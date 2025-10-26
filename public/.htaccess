@@ -1,3 +1,6 @@
+order deny,allow
+Require all granted
+
 # Apache設定ファイル
 
 # PHPのエラー表示設定
@@ -36,13 +39,6 @@ php_flag log_errors On
     # RewriteRule ^(.*)$ index.php [L]
 </IfModule>
 
-# キャッシュディレクトリへの直接アクセスを禁止
-<IfModule mod_authz_core.c>
-    <Directory "../cache">
-        Require all denied
-    </Directory>
-</IfModule>
-
 # データベースファイルへのアクセスを禁止
 <Files "*.db">
     <IfModule mod_authz_core.c>
@@ -54,21 +50,3 @@ php_flag log_errors On
     </IfModule>
 </Files>
 
-# PHPファイルのアップロード防止
-<FilesMatch "\.(php|phtml|php3|php4|php5|phps)$">
-    <IfModule mod_authz_core.c>
-        <RequireAll>
-            Require all denied
-        </RequireAll>
-    </IfModule>
-</FilesMatch>
-
-# ディレクトリリスティングを無効化
-Options -Indexes
-
-# デフォルトインデックスファイル
-DirectoryIndex index.php index.html
-
-# ファイルアップロードサイズ制限
-php_value upload_max_filesize 10M
-php_value post_max_size 10M

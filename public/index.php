@@ -255,7 +255,13 @@ try {
         }
     </style>
 </head>
-<body>
+<body data-age-verification-minutes="<?= $ageVerificationMinutes ?>" data-nsfw-config-version="<?= $nsfwConfigVersion ?>">
+    <script>
+        // 設定値をdata属性から読み込み（const定義で改ざん防止）
+        const AGE_VERIFICATION_MINUTES = parseInt(document.body.dataset.ageVerificationMinutes) || 10080;
+        const NSFW_CONFIG_VERSION = parseInt(document.body.dataset.nsfwConfigVersion) || 1;
+    </script>
+
     <!-- 年齢確認モーダル -->
     <div id="ageVerificationModal" class="modal">
         <div class="modal-dialog">
@@ -267,7 +273,16 @@ try {
                 <p>このコンテンツは18歳未満の閲覧に適さない可能性があります。</p>
                 <p><strong>あなたは18歳以上ですか？</strong></p>
                 <p style="font-size: 0.9em; color: #999; margin-top: 20px;">
-                    ※一度確認すると、ブラウザに記録され一定期間（7日間）は再度確認されません。<br>
+                    <?php
+                    if ($ageVerificationMinutes < 60) {
+                        $displayTime = $ageVerificationMinutes . '分間';
+                    } elseif ($ageVerificationMinutes < 1440) {
+                        $displayTime = round($ageVerificationMinutes / 60, 1) . '時間';
+                    } else {
+                        $displayTime = round($ageVerificationMinutes / 1440, 1) . '日間';
+                    }
+                    ?>
+                    ※一度確認すると、ブラウザに記録され一定期間（<?= $displayTime ?>）は再度確認されません。<br>
                     記録を削除したい場合はブラウザのCookieを削除してください。
                 </p>
             </div>
@@ -424,11 +439,6 @@ try {
     </footer>
 
     <!-- JavaScript -->
-    <script>
-        // NSFW設定を読み込み
-        const AGE_VERIFICATION_MINUTES = <?= $ageVerificationMinutes ?>;
-        const NSFW_CONFIG_VERSION = <?= $nsfwConfigVersion ?>;
-    </script>
     <script src="/res/js/main.js?v=<?= $nsfwConfigVersion ?>"></script>
 </body>
 </html>

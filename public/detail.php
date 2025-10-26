@@ -164,7 +164,13 @@ try {
         }
     </style>
 </head>
-<body>
+<body data-age-verification-minutes="<?= $ageVerificationMinutes ?>" data-nsfw-config-version="<?= $nsfwConfigVersion ?>" data-post-id="<?= $postId ?>" data-is-sensitive="<?= isset($post['is_sensitive']) && $post['is_sensitive'] == 1 ? '1' : '0' ?>">
+    <script>
+        // 設定値をdata属性から読み込み（const定義で改ざん防止）
+        const AGE_VERIFICATION_MINUTES = parseInt(document.body.dataset.ageVerificationMinutes) || 10080;
+        const NSFW_CONFIG_VERSION = parseInt(document.body.dataset.nsfwConfigVersion) || 1;
+    </script>
+
     <!-- 年齢確認モーダル -->
     <div id="ageVerificationModal" class="modal">
         <div class="modal-dialog">
@@ -284,20 +290,19 @@ try {
     </footer>
 
     <!-- JavaScript -->
-    <script>
-        // 年齢確認の有効期限を設定から読み込み（分単位）
-        const AGE_VERIFICATION_MINUTES = <?= $ageVerificationMinutes ?>;
-        const NSFW_CONFIG_VERSION = <?= $nsfwConfigVersion ?>;
-    </script>
     <script src="/res/js/detail.js?v=<?= $nsfwConfigVersion ?>"></script>
     <script>
         // DOMロード後に初期化
         document.addEventListener('DOMContentLoaded', function() {
+            // data属性から値を読み取る
+            const isSensitive = document.body.dataset.isSensitive === '1';
+            const postId = parseInt(document.body.dataset.postId);
+
             // 年齢確認チェック
-            initDetailPage(<?= isset($post['is_sensitive']) && $post['is_sensitive'] == 1 ? 'true' : 'false' ?>);
+            initDetailPage(isSensitive);
 
             // 閲覧回数をインクリメント
-            incrementViewCount(<?= $postId ?>);
+            incrementViewCount(postId);
         });
     </script>
 </body>

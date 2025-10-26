@@ -1,6 +1,10 @@
 /**
  * Main JavaScript for public pages
  * NSFW age verification system
+ *
+ * 依存するグローバル変数（HTML側でdata属性から読み込まれます）:
+ * - AGE_VERIFICATION_MINUTES: 年齢確認の有効期限（分）
+ * - NSFW_CONFIG_VERSION: NSFW設定のバージョン
  */
 
 // 現在クリックされた投稿ID（モーダル用）

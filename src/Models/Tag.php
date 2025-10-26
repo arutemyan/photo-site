@@ -23,15 +23,17 @@ class Tag
 
     /**
      * すべてのタグを取得（投稿数付き）
+     * 表示中の投稿（is_visible=1）のみをカウント
      *
      * @return array タグデータの配列
      */
     public function getAll(): array
     {
         $stmt = $this->db->query("
-            SELECT t.id, t.name, COUNT(pt.post_id) as post_count
+            SELECT t.id, t.name, COUNT(DISTINCT CASE WHEN p.is_visible = 1 THEN pt.post_id END) as post_count
             FROM tags t
             LEFT JOIN post_tags pt ON t.id = pt.tag_id
+            LEFT JOIN posts p ON pt.post_id = p.id
             GROUP BY t.id
             ORDER BY post_count DESC, t.name ASC
         ");
@@ -40,6 +42,7 @@ class Tag
 
     /**
      * 人気のタグを取得（投稿数が多い順）
+     * 表示中の投稿（is_visible=1）のみをカウント
      *
      * @param int $limit 取得件数（デフォルト: 10）
      * @return array タグデータの配列
@@ -47,9 +50,10 @@ class Tag
     public function getPopular(int $limit = 10): array
     {
         $stmt = $this->db->prepare("
-            SELECT t.id, t.name, COUNT(pt.post_id) as post_count
+            SELECT t.id, t.name, COUNT(DISTINCT CASE WHEN p.is_visible = 1 THEN pt.post_id END) as post_count
             FROM tags t
             LEFT JOIN post_tags pt ON t.id = pt.tag_id
+            LEFT JOIN posts p ON pt.post_id = p.id
             GROUP BY t.id
             HAVING post_count > 0
             ORDER BY post_count DESC, t.name ASC
@@ -61,6 +65,7 @@ class Tag
 
     /**
      * タグ名でタグを検索（部分一致）
+     * 表示中の投稿（is_visible=1）のみをカウント
      *
      * @param string $name 検索する名前
      * @return array タグデータの配列
@@ -68,9 +73,10 @@ class Tag
     public function searchByName(string $name): array
     {
         $stmt = $this->db->prepare("
-            SELECT t.id, t.name, COUNT(pt.post_id) as post_count
+            SELECT t.id, t.name, COUNT(DISTINCT CASE WHEN p.is_visible = 1 THEN pt.post_id END) as post_count
             FROM tags t
             LEFT JOIN post_tags pt ON t.id = pt.tag_id
+            LEFT JOIN posts p ON pt.post_id = p.id
             WHERE t.name LIKE ?
             GROUP BY t.id
             ORDER BY post_count DESC, t.name ASC
@@ -81,6 +87,7 @@ class Tag
 
     /**
      * タグIDでタグを取得
+     * 表示中の投稿（is_visible=1）のみをカウント
      *
      * @param int $id タグID
      * @return array|null タグデータ、存在しない場合はnull
@@ -88,9 +95,10 @@ class Tag
     public function getById(int $id): ?array
     {
         $stmt = $this->db->prepare("
-            SELECT t.id, t.name, COUNT(pt.post_id) as post_count
+            SELECT t.id, t.name, COUNT(DISTINCT CASE WHEN p.is_visible = 1 THEN pt.post_id END) as post_count
             FROM tags t
             LEFT JOIN post_tags pt ON t.id = pt.tag_id
+            LEFT JOIN posts p ON pt.post_id = p.id
             WHERE t.id = ?
             GROUP BY t.id
         ");
@@ -102,6 +110,7 @@ class Tag
 
     /**
      * タグ名でタグを取得（完全一致）
+     * 表示中の投稿（is_visible=1）のみをカウント
      *
      * @param string $name タグ名
      * @return array|null タグデータ、存在しない場合はnull
@@ -109,9 +118,10 @@ class Tag
     public function getByName(string $name): ?array
     {
         $stmt = $this->db->prepare("
-            SELECT t.id, t.name, COUNT(pt.post_id) as post_count
+            SELECT t.id, t.name, COUNT(DISTINCT CASE WHEN p.is_visible = 1 THEN pt.post_id END) as post_count
             FROM tags t
             LEFT JOIN post_tags pt ON t.id = pt.tag_id
+            LEFT JOIN posts p ON pt.post_id = p.id
             WHERE t.name = ?
             GROUP BY t.id
         ");
