@@ -1,6 +1,6 @@
 /**
  * SNS共有機能
- * X (Twitter), Misskey, mixi2 への投稿共有
+ * X (Twitter), Misskey への投稿共有
  */
 
 /**
@@ -25,8 +25,7 @@ function shareToSNS(postId, title, isSensitive) {
     // 各SNSの共有URL
     const shareUrls = {
         twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}&hashtags=${fullHashtags}`,
-        misskey: `https://misskey.io/share?text=${encodedTitle}%0A${encodedUrl}`,
-        mixi2: `https://mixi.social/share?text=${encodedTitle}%0A${encodedUrl}`
+        misskey: `https://misskey.io/share?text=${encodedTitle}%0A${encodedUrl}`
     };
 
     // モーダルHTML
@@ -53,9 +52,6 @@ function shareToSNS(postId, title, isSensitive) {
                             </a>
                             <a href="${shareUrls.misskey}" target="_blank" class="btn btn-primary" style="background-color: #86b300; border-color: #86b300;">
                                 <i class="bi bi-mastodon me-2"></i>Misskey で共有
-                            </a>
-                            <a href="${shareUrls.mixi2}" target="_blank" class="btn btn-primary" style="background-color: #D1AC00; border-color: #D1AC00;">
-                                <i class="bi bi-chat-dots me-2"></i>mixi2 で共有
                             </a>
                         </div>
 
