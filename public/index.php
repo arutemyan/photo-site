@@ -176,7 +176,6 @@ try {
     $config = require __DIR__ . '/../config/config.php';
     $nsfwConfig = $config['nsfw'];
     $ageVerificationMinutes = $nsfwConfig['age_verification_minutes'];
-    $nsfwFilterType = $nsfwConfig['filter_type'];
     $nsfwConfigVersion = $nsfwConfig['config_version'];
 
     // 投稿を取得（無限スクロール対応のため最初は18件のみ）
@@ -189,7 +188,6 @@ try {
     $theme = ['header_html' => '', 'footer_html' => ''];
     $showViewCount = true;
     $ageVerificationMinutes = 10080;
-    $nsfwFilterType = 'blur';
     $nsfwConfigVersion = 1;
 }
 ?>
@@ -324,12 +322,11 @@ try {
                     <?php
                     $isSensitive = isset($post['is_sensitive']) && $post['is_sensitive'] == 1;
                     $thumbPath = '/' . escapeHtml($post['thumb_path'] ?? $post['image_path'] ?? '');
-                    // センシティブ画像の場合、設定に応じたフィルター版を使用
+                    // センシティブ画像の場合、NSFWフィルター版を使用
                     if ($isSensitive) {
                         $pathInfo = pathinfo($thumbPath);
-                        $filterSuffix = $nsfwFilterType === 'frosted' ? '_frosted' : '_blur';
-                        $filteredPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . $filterSuffix . '.' . ($pathInfo['extension'] ?? 'webp');
-                        $imagePath = $filteredPath;
+                        $nsfwPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_nsfw.' . ($pathInfo['extension'] ?? 'webp');
+                        $imagePath = $nsfwPath;
                     } else {
                         $imagePath = $thumbPath;
                     }
@@ -404,7 +401,6 @@ try {
     <script>
         // NSFW設定を読み込み
         const AGE_VERIFICATION_MINUTES = <?= $ageVerificationMinutes ?>;
-        const NSFW_FILTER_TYPE = '<?= $nsfwFilterType ?>';
         const NSFW_CONFIG_VERSION = <?= $nsfwConfigVersion ?>;
     </script>
     <script src="/res/js/main.js?v=<?= $nsfwConfigVersion ?>"></script>

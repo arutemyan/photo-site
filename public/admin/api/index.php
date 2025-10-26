@@ -17,7 +17,7 @@ use App\Models\Post;
 use App\Models\Theme;
 use App\Models\Setting;
 use App\Security\CsrfProtection;
-use App\Utils\ImageProcessor;
+use App\Utils\ImageUploader;
 
 // セッション開始
 initSecureSession();
@@ -110,7 +110,7 @@ $router->post('/admin/api/posts', function () {
         }
 
         // 画像アップロード処理
-        $imageProcessor = new ImageProcessor();
+        $imageUploader = new ImageUploader();
         $uploadDir = __DIR__ . '/../../../uploads/images/';
         $thumbDir = __DIR__ . '/../../../uploads/thumbs/';
 
@@ -133,12 +133,12 @@ $router->post('/admin/api/posts', function () {
         }
 
         // サムネイル生成
-        $imageProcessor->createThumbnail($uploadPath, $thumbPath, 600, 600);
+        $imageUploader->createThumbnail($uploadPath, $thumbPath, 600, 600);
 
-        // NSFWの場合、ぼかしサムネイルも生成
+        // NSFWの場合、NSFWフィルターサムネイルも生成
         if ($isSensitive) {
-            $blurPath = $thumbDir . pathinfo($thumbFilename, PATHINFO_FILENAME) . '_blur.webp';
-            $imageProcessor->createBlurredThumbnail($thumbPath, $blurPath);
+            $nsfwPath = $thumbDir . pathinfo($thumbFilename, PATHINFO_FILENAME) . '_nsfw.webp';
+            $imageUploader->createNsfwThumbnail($thumbPath, $nsfwPath);
         }
 
         // DB登録
@@ -194,6 +194,39 @@ $router->put('/admin/api/posts/:id', function (string $id) {
         if ($existingPost === null) {
             Router::error('投稿が見つかりません', 404);
             return;
+        }
+
+        // NSFWフィルター設定を読み込み
+        $config = require __DIR__ . '/../../../config/config.php';
+        $filterSettings = $config['nsfw']['filter_settings'];
+
+        // is_sensitiveが変更された場合、NSFWフィルター画像を処理
+        $oldIsSensitive = (int)$existingPost['is_sensitive'];
+        $newIsSensitive = $isSensitive;
+
+        if ($oldIsSensitive !== $newIsSensitive) {
+            $thumbPath = $existingPost['thumb_path'];
+            if (!empty($thumbPath)) {
+                $thumbFullPath = __DIR__ . '/../../../public/' . $thumbPath;
+                $pathInfo = pathinfo($thumbFullPath);
+                $nsfwPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_nsfw.' . ($pathInfo['extension'] ?? 'webp');
+
+                if ($newIsSensitive === 1) {
+                    // 0→1: NSFWフィルター画像を生成
+                    if (file_exists($thumbFullPath)) {
+                        $imageUploader = new ImageUploader(
+                            __DIR__ . '/../../../public/uploads/images',
+                            __DIR__ . '/../../../public/uploads/thumbs'
+                        );
+                        $imageUploader->createNsfwThumbnail($thumbFullPath, $nsfwPath, $filterSettings);
+                    }
+                } else {
+                    // 1→0: NSFWフィルター画像を削除
+                    if (file_exists($nsfwPath)) {
+                        unlink($nsfwPath);
+                    }
+                }
+            }
         }
 
         // 更新
@@ -258,7 +291,10 @@ $router->post('/admin/api/bulk-upload', function () {
 
         $uploadedFiles = $_FILES['images'];
         $postModel = new Post();
-        $imageProcessor = new ImageProcessor();
+        $imageUploader = new ImageUploader(
+            __DIR__ . '/../../../public/uploads/images',
+            __DIR__ . '/../../../public/uploads/thumbs'
+        );
 
         $results = [];
         $successCount = 0;
@@ -285,24 +321,38 @@ $router->post('/admin/api/bulk-upload', function () {
             }
 
             try {
-                $ext = pathinfo($filename, PATHINFO_EXTENSION);
-                $uniqueName = uniqid('bulk_', true) . '.' . $ext;
-                $uploadDir = __DIR__ . '/../../../uploads/';
-                $thumbDir = __DIR__ . '/../../../uploads/thumbs/';
+                // ファイルの検証
+                $fileData = [
+                    'error' => $error,
+                    'size' => $size,
+                    'tmp_name' => $tmpPath
+                ];
+                $validation = $imageUploader->validateFile($fileData);
 
-                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
-                if (!is_dir($thumbDir)) mkdir($thumbDir, 0755, true);
-
-                $uploadPath = $uploadDir . $uniqueName;
-                $thumbPath = $thumbDir . 'thumb_' . $uniqueName;
-
-                if (!move_uploaded_file($tmpPath, $uploadPath)) {
-                    throw new Exception('ファイルの保存に失敗');
+                if (!$validation['valid']) {
+                    throw new Exception($validation['error']);
                 }
 
-                $imageProcessor->createThumbnail($uploadPath, $thumbPath, 600, 600);
+                // ユニークなファイル名を生成
+                $uniqueName = $imageUploader->generateUniqueFilename('bulk_');
 
-                $postId = $postModel->createBulk('uploads/' . $uniqueName, 'uploads/thumbs/thumb_' . $uniqueName);
+                // 画像を処理して保存
+                $uploadResult = $imageUploader->processAndSave(
+                    $tmpPath,
+                    $validation['mime_type'],
+                    $uniqueName,
+                    false  // 一括アップロードではNSFWフィルターは生成しない
+                );
+
+                if (!$uploadResult['success']) {
+                    throw new Exception($uploadResult['error']);
+                }
+
+                // DB登録
+                $postId = $postModel->createBulk(
+                    $uploadResult['image_path'],
+                    $uploadResult['thumb_path']
+                );
 
                 $results[] = ['filename' => $filename, 'success' => true, 'post_id' => $postId];
                 $successCount++;

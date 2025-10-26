@@ -348,13 +348,9 @@ function appendPostCard(grid, post) {
     let imagePath;
     if (isSensitive) {
         const thumbPath = post.thumb_path || post.image_path || '';
-        // NSFW_FILTER_TYPE に応じてサフィックスを選択（frosted or blur）
-        const filterType = NSFW_FILTER_TYPE;
-        const suffix = filterType === 'frosted' ? '_frosted' : '_blur';
-
         const pathParts = thumbPath.split('.');
         if (pathParts.length > 1) {
-            pathParts[pathParts.length - 2] += suffix;
+            pathParts[pathParts.length - 2] += '_nsfw';
             imagePath = '/' + pathParts.join('.');
         } else {
             imagePath = '/res/images/nsfw-placeholder.svg';

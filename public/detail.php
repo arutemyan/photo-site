@@ -61,22 +61,22 @@ try {
     $shareImagePath = '';
     if (!empty($post['image_path'])) {
         if ($isSensitive) {
-            // NSFW画像の場合はぼかし版を使用
+            // NSFW画像の場合はNSFWフィルター版を使用
             $pathInfo = pathinfo($post['image_path']);
             // basename()でディレクトリトラバーサルを防止
-            $frostedFilename = basename($pathInfo['filename'] . '_frosted.' . ($pathInfo['extension'] ?? 'webp'));
-            $shareImagePath = $pathInfo['dirname'] . '/' . $frostedFilename;
+            $nsfwFilename = basename($pathInfo['filename'] . '_nsfw.' . ($pathInfo['extension'] ?? 'webp'));
+            $shareImagePath = $pathInfo['dirname'] . '/' . $nsfwFilename;
 
             // パスの検証（uploadsディレクトリ内であることを確認）
             $fullPath = realpath(__DIR__ . '/' . $shareImagePath);
             $uploadsDir = realpath(__DIR__ . '/uploads/');
 
-            // ぼかし版が存在しない、または不正なパスの場合はサムネイルのぼかし版を使用
+            // NSFWフィルター版が存在しない、または不正なパスの場合はサムネイルのNSFWフィルター版を使用
             if (!$fullPath || !$uploadsDir || strpos($fullPath, $uploadsDir) !== 0 || !file_exists($fullPath)) {
                 if (!empty($post['thumb_path'])) {
                     $thumbInfo = pathinfo($post['thumb_path']);
-                    $frostedThumbFilename = basename($thumbInfo['filename'] . '_frosted.' . ($thumbInfo['extension'] ?? 'webp'));
-                    $shareImagePath = $thumbInfo['dirname'] . '/' . $frostedThumbFilename;
+                    $nsfwThumbFilename = basename($thumbInfo['filename'] . '_nsfw.' . ($thumbInfo['extension'] ?? 'webp'));
+                    $shareImagePath = $thumbInfo['dirname'] . '/' . $nsfwThumbFilename;
                 } else {
                     $shareImagePath = '';
                 }
@@ -214,11 +214,11 @@ try {
             <?php
             $isSensitive = isset($post['is_sensitive']) && $post['is_sensitive'] == 1;
             $imagePath = '/' . escapeHtml($post['image_path'] ?? $post['thumb_path'] ?? '');
-            // センシティブ画像の場合、最初はモザイク版を表示
+            // センシティブ画像の場合、最初はNSFWフィルター版を表示
             if ($isSensitive) {
                 $pathInfo = pathinfo($imagePath);
-                $blurPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_blur.' . ($pathInfo['extension'] ?? '');
-                $displayPath = $blurPath;
+                $nsfwPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_nsfw.' . ($pathInfo['extension'] ?? '');
+                $displayPath = $nsfwPath;
             } else {
                 $displayPath = $imagePath;
             }

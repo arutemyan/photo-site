@@ -218,7 +218,7 @@ if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
 - ✅ 型キャストによる型安全性確保
 - ✅ 文字列長の制限
 - ✅ ファイルアップロードのエラーチェック
-- ✅ ImageUploader/ImageProcessorによる詳細な検証
+- ✅ ImageUploaderによる詳細な検証
 
 ---
 

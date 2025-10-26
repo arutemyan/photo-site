@@ -105,12 +105,11 @@ class ImageUploader
      * @param string $tmpPath 一時ファイルのパス
      * @param string $mimeType MIMEタイプ
      * @param string $filename 保存するファイル名（拡張子なし）
-     * @param bool $createFiltered フィルター版サムネイルを作成するか
-     * @param string $filterType フィルタータイプ ('blur' または 'frosted')
+     * @param bool $createNsfwFilter NSFWフィルター版サムネイルを作成するか
      * @param array $filterSettings フィルター設定（オプション）
      * @return array ['success' => bool, 'image_path' => string, 'thumb_path' => string, 'error' => string|null]
      */
-    public function processAndSave(string $tmpPath, string $mimeType, string $filename, bool $createFiltered = false, string $filterType = 'blur', array $filterSettings = []): array
+    public function processAndSave(string $tmpPath, string $mimeType, string $filename, bool $createNsfwFilter = false, array $filterSettings = []): array
     {
         try {
             $webpFilename = $filename . '.webp';
@@ -139,17 +138,11 @@ class ImageUploader
             // サムネイルを生成
             $this->createThumbnail($sourceImage, $thumbPath, 600, 600);
 
-            // フィルター版サムネイルを生成
-            if ($createFiltered) {
-                $filterSuffix = $filterType === 'frosted' ? '_frosted' : '_blur';
-                $filterFilename = $filename . $filterSuffix . '.webp';
-                $filterPath = $this->thumbDir . '/' . $filterFilename;
-
-                if ($filterType === 'frosted') {
-                    $this->createFrostedThumbnail($thumbPath, $filterPath, $filterSettings);
-                } else {
-                    $this->createBlurredThumbnail($thumbPath, $filterPath, $filterSettings);
-                }
+            // NSFWフィルター版サムネイルを生成
+            if ($createNsfwFilter) {
+                $nsfwFilename = $filename . '_nsfw.webp';
+                $nsfwPath = $this->thumbDir . '/' . $nsfwFilename;
+                $this->createNsfwThumbnail($thumbPath, $nsfwPath, $filterSettings);
             }
 
             // メモリ解放
@@ -221,52 +214,117 @@ class ImageUploader
     }
 
     /**
-     * ぼかし版サムネイルを生成（NSFW用）
-     *
-     * @param string $sourcePath 元サムネイルのパス
-     * @param string $outputPath 出力パス
-     * @param array $settings フィルター設定（blur_strength, brightness, quality）
+     * StackBlurを適用
      */
-    private function createBlurredThumbnail(string $sourcePath, string $outputPath, array $settings = []): void
+    private function applyStackBlur(&$image, $width, $height, $radius)
     {
-        $image = imagecreatefromwebp($sourcePath);
-        if ($image === false) {
-            return;
+        if ($radius < 1) return;
+
+        $referenceImage = imagecreatetruecolor($width, $height);
+        imagecopy($referenceImage, $image, 0, 0, 0, 0, $width, $height);
+        $divsum = ($radius * 2 + 1);
+
+        // 水平パス
+        for ($y = 0; $y < $height; $y++) {
+            $rt = $gt = $bt = $at = 0;
+            $stack = array_fill(0, $radius * 2 + 1, 0);
+            $stackpointer = $radius;
+
+            for ($i = -$radius; $i <= $radius; $i++) {
+                $x = min(max($i, 0), $width - 1);
+                $pixel = imagecolorat($referenceImage, $x, $y);
+                $stack[$i + $radius] = $pixel;
+                $rt += ($pixel >> 16) & 0xFF;
+                $gt += ($pixel >> 8) & 0xFF;
+                $bt += $pixel & 0xFF;
+                $at += ($pixel >> 24) & 0xFF;
+            }
+
+            for ($x = 0; $x < $width; $x++) {
+                $r = (int)($rt / $divsum);
+                $g = (int)($gt / $divsum);
+                $b = (int)($bt / $divsum);
+                $a = (int)($at / $divsum);
+
+                $color = ($a << 24) | ($r << 16) | ($g << 8) | $b;
+                imagesetpixel($image, $x, $y, $color);
+
+                $stackpointer = ($stackpointer + 1) % ($radius * 2 + 1);
+                $pixelOut = $stack[$stackpointer];
+                $rt -= ($pixelOut >> 16) & 0xFF;
+                $gt -= ($pixelOut >> 8) & 0xFF;
+                $bt -= $pixelOut & 0xFF;
+                $at -= ($pixelOut >> 24) & 0xFF;
+
+                $xi = min($x + $radius + 1, $width - 1);
+                $pixelIn = imagecolorat($referenceImage, $xi, $y);
+                $stack[$stackpointer] = $pixelIn;
+                $rt += ($pixelIn >> 16) & 0xFF;
+                $gt += ($pixelIn >> 8) & 0xFF;
+                $bt += ($pixelIn & 0xFF);
+                $at += ($pixelIn >> 24) & 0xFF;
+            }
         }
 
-        $width = imagesx($image);
-        $height = imagesy($image);
+        // 中間バッファを破棄
+        imagedestroy($referenceImage);
+        $referenceImage = imagecreatetruecolor($width, $height);
+        imagecopy($referenceImage, $image, 0, 0, 0, 0, $width, $height);
 
-        // デフォルト設定
-        $blurStrength = $settings['blur_strength'] ?? 10;
-        $brightness = $settings['brightness'] ?? -30;
-        $quality = $settings['quality'] ?? 75;
+        // 垂直パス
+        for ($x = 0; $x < $width; $x++) {
+            $rt = $gt = $bt = $at = 0;
+            $stack = array_fill(0, $radius * 2 + 1, 0);
+            $stackpointer = $radius;
 
-        // 高速ぼかし処理（縮小→拡大方式）
-        $blurStrength = max(1, min(20, $blurStrength));
-        $smallWidth = max(1, (int)($width / $blurStrength));
-        $smallHeight = max(1, (int)($height / $blurStrength));
+            for ($i = -$radius; $i <= $radius; $i++) {
+                $y = min(max($i, 0), $height - 1);
+                $pixel = imagecolorat($referenceImage, $x, $y);
+                $stack[$i + $radius] = $pixel;
+                $rt += ($pixel >> 16) & 0xFF;
+                $gt += ($pixel >> 8) & 0xFF;
+                $bt += ($pixel & 0xFF);
+                $at += ($pixel >> 24) & 0xFF;
+            }
 
-        $smallImage = imagecreatetruecolor($smallWidth, $smallHeight);
-        imagecopyresampled($smallImage, $image, 0, 0, 0, 0, $smallWidth, $smallHeight, $width, $height);
-        imagecopyresampled($image, $smallImage, 0, 0, 0, 0, $width, $height, $smallWidth, $smallHeight);
-        imagedestroy($smallImage);
+            for ($y = 0; $y < $height; $y++) {
+                $r = (int)($rt / $divsum);
+                $g = (int)($gt / $divsum);
+                $b = (int)($bt / $divsum);
+                $a = (int)($at / $divsum);
 
-        // 明度調整
-        imagefilter($image, IMG_FILTER_BRIGHTNESS, $brightness);
+                $color = ($a << 24) | ($r << 16) | ($g << 8) | $b;
+                imagesetpixel($image, $x, $y, $color);
 
-        imagewebp($image, $outputPath, $quality);
-        imagedestroy($image);
+                $stackpointer = ($stackpointer + 1) % ($radius * 2 + 1);
+                $pixelOut = $stack[$stackpointer];
+                $rt -= ($pixelOut >> 16) & 0xFF;
+                $gt -= ($pixelOut >> 8) & 0xFF;
+                $bt -= ($pixelOut & 0xFF);
+                $at -= ($pixelOut >> 24) & 0xFF;
+
+                $yi = min($y + $radius + 1, $height - 1);
+                $pixelIn = imagecolorat($referenceImage, $x, $yi);
+                $stack[$stackpointer] = $pixelIn;
+                $rt += ($pixelIn >> 16) & 0xFF;
+                $gt += ($pixelIn >> 8) & 0xFF;
+                $bt += ($pixelIn & 0xFF);
+                $at += ($pixelIn >> 24) & 0xFF;
+            }
+        }
+
+        imagedestroy($referenceImage);
     }
 
+
     /**
-     * すりガラス効果のサムネイルを生成（NSFW用）
+     * NSFWフィルターサムネイルを生成（すりガラス効果）
      *
      * @param string $sourcePath 元サムネイルのパス
      * @param string $outputPath 出力パス
-     * @param array $settings フィルター設定（blur_passes, contrast, brightness, overlay_opacity, quality）
+     * @param array $settings フィルター設定（blur_strength, brightness, contrast, white_overlay, quality）
      */
-    private function createFrostedThumbnail(string $sourcePath, string $outputPath, array $settings = []): void
+    public function createNsfwThumbnail(string $sourcePath, string $outputPath, array $settings = []): void
     {
         $image = imagecreatefromwebp($sourcePath);
         if ($image === false) {
@@ -277,36 +335,25 @@ class ImageUploader
         $height = imagesy($image);
 
         // デフォルト設定
-        $blurStrength = $settings['blur_strength'] ?? 10; // 1-20推奨、高いほどぼける
-        $contrast = $settings['contrast'] ?? -10;
-        $brightness = $settings['brightness'] ?? 15;
-        $overlayOpacity = $settings['overlay_opacity'] ?? 30;
-        $quality = $settings['quality'] ?? 80;
+        $blurStrength = $settings['blur_strength'];
+        $brightness = $settings['brightness'];
+        $contrast = $settings['contrast'];
+        $whiteOverlay = $settings['white_overlay'];
+        $quality = $settings['quality'];
 
-        // 1. 高速ぼかし処理（縮小→拡大方式）
-        $blurStrength = max(1, min(20, $blurStrength)); // 1-20に制限
-        $smallWidth = max(1, (int)($width / $blurStrength));
-        $smallHeight = max(1, (int)($height / $blurStrength));
+        // stack-blur
+        $this->applyStackBlur($image, $width, $height, $blurStrength);
 
-        // 一時的に小さい画像を作成
-        $smallImage = imagecreatetruecolor($smallWidth, $smallHeight);
-        imagecopyresampled($smallImage, $image, 0, 0, 0, 0, $smallWidth, $smallHeight, $width, $height);
-
-        // 元のサイズに戻す（この過程でぼかしがかかる）
-        imagecopyresampled($image, $smallImage, 0, 0, 0, 0, $width, $height, $smallWidth, $smallHeight);
-        imagedestroy($smallImage);
-
-        // 2. コントラスト調整（色を鮮やかに保つ）
+        // 2. コントラスト調整（柔らかい印象に）
         imagefilter($image, IMG_FILTER_CONTRAST, $contrast);
 
-        // 3. 明度調整（透明感を出す）
+        // 3. 明度調整（明るく透明感を出す）
         imagefilter($image, IMG_FILTER_BRIGHTNESS, $brightness);
 
-        // 4. 半透明の白いオーバーレイを追加（すりガラス感を強調）
-        // overlay_opacityは0-100のパーセント値として扱う（0=透明、100=完全不透明）
-        $overlayOpacity = min(100, max(0, $overlayOpacity)); // 0-100に制限
+        // 4. 白い半透明オーバーレイ（すりガラス感）
+        $whiteOverlay = min(100, max(0, $whiteOverlay));
 
-        // ピクセル単位でアルファブレンディング
+        // 白 (255, 255, 255) とブレンド
         for ($y = 0; $y < $height; $y++) {
             for ($x = 0; $x < $width; $x++) {
                 $rgb = imagecolorat($image, $x, $y);
@@ -314,10 +361,10 @@ class ImageUploader
                 $g = ($rgb >> 8) & 0xFF;
                 $b = $rgb & 0xFF;
 
-                // 白とブレンド（overlay_opacity%の白を混ぜる）
-                $r = (int)($r + (255 - $r) * $overlayOpacity / 100);
-                $g = (int)($g + (255 - $g) * $overlayOpacity / 100);
-                $b = (int)($b + (255 - $b) * $overlayOpacity / 100);
+                // 白とブレンド（white_overlay%の白を混ぜる）
+                $r = (int)($r + (255 - $r) * $whiteOverlay / 100);
+                $g = (int)($g + (255 - $g) * $whiteOverlay / 100);
+                $b = (int)($b + (255 - $b) * $whiteOverlay / 100);
 
                 $newColor = imagecolorallocate($image, $r, $g, $b);
                 imagesetpixel($image, $x, $y, $newColor);

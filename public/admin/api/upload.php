@@ -53,15 +53,7 @@ try {
     // NSFW設定を読み込み
     $config = require __DIR__ . '/../../../config/config.php';
     $nsfwConfig = $config['nsfw'];
-    $filterType = $nsfwConfig['filter_type'];
-
-    // フィルタータイプに応じた設定を取得
-    $filterSettings = [];
-    if ($filterType === 'frosted') {
-        $filterSettings = $nsfwConfig['frosted_settings'];
-    } else {
-        $filterSettings = $nsfwConfig['blur_settings'];
-    }
+    $filterSettings = $nsfwConfig['filter_settings'];
 
     // ImageUploaderを初期化
     $imageUploader = new ImageUploader(
@@ -91,8 +83,7 @@ try {
         $_FILES['image']['tmp_name'],
         $validation['mime_type'],
         $uniqueName,
-        $isSensitive == 1, // センシティブ画像の場合はフィルター版も生成
-        $filterType, // 設定から読み込んだフィルタータイプ
+        $isSensitive == 1, // センシティブ画像の場合はNSFWフィルター版も生成
         $filterSettings // フィルター設定
     );
 

@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../../src/Security/SecurityUtil.php';
 use App\Models\Post;
 use App\Security\CsrfProtection;
 use App\Cache\CacheManager;
+use App\Utils\ImageUploader;
 
 initSecureSession();
 
@@ -175,6 +176,39 @@ try {
             http_response_code(404);
             echo json_encode(['success' => false, 'error' => '投稿が見つかりません'], JSON_UNESCAPED_UNICODE);
             exit;
+        }
+
+        // NSFWフィルター設定を読み込み
+        $config = require __DIR__ . '/../../../config/config.php';
+        $filterSettings = $config['nsfw']['filter_settings'];
+
+        // is_sensitiveが変更された場合、NSFWフィルター画像を処理
+        $oldIsSensitive = (int)$existingPost['is_sensitive'];
+        $newIsSensitive = $isSensitive;
+
+        if ($oldIsSensitive !== $newIsSensitive) {
+            $thumbPath = $existingPost['thumb_path'];
+            if (!empty($thumbPath)) {
+                $thumbFullPath = __DIR__ . '/../../../public/' . $thumbPath;
+                $pathInfo = pathinfo($thumbFullPath);
+                $nsfwPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_nsfw.' . ($pathInfo['extension'] ?? 'webp');
+
+                if ($newIsSensitive === 1) {
+                    // 0→1: NSFWフィルター画像を生成
+                    if (file_exists($thumbFullPath)) {
+                        $imageUploader = new ImageUploader(
+                            __DIR__ . '/../../../public/uploads/images',
+                            __DIR__ . '/../../../public/uploads/thumbs'
+                        );
+                        $imageUploader->createNsfwThumbnail($thumbFullPath, $nsfwPath, $filterSettings);
+                    }
+                } else {
+                    // 1→0: NSFWフィルター画像を削除
+                    if (file_exists($nsfwPath)) {
+                        unlink($nsfwPath);
+                    }
+                }
+            }
         }
 
         // 投稿を更新
