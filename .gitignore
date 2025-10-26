@@ -2,16 +2,11 @@
 /vendor/
 composer.lock
 
-# データベース（/data ディレクトリに一元化）
-/data/*.db
-/data/*.sqlite
-/data/*.sqlite3
-/data/*.db-journal
-/data/rate-limits/
+# データベース（実行時に自動作成されるため全体を除外）
+/data/
 
-# 旧データベース場所（非推奨）
-/public/data/*.db
-/public/data/*.db-journal
+# 旧データベース場所（非推奨、実行時に自動作成）
+/public/data/
 /work/*.db
 
 # アップロードファイル
@@ -20,14 +15,11 @@ composer.lock
 !public/uploads/images/.gitkeep
 !public/uploads/thumbs/.gitkeep
 
-# キャッシュ
-/cache/*.json
-/cache/*.html
-!cache/.gitkeep
+# キャッシュ（実行時に自動作成されるため全体を除外）
+/cache/
 
-# ログ
-/logs/*.log
-!logs/.gitkeep
+# ログ（実行時に自動作成されるため全体を除外）
+/logs/
 
 # PHPUnit
 /.phpunit.cache/
