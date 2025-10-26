@@ -765,6 +765,94 @@ function updateNavigationButtons() {
 }
 
 /**
+ * 特定の投稿だけを更新（ページ位置を保持）
+ */
+function updateSinglePost(postId) {
+    $.ajax({
+        url: '/' + ADMIN_PATH + '/api/posts.php?id=' + postId,
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+            if (response.success && response.post) {
+                const updatedPost = response.post;
+
+                // allPosts配列内の該当投稿を更新
+                const index = allPosts.findIndex(p => p.id == postId);
+                if (index !== -1) {
+                    allPosts[index] = updatedPost;
+                }
+
+                // DOM内の該当カードを更新
+                updatePostCard(updatedPost);
+            }
+        },
+        error: function() {
+            // エラー時は安全のため全体を再読み込み
+            console.warn('Failed to update single post, reloading all posts');
+            loadPosts();
+        }
+    });
+}
+
+/**
+ * 投稿カードのDOMを更新
+ */
+function updatePostCard(post) {
+    const $card = $(`.post-card[data-id="${post.id}"]`);
+    if ($card.length === 0) return;
+
+    const thumbPath = post.thumb_path || post.image_path || '';
+    const tags = post.tags || '';
+    const detail = post.detail || '';
+    const isSensitive = post.is_sensitive == 1;
+    const isVisible = post.is_visible == 1;
+
+    // カードの表示状態を更新
+    if (isVisible) {
+        $card.removeClass('post-card-hidden');
+    } else {
+        $card.addClass('post-card-hidden');
+    }
+
+    // 画像を更新
+    $card.find('.post-card-image img').attr('src', '/' + thumbPath);
+
+    // タイトルを更新
+    $card.find('.post-card-title').text(post.title);
+
+    // 詳細を更新
+    const $description = $card.find('.post-card-description');
+    if (detail) {
+        if ($description.length > 0) {
+            $description.text(detail);
+        } else {
+            $card.find('.post-card-title').after(`<div class="post-card-description">${escapeHtml(detail)}</div>`);
+        }
+    } else {
+        $description.remove();
+    }
+
+    // メタ情報（バッジ）を更新
+    const $meta = $card.find('.post-card-meta');
+    $meta.empty();
+
+    // 表示/非表示バッジ
+    if (!isVisible) {
+        $meta.append('<span class="badge bg-warning text-dark me-1"><i class="bi bi-eye-slash"></i> 非表示</span>');
+    }
+
+    // センシティブバッジ
+    if (isSensitive) {
+        $meta.append('<span class="badge bg-danger me-1">NSFW</span>');
+    }
+
+    // タグバッジ
+    if (tags) {
+        $meta.append(`<span class="badge bg-secondary me-1">${escapeHtml(tags)}</span>`);
+    }
+}
+
+/**
  * 投稿を保存
  */
 function savePost() {
@@ -790,8 +878,8 @@ function savePost() {
                 // 成功メッセージ
                 $('#editAlert').text(response.message || '投稿が更新されました').removeClass('d-none');
 
-                // 投稿一覧を再読み込み
-                loadPosts();
+                // 投稿一覧を再読み込みせず、該当の投稿だけを更新
+                updateSinglePost(postId);
 
                 // 2秒後にモーダルを閉じる
                 //setTimeout(function() {
