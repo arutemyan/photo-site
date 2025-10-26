@@ -276,9 +276,7 @@ try {
                 <?php endif; ?>
 
                 <?php if (!empty($post['detail'])): ?>
-                    <div class="detail-description">
-                        <?= escapeHtml($post['detail']) ?>
-                    </div>
+<div class="detail-description"><?= escapeHtml($post['detail']) ?></div>
                 <?php endif; ?>
             </div>
         </div>
