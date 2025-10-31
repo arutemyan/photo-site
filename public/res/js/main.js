@@ -589,6 +589,9 @@ function displayOverlayImage(postId) {
 
         // ナビゲーションボタンの表示/非表示
         updateNavigationButtons();
+
+        // 閲覧回数をインクリメント
+        incrementViewCount(postId);
     }
 }
 
@@ -782,6 +785,22 @@ function handleScroll() {
     if (scrollPosition >= threshold) {
         loadMorePosts();
     }
+}
+
+/**
+ * 閲覧回数をインクリメント
+ * @param {number} postId 投稿ID
+ */
+function incrementViewCount(postId) {
+    fetch('/api/increment_view', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'id=' + postId
+    }).catch(function(error) {
+        console.error('View count increment failed:', error);
+    });
 }
 
 // DOMロード後の初期化
