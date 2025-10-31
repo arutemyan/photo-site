@@ -7,6 +7,9 @@
 // モーダルインスタンス
 let editModal;
 
+// クリップボードから貼り付けた画像を保持
+let clipboardImageFile = null;
+
 $(document).ready(function() {
     // Bootstrapモーダルを初期化
     const editModalElement = document.getElementById('editModal');
@@ -22,6 +25,53 @@ $(document).ready(function() {
 
     // サイト設定を読み込み
     loadSettings();
+
+    // クリップボードアップロードのトグル
+    $('#toggleClipboardUpload').on('click', function() {
+        const $section = $('#clipboardUploadSection');
+        const $icon = $('#clipboardToggleIcon');
+
+        if ($section.is(':visible')) {
+            $section.slideUp(300);
+            $icon.removeClass('bi-chevron-up').addClass('bi-chevron-down');
+        } else {
+            $section.slideDown(300);
+            $icon.removeClass('bi-chevron-down').addClass('bi-chevron-up');
+            // フォーカスを当てる
+            setTimeout(function() {
+                $('#clipboardPasteArea').focus();
+            }, 350);
+        }
+    });
+
+    // クリップボードペーストエリアのイベント
+    $('#clipboardPasteArea').on('paste', function(e) {
+        handleClipboardPaste(e.originalEvent);
+    });
+
+    // クリップボードペーストエリアのクリックでフォーカス
+    $('#clipboardPasteArea').on('click', function() {
+        $(this).focus();
+    });
+
+    // クリップボード画像をクリア
+    $('#clearClipboardImage').on('click', function() {
+        clearClipboardImage();
+    });
+
+    // クリップボードフォーム送信
+    $('#clipboardUploadForm').on('submit', function(e) {
+        e.preventDefault();
+        uploadClipboardImage();
+    });
+
+    // クリップボードキャンセル
+    $('#clipboardCancelBtn').on('click', function() {
+        clearClipboardImage();
+        $('#clipboardUploadForm')[0].reset();
+        $('#clipboardUploadSection').slideUp(300);
+        $('#clipboardToggleIcon').removeClass('bi-chevron-up').addClass('bi-chevron-down');
+    });
 
     // 画像プレビュー
     $('#image').on('change', function(e) {
@@ -42,6 +92,11 @@ $(document).ready(function() {
         e.preventDefault();
 
         const formData = new FormData(this);
+
+        // チェックボックスの値を明示的に設定（チェックされていない場合も '0' として送信）
+        formData.set('is_sensitive', $('#isSensitive').is(':checked') ? '1' : '0');
+        formData.set('is_visible', $('#isVisible').is(':checked') ? '1' : '0');
+
         const $submitBtn = $(this).find('button[type="submit"]');
         const originalText = $submitBtn.html();
 
@@ -1153,5 +1208,218 @@ function bulkUpdateVisibility(visibility) {
             $unpublishBtn.prop('disabled', false).html(originalUnpublishText);
             updateBulkActionButtons();
         }
+    });
+}
+
+/**
+ * クリップボードから画像を貼り付け
+ */
+function handleClipboardPaste(event) {
+    const items = event.clipboardData.items;
+
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+
+        // 画像アイテムのみを処理
+        if (item.type.indexOf('image') !== -1) {
+            const blob = item.getAsFile();
+
+            // BlobをFileオブジェクトに変換
+            const format = $('#clipboardFormat').val() || 'webp';
+            const extension = format === 'jpg' ? 'jpg' : format;
+            const timestamp = Date.now();
+            const filename = `clipboard_${timestamp}.${extension}`;
+
+            clipboardImageFile = new File([blob], filename, {
+                type: blob.type,
+                lastModified: Date.now()
+            });
+
+            // プレビュー表示
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                $('#clipboardPreviewImg').attr('src', e.target.result);
+                $('#clipboardPasteHint').hide();
+                $('#clipboardPreview').show();
+                $('#clipboardUploadBtn').prop('disabled', false);
+            };
+            reader.readAsDataURL(blob);
+
+            $('#clipboardError').addClass('d-none');
+            break;
+        }
+    }
+
+    // 画像以外の場合はエラー表示
+    if (!clipboardImageFile) {
+        $('#clipboardError').text('画像が見つかりません。画像をコピーしてから貼り付けてください。').removeClass('d-none');
+    }
+}
+
+/**
+ * クリップボード画像をクリア
+ */
+function clearClipboardImage() {
+    clipboardImageFile = null;
+    $('#clipboardPreviewImg').attr('src', '');
+    $('#clipboardPreview').hide();
+    $('#clipboardPasteHint').show();
+    $('#clipboardUploadBtn').prop('disabled', true);
+    $('#clipboardError').addClass('d-none');
+    $('#clipboardAlert').addClass('d-none');
+}
+
+/**
+ * クリップボード画像をアップロード
+ */
+function uploadClipboardImage() {
+    if (!clipboardImageFile) {
+        $('#clipboardError').text('画像が選択されていません').removeClass('d-none');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('csrf_token', $('input[name="csrf_token"]').val());
+    formData.append('title', $('#clipboardTitle').val());
+    formData.append('tags', $('#clipboardTags').val());
+    formData.append('detail', $('#clipboardDetail').val());
+    formData.append('is_sensitive', $('#clipboardIsSensitive').is(':checked') ? '1' : '0');
+    formData.append('is_visible', $('#clipboardIsVisible').is(':checked') ? '1' : '0');
+
+    // 選択された形式に応じてファイルを処理
+    const format = $('#clipboardFormat').val();
+
+    // 画像を選択された形式に変換
+    convertImageFormat(clipboardImageFile, format).then(function(convertedFile) {
+        formData.append('image', convertedFile);
+
+        const $submitBtn = $('#clipboardUploadBtn');
+        const originalText = $submitBtn.html();
+
+        // ボタンを無効化
+        $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>アップロード中...');
+        $('#clipboardAlert').addClass('d-none');
+        $('#clipboardError').addClass('d-none');
+
+        $.ajax({
+            url: '/' + ADMIN_PATH + '/api/upload.php',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    // 成功メッセージ
+                    $('#clipboardAlert').text(response.message || '投稿が作成されました').removeClass('d-none');
+
+                    // フォームとプレビューをリセット
+                    $('#clipboardUploadForm')[0].reset();
+                    clearClipboardImage();
+
+                    // 投稿一覧を再読み込み
+                    loadPosts();
+
+                    // 3秒後にメッセージを消す
+                    setTimeout(function() {
+                        $('#clipboardAlert').addClass('d-none');
+                    }, 3000);
+
+                    // 成功メッセージをトップにも表示
+                    $('#uploadAlert').text(response.message || '投稿が作成されました').removeClass('d-none');
+                    setTimeout(function() {
+                        $('#uploadAlert').addClass('d-none');
+                    }, 3000);
+                } else {
+                    $('#clipboardError').text(response.error || 'アップロードに失敗しました').removeClass('d-none');
+                }
+            },
+            error: function(xhr) {
+                let errorMsg = 'サーバーエラーが発生しました';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMsg = xhr.responseJSON.error;
+                }
+                $('#clipboardError').text(errorMsg).removeClass('d-none');
+            },
+            complete: function() {
+                // ボタンを有効化
+                $submitBtn.prop('disabled', false).html(originalText);
+            }
+        });
+    }).catch(function(error) {
+        $('#clipboardError').text('画像の変換に失敗しました: ' + error.message).removeClass('d-none');
+    });
+}
+
+/**
+ * 画像を指定された形式に変換
+ */
+function convertImageFormat(file, targetFormat) {
+    return new Promise(function(resolve, reject) {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const img = new Image();
+
+            img.onload = function() {
+                // Canvasで画像を描画
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+
+                // 指定された形式で変換
+                let mimeType, quality;
+                let extension;
+
+                switch (targetFormat) {
+                    case 'png':
+                        mimeType = 'image/png';
+                        quality = 1.0;
+                        extension = 'png';
+                        break;
+                    case 'jpg':
+                    case 'jpeg':
+                        mimeType = 'image/jpeg';
+                        quality = 0.92;
+                        extension = 'jpg';
+                        break;
+                    case 'webp':
+                    default:
+                        mimeType = 'image/webp';
+                        quality = 0.92;
+                        extension = 'webp';
+                        break;
+                }
+
+                // Canvasから Blob を生成
+                canvas.toBlob(function(blob) {
+                    if (blob) {
+                        const timestamp = Date.now();
+                        const filename = `clipboard_${timestamp}.${extension}`;
+                        const convertedFile = new File([blob], filename, {
+                            type: mimeType,
+                            lastModified: Date.now()
+                        });
+                        resolve(convertedFile);
+                    } else {
+                        reject(new Error('画像の変換に失敗しました'));
+                    }
+                }, mimeType, quality);
+            };
+
+            img.onerror = function() {
+                reject(new Error('画像の読み込みに失敗しました'));
+            };
+
+            img.src = e.target.result;
+        };
+
+        reader.onerror = function() {
+            reject(new Error('ファイルの読み込みに失敗しました'));
+        };
+
+        reader.readAsDataURL(file);
     });
 }
