@@ -362,3 +362,42 @@ body {
         width: 100%;
     }
 }
+
+/* クリップボードペーストエリア */
+.clipboard-paste-area {
+    border: 3px dashed #8B5AFA;
+    border-radius: 10px;
+    padding: 30px;
+    min-height: 200px;
+    background: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.clipboard-paste-area:hover {
+    background: #e9ecef;
+    border-color: #764ba2;
+}
+
+.clipboard-paste-area:focus {
+    outline: none;
+    border-color: #667eea;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(139, 90, 250, 0.2);
+}
+
+#clipboardPreview {
+    width: 100%;
+}
+
+#clipboardPreviewImg {
+    display: block;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+#clearClipboardImage {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}

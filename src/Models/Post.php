@@ -134,6 +134,7 @@ class Post
      * @param string|null $imagePath 画像パス
      * @param string|null $thumbPath サムネイルパス
      * @param int $isSensitive センシティブ画像フラグ（0: 通常, 1: NSFW）
+     * @param int $isVisible 表示フラグ（0: 非表示, 1: 表示）デフォルト1
      * @return int 作成された投稿のID
      */
     public function create(
@@ -142,18 +143,19 @@ class Post
         ?string $detail = null,
         ?string $imagePath = null,
         ?string $thumbPath = null,
-        int $isSensitive = 0
+        int $isSensitive = 0,
+        int $isVisible = 1
     ): int {
         // タグをカンマ区切りから配列に変換し、前後のスペース/タブを除去
         $tagArray = $this->tagsToArray($tags);
         $tagIds = $this->getOrCreateTagIds($tagArray);
 
         // tag1～tag10を含むINSERT文を構築
-        $sql = "INSERT INTO posts (title, detail, image_path, thumb_path, is_sensitive, tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO posts (title, detail, image_path, thumb_path, is_sensitive, is_visible, tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
-            $title, $detail, $imagePath, $thumbPath, $isSensitive,
+            $title, $detail, $imagePath, $thumbPath, $isSensitive, $isVisible,
             $tagIds[0], $tagIds[1], $tagIds[2], $tagIds[3], $tagIds[4],
             $tagIds[5], $tagIds[6], $tagIds[7], $tagIds[8], $tagIds[9]
         ]);

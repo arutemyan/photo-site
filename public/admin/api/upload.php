@@ -74,6 +74,7 @@ try {
     $tags = isset($_POST['tags']) ? trim($_POST['tags']) : null;
     $detail = isset($_POST['detail']) ? trim($_POST['detail']) : null;
     $isSensitive = isset($_POST['is_sensitive']) ? (int)$_POST['is_sensitive'] : 0;
+    $isVisible = isset($_POST['is_visible']) ? (int)$_POST['is_visible'] : 1;
 
     // ユニークなファイル名を生成
     $uniqueName = $imageUploader->generateUniqueFilename();
@@ -101,7 +102,8 @@ try {
         $detail,
         $uploadResult['image_path'],
         $uploadResult['thumb_path'],
-        $isSensitive
+        $isSensitive,
+        $isVisible
     );
 
     // キャッシュを無効化
