@@ -12,8 +12,10 @@ composer.lock
 # アップロードファイル
 /public/uploads/images/*
 /public/uploads/thumbs/*
+/public/uploads/theme/*
 !public/uploads/images/.gitkeep
 !public/uploads/thumbs/.gitkeep
+!public/uploads/theme/.gitkeep
 
 # キャッシュ（実行時に自動作成されるため全体を除外）
 /cache/

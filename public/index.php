@@ -276,49 +276,7 @@ try {
 
     <!-- テーマカラー -->
     <style>
-        :root {
-            --primary-color: <?= escapeHtml($theme['primary_color'] ?? '#8B5AFA') ?>;
-            --secondary-color: <?= escapeHtml($theme['secondary_color'] ?? '#667eea') ?>;
-            --accent-color: <?= escapeHtml($theme['accent_color'] ?? '#FFD700') ?>;
-            --background-color: <?= escapeHtml($theme['background_color'] ?? '#1a1a1a') ?>;
-            --text-color: <?= escapeHtml($theme['text_color'] ?? '#ffffff') ?>;
-            --heading-color: <?= escapeHtml($theme['heading_color'] ?? '#ffffff') ?>;
-            --footer-bg-color: <?= escapeHtml($theme['footer_bg_color'] ?? '#2a2a2a') ?>;
-            --footer-text-color: <?= escapeHtml($theme['footer_text_color'] ?? '#cccccc') ?>;
-            --card-border-color: <?= escapeHtml($theme['card_border_color'] ?? '#333333') ?>;
-            --card-bg-color: <?= escapeHtml($theme['card_bg_color'] ?? '#252525') ?>;
-            --card-shadow-opacity: <?= escapeHtml($theme['card_shadow_opacity'] ?? '0.3') ?>;
-            --link-color: <?= escapeHtml($theme['link_color'] ?? '#8B5AFA') ?>;
-            --link-hover-color: <?= escapeHtml($theme['link_hover_color'] ?? '#a177ff') ?>;
-            --tag-bg-color: <?= escapeHtml($theme['tag_bg_color'] ?? '#8B5AFA') ?>;
-            --tag-text-color: <?= escapeHtml($theme['tag_text_color'] ?? '#ffffff') ?>;
-            --filter-active-bg-color: <?= escapeHtml($theme['filter_active_bg_color'] ?? '#8B5AFA') ?>;
-            --filter-active-text-color: <?= escapeHtml($theme['filter_active_text_color'] ?? '#ffffff') ?>;
-        }
-
-        body {
-            background-color: var(--background-color);
-        }
-
-        header {
-            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
-            <?php if (!empty($theme['header_image'])): ?>
-            background-image: url('/<?= escapeHtml($theme['header_image']) ?>');
-            background-size: cover;
-            background-position: center;
-            background-blend-mode: overlay;
-            <?php endif; ?>
-        }
-
-        .btn-primary,
-        .btn-detail {
-            background: var(--primary-color);
-        }
-
-        .btn-primary:hover,
-        .btn-detail:hover {
-            background: var(--secondary-color);
-        }
+        <?php require_once(__DIR__."/block/style.php") ?>        
     </style>
 </head>
 <body data-age-verification-minutes="<?= $ageVerificationMinutes ?>" data-nsfw-config-version="<?= $nsfwConfigVersion ?>">
@@ -361,16 +319,7 @@ try {
         </div>
     </div>
 
-    <!-- ヘッダー -->
-    <header>
-        <?php if (!empty($theme['logo_image'])): ?>
-            <img src="/<?= escapeHtml($theme['logo_image']) ?>" alt="<?= escapeHtml($theme['site_title'] ?? 'ロゴ') ?>" style="max-height: 80px; margin-bottom: 10px;">
-        <?php endif; ?>
-        <h1><?= !empty($theme['header_html']) ? escapeHtml($theme['header_html']) : escapeHtml($theme['site_title'] ?? 'イラストポートフォリオ') ?></h1>
-        <?php if (!empty($theme['site_subtitle'])): ?>
-            <p><?= escapeHtml($theme['site_subtitle']) ?></p>
-        <?php endif; ?>
-    </header>
+    <?php require_once(__DIR__."/block/header.php") ?>
 
     <!-- メインコンテンツ -->
     <div class="container">
@@ -507,12 +456,7 @@ try {
             </div>
         </div>
     </div>
-
-    <!-- フッター -->
-    <footer>
-        <p><?= !empty($theme['footer_html']) ? nl2br(escapeHtml($theme['footer_html'])) : '&copy; ' . date('Y') . ' イラストポートフォリオ. All rights reserved.' ?></p>
-    </footer>
-
+    <?php require_once(__dir__."/block/footer.php") ?>
     <!-- JavaScript -->
     <script src="/res/js/main.js?v=<?= $nsfwConfigVersion ?>"></script>
 </body>

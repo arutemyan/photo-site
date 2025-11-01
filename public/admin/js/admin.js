@@ -296,6 +296,11 @@ $(document).ready(function() {
     });
 
 
+    // 一覧に戻るボタンのプレビュー更新
+    $('#backButtonText, #backButtonBgColor, #backButtonTextColor').on('input change', function() {
+        updateBackButtonPreview();
+    });
+
     // リアルタイムプレビュー
     $('#siteTitle, #siteSubtitle, #headerText, #footerText, #primaryColor, #secondaryColor, #accentColor, #backgroundColor, #textColor, #headingColor, #footerBgColor, #footerTextColor, #cardBorderColor, #cardBgColor, #cardShadowOpacity, #linkColor, #linkHoverColor, #tagBgColor, #tagTextColor, #filterActiveBgColor, #filterActiveTextColor').on('input change', function() {
         updateThemePreview();
@@ -680,6 +685,11 @@ function loadThemeSettings() {
                 $('#headerText').val(theme.header_html || '');
                 $('#footerText').val(theme.footer_html || '');
 
+                // ナビゲーション設定（一覧に戻るボタン）
+                $('#backButtonText').val(theme.back_button_text || '一覧に戻る');
+                $('#backButtonBgColor').val(theme.back_button_bg_color || '#8B5AFA');
+                $('#backButtonTextColor').val(theme.back_button_text_color || '#FFFFFF');
+
                 // 画像プレビュー
                 if (theme.logo_image) {
                     $('#logoPreviewImg').attr('src', '/' + theme.logo_image).show();
@@ -690,6 +700,7 @@ function loadThemeSettings() {
 
                 // プレビューを更新
                 updateThemePreview();
+                updateBackButtonPreview();
             }
         },
         error: function() {
@@ -1244,6 +1255,22 @@ function saveSettings() {
                 .removeClass('d-none');
         }
     });
+}
+
+/**
+ * 一覧に戻るボタンのプレビューを更新
+ */
+function updateBackButtonPreview() {
+    const text = $('#backButtonText').val() || '一覧に戻る';
+    const bgColor = $('#backButtonBgColor').val() || '#8B5AFA';
+    const textColor = $('#backButtonTextColor').val() || '#FFFFFF';
+
+    $('#backButtonPreview')
+        .text(text)
+        .css({
+            'background-color': bgColor,
+            'color': textColor
+        });
 }
 
 /**

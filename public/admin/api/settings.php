@@ -54,6 +54,8 @@ try {
             $settingModel->set('twitter_site', trim($_POST['twitter_site']));
         }
 
+        // 注意: back_button設定はテーマ設定に移動しました
+
         echo json_encode(['success' => true, 'message' => '設定が保存されました']);
     }
 

@@ -144,6 +144,22 @@ try {
         $data['filter_active_text_color'] = $_POST['filter_active_text_color'];
     }
 
+    // ナビゲーション設定（一覧に戻るボタン）
+    if (isset($_POST['back_button_text'])) {
+        if (mb_strlen($_POST['back_button_text']) > 20) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'ボタンテキストは20文字以内で入力してください'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $data['back_button_text'] = $_POST['back_button_text'];
+    }
+    if (isset($_POST['back_button_bg_color'])) {
+        $data['back_button_bg_color'] = $_POST['back_button_bg_color'];
+    }
+    if (isset($_POST['back_button_text_color'])) {
+        $data['back_button_text_color'] = $_POST['back_button_text_color'];
+    }
+
     // カスタムHTML（XSS対策: HTMLタグを許可しない）
     // セキュリティ上の理由から、カスタムHTMLは無効化されています
     // 必要な場合は、HTMLPurifierなどのホワイトリスト型サニタイザーを実装してください

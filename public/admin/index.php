@@ -429,8 +429,18 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                                 <form id="themeForm">
                                     <input type="hidden" name="csrf_token" value="<?= escapeHtml($csrfToken) ?>">
 
-                                    <!-- ========== ヘッダー設定 ========== -->
-                                    <h5 class="mb-3 section-title"><i class="bi bi-layout-text-window me-2"></i>ヘッダー設定</h5>
+                                    <!-- アコーディオン形式のテーマ設定 -->
+                                    <div class="accordion" id="themeAccordion">
+
+                                        <!-- ========== ヘッダー設定 ========== -->
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="headingHeader">
+                                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseHeader" aria-expanded="true" aria-controls="collapseHeader">
+                                                    <i class="bi bi-layout-text-window me-2"></i>ヘッダー設定
+                                                </button>
+                                            </h2>
+                                            <div id="collapseHeader" class="accordion-collapse collapse show" aria-labelledby="headingHeader" data-bs-parent="#themeAccordion">
+                                                <div class="accordion-body">
 
                                     <!-- サイト基本情報 -->
                                     <div class="mb-3">
@@ -501,10 +511,19 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                                         <div class="form-text">空欄の場合は上記のサイトタイトルが自動表示されます</div>
                                     </div>
 
-                                    <hr class="my-4">
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                    <!-- ========== コンテンツ設定 ========== -->
-                                    <h5 class="mb-3 section-title"><i class="bi bi-file-earmark-text me-2"></i>コンテンツ設定</h5>
+                                        <!-- ========== コンテンツ設定 ========== -->
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="headingContent">
+                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseContent" aria-expanded="false" aria-controls="collapseContent">
+                                                    <i class="bi bi-file-earmark-text me-2"></i>コンテンツ設定
+                                                </button>
+                                            </h2>
+                                            <div id="collapseContent" class="accordion-collapse collapse" aria-labelledby="headingContent" data-bs-parent="#themeAccordion">
+                                                <div class="accordion-body">
 
                                     <!-- 背景・テキスト色 -->
                                     <div class="color-grid mb-3">
@@ -590,10 +609,62 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                                         </div>
                                     </div>
 
-                                    <hr class="my-4">
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                    <!-- ========== フッター設定 ========== -->
-                                    <h5 class="mb-3 section-title"><i class="bi bi-layout-text-window-reverse me-2"></i>フッター設定</h5>
+                                        <!-- ========== ナビゲーション設定 ========== -->
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="headingThemeNavigation">
+                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThemeNavigation" aria-expanded="false" aria-controls="collapseThemeNavigation">
+                                                    <i class="bi bi-arrow-left-circle me-2"></i>ナビゲーション設定
+                                                </button>
+                                            </h2>
+                                            <div id="collapseThemeNavigation" class="accordion-collapse collapse" aria-labelledby="headingThemeNavigation" data-bs-parent="#themeAccordion">
+                                                <div class="accordion-body">
+                                                    <p class="text-muted small mb-3">
+                                                        詳細ページの「一覧に戻る」ボタンのデザインをカスタマイズできます
+                                                    </p>
+
+                                                    <div class="mb-3">
+                                                        <label for="backButtonText" class="form-label">ボタンテキスト</label>
+                                                        <input type="text" class="form-control" id="backButtonText" name="back_button_text" placeholder="一覧に戻る" maxlength="20">
+                                                        <div class="form-text">ボタンに表示するテキスト（20文字以内）</div>
+                                                    </div>
+
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-6">
+                                                            <label for="backButtonBgColor" class="form-label">背景色</label>
+                                                            <input type="color" class="form-control form-control-color" id="backButtonBgColor" name="back_button_bg_color" value="#8B5AFA">
+                                                            <div class="form-text">ボタンの背景色</div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label for="backButtonTextColor" class="form-label">テキスト色</label>
+                                                            <input type="color" class="form-control form-control-color" id="backButtonTextColor" name="back_button_text_color" value="#FFFFFF">
+                                                            <div class="form-text">ボタンのテキスト色</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- プレビュー -->
+                                                    <div class="mt-3 p-3 bg-light rounded">
+                                                        <label class="form-label small text-muted">プレビュー:</label>
+                                                        <div id="backButtonPreview" class="header-back-button" style="display: inline-block; background-color: #8B5AFA; color: #FFFFFF; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+                                                            一覧に戻る
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ========== フッター設定 ========== -->
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="headingFooter">
+                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFooter" aria-expanded="false" aria-controls="collapseFooter">
+                                                    <i class="bi bi-layout-text-window-reverse me-2"></i>フッター設定
+                                                </button>
+                                            </h2>
+                                            <div id="collapseFooter" class="accordion-collapse collapse" aria-labelledby="headingFooter" data-bs-parent="#themeAccordion">
+                                                <div class="accordion-body">
 
                                     <!-- フッター色 -->
                                     <div class="color-grid mb-3">
@@ -614,9 +685,17 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                                         <div class="form-text">フッターに表示されるテキスト（HTMLタグも使用可）</div>
                                     </div>
 
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-save me-2"></i>保存
-                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                    <div class="mt-4">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-save me-2"></i>すべて保存
+                                        </button>
+                                    </div>
                                 </form>
                             </div>
                         </div>
@@ -668,7 +747,7 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                     <div class="col-lg-8">
                         <div class="card">
                             <div class="card-header">
-                                <i class="bi bi-gear-fill me-2"></i>表示設定
+                                <i class="bi bi-gear-fill me-2"></i>サイト設定
                             </div>
                             <div class="card-body">
                                 <div id="settingsAlert" class="alert d-none" role="alert"></div>
@@ -676,74 +755,97 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                                 <form id="settingsForm">
                                     <input type="hidden" name="csrf_token" value="<?= escapeHtml($csrfToken) ?>">
 
-                                    <!-- 表示設定 -->
-                                    <h5 class="mb-3"><i class="bi bi-eye me-2"></i>表示設定</h5>
-                                    <div class="mb-4">
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input" type="checkbox" id="showViewCount" checked>
-                                            <label class="form-check-label" for="showViewCount">
-                                                <strong>閲覧回数を表示する</strong>
-                                            </label>
-                                        </div>
-                                        <div class="form-text mt-2">
-                                            オフにすると、すべての投稿で閲覧回数が非表示になります
-                                        </div>
-                                    </div>
+                                    <!-- アコーディオン形式の設定 -->
+                                    <div class="accordion" id="settingsAccordion">
 
-                                    <hr class="my-4">
-
-                                    <!-- OGP/SNSシェア設定 -->
-                                    <h5 class="mb-3"><i class="bi bi-share me-2"></i>OGP/SNSシェア設定</h5>
-                                    <p class="text-muted small mb-3">
-                                        TwitterやFacebookなどのSNSでシェアされた際に表示される情報を設定します
-                                    </p>
-
-                                    <div class="mb-3">
-                                        <label for="ogpTitle" class="form-label">OGPタイトル</label>
-                                        <input type="text" class="form-control" id="ogpTitle" name="ogp_title" placeholder="空欄の場合はサイトタイトルを使用">
-                                        <div class="form-text">SNSでシェアされた際のタイトル（60文字以内推奨）</div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="ogpDescription" class="form-label">OGP説明文</label>
-                                        <textarea class="form-control" id="ogpDescription" name="ogp_description" rows="3" placeholder="空欄の場合はサイト説明を使用"></textarea>
-                                        <div class="form-text">SNSでシェアされた際の説明文（120文字以内推奨）</div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">OGP画像</label>
-                                        <div id="ogpImagePreview" class="mb-2">
-                                            <img src="" alt="OGP画像プレビュー" style="max-width: 300px; display: none;" id="ogpImagePreviewImg">
-                                        </div>
-                                        <input type="file" class="form-control" id="ogpImageFile" accept="image/*">
-                                        <button type="button" class="btn btn-sm btn-primary mt-2" id="uploadOgpImage">
-                                            <i class="bi bi-upload me-1"></i>アップロード
-                                        </button>
-                                        <div class="form-text">推奨サイズ: 1200x630px（横長）。Twitterでは2:1の比率が推奨されます</div>
-                                    </div>
-
-                                    <div class="row mb-3">
-                                        <div class="col-md-6">
-                                            <label for="twitterCard" class="form-label">Twitter Cardタイプ</label>
-                                            <select class="form-select" id="twitterCard" name="twitter_card">
-                                                <option value="summary">summary（正方形）</option>
-                                                <option value="summary_large_image" selected>summary_large_image（大きな画像）</option>
-                                            </select>
-                                            <div class="form-text">Twitterでの表示タイプ</div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="twitterSite" class="form-label">Twitterアカウント</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">@</span>
-                                                <input type="text" class="form-control" id="twitterSite" name="twitter_site" placeholder="username">
+                                        <!-- コンテンツ表示設定 -->
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="headingDisplay">
+                                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDisplay" aria-expanded="true" aria-controls="collapseDisplay">
+                                                    <i class="bi bi-eye me-2"></i>コンテンツ表示設定
+                                                </button>
+                                            </h2>
+                                            <div id="collapseDisplay" class="accordion-collapse collapse show" aria-labelledby="headingDisplay" data-bs-parent="#settingsAccordion">
+                                                <div class="accordion-body">
+                                                    <div class="form-check form-switch mb-3">
+                                                        <input class="form-check-input" type="checkbox" id="showViewCount" checked>
+                                                        <label class="form-check-label" for="showViewCount">
+                                                            <strong>閲覧回数を表示する</strong>
+                                                        </label>
+                                                        <div class="form-text mt-2">
+                                                            オフにすると、すべての投稿で閲覧回数が非表示になります
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div class="form-text">@なしで入力</div>
                                         </div>
+
+                                        <!-- OGP/SNSシェア設定 -->
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="headingOGP">
+                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOGP" aria-expanded="false" aria-controls="collapseOGP">
+                                                    <i class="bi bi-share me-2"></i>OGP/SNSシェア設定
+                                                </button>
+                                            </h2>
+                                            <div id="collapseOGP" class="accordion-collapse collapse" aria-labelledby="headingOGP" data-bs-parent="#settingsAccordion">
+                                                <div class="accordion-body">
+                                                    <p class="text-muted small mb-3">
+                                                        TwitterやFacebookなどのSNSでシェアされた際に表示される情報を設定します
+                                                    </p>
+
+                                                    <div class="mb-3">
+                                                        <label for="ogpTitle" class="form-label">OGPタイトル</label>
+                                                        <input type="text" class="form-control" id="ogpTitle" name="ogp_title" placeholder="空欄の場合はサイトタイトルを使用">
+                                                        <div class="form-text">SNSでシェアされた際のタイトル（60文字以内推奨）</div>
+                                                    </div>
+
+                                                    <div class="mb-3">
+                                                        <label for="ogpDescription" class="form-label">OGP説明文</label>
+                                                        <textarea class="form-control" id="ogpDescription" name="ogp_description" rows="3" placeholder="空欄の場合はサイト説明を使用"></textarea>
+                                                        <div class="form-text">SNSでシェアされた際の説明文（120文字以内推奨）</div>
+                                                    </div>
+
+                                                    <div class="mb-3">
+                                                        <label class="form-label">OGP画像</label>
+                                                        <div id="ogpImagePreview" class="mb-2">
+                                                            <img src="" alt="OGP画像プレビュー" style="max-width: 300px; display: none;" id="ogpImagePreviewImg">
+                                                        </div>
+                                                        <input type="file" class="form-control" id="ogpImageFile" accept="image/*">
+                                                        <button type="button" class="btn btn-sm btn-primary mt-2" id="uploadOgpImage">
+                                                            <i class="bi bi-upload me-1"></i>アップロード
+                                                        </button>
+                                                        <div class="form-text">推奨サイズ: 1200x630px（横長）。Twitterでは2:1の比率が推奨されます</div>
+                                                    </div>
+
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-6">
+                                                            <label for="twitterCard" class="form-label">Twitter Cardタイプ</label>
+                                                            <select class="form-select" id="twitterCard" name="twitter_card">
+                                                                <option value="summary">summary（正方形）</option>
+                                                                <option value="summary_large_image" selected>summary_large_image（大きな画像）</option>
+                                                            </select>
+                                                            <div class="form-text">Twitterでの表示タイプ</div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label for="twitterSite" class="form-label">Twitterアカウント</label>
+                                                            <div class="input-group">
+                                                                <span class="input-group-text">@</span>
+                                                                <input type="text" class="form-control" id="twitterSite" name="twitter_site" placeholder="username">
+                                                            </div>
+                                                            <div class="form-text">@なしで入力</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                     </div>
 
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-save me-2"></i>保存
-                                    </button>
+                                    <div class="mt-4">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-save me-2"></i>すべて保存
+                                        </button>
+                                    </div>
                                 </form>
                             </div>
                         </div>
