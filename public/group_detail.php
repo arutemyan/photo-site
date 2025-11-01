@@ -143,19 +143,8 @@ try {
         </div>
     </div>
 
+    <?php define("ENABLE_BACK_BUTTON") ?>
     <?php require_once(__DIR__."/block/header.php") ?>
-
-    <?php
-    // 一覧に戻るボタンの設定
-    $backButtonText = $theme['back_button_text'] ?? '一覧に戻る';
-    $backButtonBgColor = $theme['back_button_bg_color'] ?? '#8B5AFA';
-    $backButtonTextColor = $theme['back_button_text_color'] ?? '#FFFFFF';
-    ?>
-    <a href="/index.php" class="back-link">
-        <div class="header-back-button" style="background-color: <?= escapeHtml($backButtonBgColor) ?>; color: <?= escapeHtml($backButtonTextColor) ?>;">
-            <?= escapeHtml($backButtonText) ?>
-        </div>
-    </a>
 
     <!-- メインコンテンツ -->
     <div class="container">

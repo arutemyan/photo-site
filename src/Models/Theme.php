@@ -54,6 +54,9 @@ class Theme
                 tag_text_color,
                 filter_active_bg_color,
                 filter_active_text_color,
+                back_button_text,
+                back_button_bg_color,
+                back_button_text_color,
                 updated_at
             FROM themes
             ORDER BY id DESC
@@ -87,6 +90,9 @@ class Theme
                 'tag_text_color' => '#ffffff',
                 'filter_active_bg_color' => '#8B5AFA',
                 'filter_active_text_color' => '#ffffff',
+                'back_button_text' => '一覧に戻る',
+                'back_button_bg_color' => '#8B5AFA',
+                'back_button_text_color' => '#FFFFFF',
                 'updated_at' => null
             ];
         }
@@ -113,7 +119,8 @@ class Theme
             'header_image', 'logo_image',
             'footer_bg_color', 'footer_text_color', 'card_border_color',
             'card_bg_color', 'card_shadow_opacity', 'link_color', 'link_hover_color',
-            'tag_bg_color', 'tag_text_color', 'filter_active_bg_color', 'filter_active_text_color'
+            'tag_bg_color', 'tag_text_color', 'filter_active_bg_color', 'filter_active_text_color',
+            'back_button_text', 'back_button_bg_color', 'back_button_text_color'
         ];
 
         foreach ($allowedFields as $field) {
