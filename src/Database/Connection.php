@@ -87,6 +87,9 @@ class Connection
 
                 // データベーススキーマを初期化
                 self::initializeSchema();
+
+                // マイグレーションを実行
+                self::runMigrations();
             } catch (PDOException $e) {
                 throw new PDOException('データベース接続エラー: ' . $e->getMessage());
             }
@@ -204,170 +207,30 @@ class Connection
         if ($result['count'] == 0) {
             $db->exec("INSERT INTO themes (header_html, footer_html) VALUES ('', '')");
         }
-
-        // マイグレーションを実行
-        self::runMigrations($db);
     }
 
     /**
      * マイグレーション実行
      */
-    private static function runMigrations(PDO $db): void
+    private static function runMigrations(): void
     {
-        // マイグレーション一覧（バージョン番号 => [名前, 関数]）
-        $migrations = [
-            1 => ['add_tag_columns', function($db) { self::migration_001_addTagColumns($db); }],
-            2 => ['add_updated_at_columns', function($db) { self::migration_002_addUpdatedAtColumns($db); }],
-        ];
-
-        // 実行済みマイグレーションを取得
-        $stmt = $db->query("SELECT version FROM migrations");
-        $executed = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-        // 未実行のマイグレーションを実行
-        foreach ($migrations as $version => $migration) {
-            if (!in_array($version, $executed)) {
-                [$name, $func] = $migration;
-
-                try {
-                    // マイグレーション実行
-                    $func($db);
-
-                    // 実行済みとして記録
-                    $stmt = $db->prepare("INSERT INTO migrations (version, name) VALUES (?, ?)");
-                    $stmt->execute([$version, $name]);
-
-                    error_log("Migration {$version} ({$name}) executed successfully");
-                } catch (\Exception $e) {
-                    error_log("Migration {$version} ({$name}) failed: " . $e->getMessage());
-                    throw $e;
-                }
-            }
+        try {
+            $runner = new MigrationRunner(self::$instance);
+            $runner->run();
+        } catch (\Exception $e) {
+            error_log("Migration execution failed: " . $e->getMessage());
+            // マイグレーションエラーは継続（既存の動作を維持）
         }
     }
 
     /**
-     * マイグレーション 001: タグを分割カラム（tag1～tag10）に移行
+     * マイグレーションランナーを取得
+     *
+     * @return MigrationRunner
      */
-    private static function migration_001_addTagColumns(PDO $db): void
+    public static function getMigrationRunner(): MigrationRunner
     {
-
-        // tag1～tag10カラムを追加（INTEGER型でタグIDを保存）
-        for ($i = 1; $i <= 10; $i++) {
-            $db->exec("ALTER TABLE posts ADD COLUMN tag{$i} INTEGER");
-        }
-
-        // tag1～tag10にインデックスを追加（整数なので高速）
-        for ($i = 1; $i <= 10; $i++) {
-            $db->exec("CREATE INDEX IF NOT EXISTS idx_posts_tag{$i} ON posts(tag{$i})");
-        }
-
-        // 既存のtagsカラムからtag1～tag10にデータを移行
-        $stmt = $db->query("SELECT id, tags FROM posts WHERE tags IS NOT NULL AND tags != ''");
-        $posts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        foreach ($posts as $post) {
-            $tags = $post['tags'];
-            if (empty($tags)) {
-                continue;
-            }
-
-            // カンマで分割し、前後のスペース/タブを除去
-            $tagArray = array_map('trim', explode(',', $tags));
-            $tagArray = array_filter($tagArray, function($tag) {
-                return !empty($tag);
-            });
-
-            // 最大10個まで
-            $tagArray = array_slice($tagArray, 0, 10);
-
-            // タグ名をタグIDに変換
-            $tagIds = [];
-            foreach ($tagArray as $tagName) {
-                // タグを取得または作成
-                $stmt = $db->prepare("INSERT OR IGNORE INTO tags (name) VALUES (?)");
-                $stmt->execute([$tagName]);
-
-                $stmt = $db->prepare("SELECT id FROM tags WHERE name = ?");
-                $stmt->execute([$tagName]);
-                $tag = $stmt->fetch();
-
-                if ($tag) {
-                    $tagIds[] = (int)$tag['id'];
-                }
-            }
-
-            // tag1～tag10にタグIDを保存
-            if (!empty($tagIds)) {
-                $updates = [];
-                $params = [];
-                for ($i = 0; $i < count($tagIds); $i++) {
-                    $colNum = $i + 1;
-                    $updates[] = "tag{$colNum} = ?";
-                    $params[] = $tagIds[$i];
-                }
-
-                $params[] = $post['id'];
-                $sql = "UPDATE posts SET " . implode(', ', $updates) . " WHERE id = ?";
-                $updateStmt = $db->prepare($sql);
-                $updateStmt->execute($params);
-            }
-        }
-
-        // 注意: tagsカラムは後方互換性のため残す（将来的に削除可能）
-        // $db->exec("ALTER TABLE posts DROP COLUMN tags"); // SQLiteではDROPがサポートされていない
-    }
-
-    /**
-     * マイグレーション 002: updated_atカラムの追加
-     */
-    private static function migration_002_addUpdatedAtColumns(PDO $db): void
-    {
-        // postsテーブルにupdated_atカラムを追加
-        // カラムが既に存在するかチェック
-        $stmt = $db->query("PRAGMA table_info(posts)");
-        $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $hasUpdatedAt = false;
-
-        foreach ($columns as $column) {
-            if ($column['name'] === 'updated_at') {
-                $hasUpdatedAt = true;
-                break;
-            }
-        }
-
-        if (!$hasUpdatedAt) {
-            // updated_atカラムを追加
-            $db->exec("ALTER TABLE posts ADD COLUMN updated_at DATETIME");
-
-            // 既存のレコードのupdated_atをcreated_atと同じ値に設定
-            $db->exec("UPDATE posts SET updated_at = created_at");
-        }
-
-        // group_postsテーブルにupdated_atカラムを追加（テーブルが存在する場合）
-        $stmt = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='group_posts'");
-        $groupPostsExists = $stmt->fetch();
-
-        if ($groupPostsExists) {
-            $stmt = $db->query("PRAGMA table_info(group_posts)");
-            $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $hasUpdatedAt = false;
-
-            foreach ($columns as $column) {
-                if ($column['name'] === 'updated_at') {
-                    $hasUpdatedAt = true;
-                    break;
-                }
-            }
-
-            if (!$hasUpdatedAt) {
-                // updated_atカラムを追加
-                $db->exec("ALTER TABLE group_posts ADD COLUMN updated_at DATETIME");
-
-                // 既存のレコードのupdated_atをcreated_atと同じ値に設定
-                $db->exec("UPDATE group_posts SET updated_at = created_at");
-            }
-        }
+        return new MigrationRunner(self::getInstance());
     }
 
     /**
@@ -378,10 +241,7 @@ class Connection
      */
     public static function isMigrationExecuted(int $version): bool
     {
-        $db = self::getInstance();
-        $stmt = $db->prepare("SELECT COUNT(*) FROM migrations WHERE version = ?");
-        $stmt->execute([$version]);
-        return $stmt->fetchColumn() > 0;
+        return self::getMigrationRunner()->isMigrationExecuted($version);
     }
 
     /**
@@ -391,9 +251,7 @@ class Connection
      */
     public static function getExecutedMigrations(): array
     {
-        $db = self::getInstance();
-        $stmt = $db->query("SELECT version, name, executed_at FROM migrations ORDER BY version ASC");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return self::getMigrationRunner()->getExecutedMigrationDetails();
     }
 
     /**

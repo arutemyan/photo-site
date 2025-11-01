@@ -35,13 +35,41 @@ try {
         // 既にセットアップ済み
 
         // マイグレーション実行リクエストの処理
-        if ($_SERVER['REQUEST_METHOD'] === 'GET' && empty($_GET['action']) === false && $_GET['action'] === 'migration') {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'migrate') {
             try {
-                // マイグレーションを強制実行（Connection::getInstance()で自動実行される）
-                $db = Connection::getInstance();
+                // CSRF検証
+                if (!isset($_POST['csrf_token']) || !isset($_SESSION['migrate_csrf_token'])) {
+                    throw new Exception('不正なリクエストです。');
+                }
 
-                $success = 'マイグレーションが完了しました。';
+                if (!hash_equals($_SESSION['migrate_csrf_token'], $_POST['csrf_token'])) {
+                    throw new Exception('不正なリクエストです。');
+                }
+
+                // マイグレーションを実行
+                $runner = Connection::getMigrationRunner();
+                $results = $runner->run();
+
+                if (empty($results)) {
+                    $success = 'すべてのマイグレーションは既に実行済みです。';
+                } else {
+                    $successCount = count(array_filter($results, fn($r) => $r['status'] === 'success'));
+                    $success = "{$successCount}件のマイグレーションが完了しました。";
+                }
+
                 unset($_SESSION['migrate_csrf_token']);
+
+                // マイグレーション完了後に自動削除オプションが有効な場合
+                if (isset($_POST['auto_delete']) && $_POST['auto_delete'] === '1') {
+                    $setupFile = __FILE__;
+                    if (@unlink($setupFile)) {
+                        // 削除成功、リダイレクト
+                        header('Location: ' . admin_url('login.php?setup_deleted=1&migration_completed=1'));
+                        exit;
+                    } else {
+                        $success .= ' セットアップファイルの自動削除に失敗しました。手動で削除してください。';
+                    }
+                }
 
             } catch (Exception $e) {
                 $error = $e->getMessage();
@@ -281,10 +309,23 @@ try {
                             </div>
                         </details>
 
-                        <form method="POST" style="margin-top: 15px;" onsubmit="return confirm('マイグレーションを再実行しますか？既に実行済みのマイグレーションはスキップされます。');">
+                        <form method="POST" style="margin-top: 15px;" id="migrationForm">
                             <input type="hidden" name="action" value="migrate">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['migrate_csrf_token']) ?>">
-                            <button type="submit" class="btn" style="background: #667eea;">マイグレーションを確認・実行</button>
+
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: flex; align-items: center; cursor: pointer; color: #666;">
+                                    <input type="checkbox" name="auto_delete" value="1" style="margin-right: 8px;">
+                                    <span>マイグレーション完了後に自動的にこのファイルを削除</span>
+                                </label>
+                                <div style="font-size: 0.85em; color: #999; margin-top: 5px; margin-left: 24px;">
+                                    ⚠️ 削除後は元に戻せません。必要に応じてバックアップを取ってください。
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn" style="background: #667eea;" onclick="return confirm('マイグレーションを実行しますか？\n既に実行済みのマイグレーションはスキップされます。');">
+                                マイグレーションを確認・実行
+                            </button>
                         </form>
                     <?php endif; ?>
                 </div>
