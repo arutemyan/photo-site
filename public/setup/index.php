@@ -33,29 +33,28 @@ try {
 
     if ($result['count'] > 0) {
         // 既にセットアップ済み
-            try {
-                // マイグレーションを実行
-                $runner = Connection::getMigrationRunner();
-                $results = $runner->run();
+        try {
+            // マイグレーションを実行
+            $runner = Connection::getMigrationRunner();
+            $results = $runner->run();
 
-                if (empty($results)) {
-                    $success = 'すべてのマイグレーションは既に実行済みです。';
-                } else {
-                    $successCount = count(array_filter($results, fn($r) => $r['status'] === 'success'));
-                    $success = "{$successCount}件のマイグレーションが完了しました。";
-                }
-                // マイグレーション完了後に自動削除
-                $setupFile = __FILE__;
-                if (@unlink($setupFile)) {
-                    // 削除成功、リダイレクト
-                    header('Location: ' . admin_url('login.php?setup_deleted=1&migration_completed=1'));
-                    exit;
-                } else {
-                    $success .= ' セットアップファイルの自動削除に失敗しました。手動で削除してください。';
-                }
-            } catch (Exception $e) {
-                $error = $e->getMessage();
+            if (empty($results)) {
+                $success = 'すべてのマイグレーションは既に実行済みです。';
+            } else {
+                $successCount = count(array_filter($results, fn($r) => $r['status'] === 'success'));
+                $success = "{$successCount}件のマイグレーションが完了しました。";
             }
+            // マイグレーション完了後に自動削除
+            $setupFile = __FILE__;
+            if (@unlink($setupFile)) {
+                // 削除成功、リダイレクト
+                header('Location: ' . admin_url('login.php?setup_deleted=1&migration_completed=1'));
+                exit;
+            } else {
+                $success .= ' セットアップファイルの自動削除に失敗しました。手動で削除してください。';
+            }
+        } catch (Exception $e) {
+            $error = $e->getMessage();
         }
 
         // 削除リクエストの処理
