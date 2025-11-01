@@ -5,16 +5,16 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../src/Security/SecurityUtil.php';
-require_once __DIR__ . '/../../src/Utils/path_helpers.php';
 
 use App\Security\CsrfProtection;
+use App\Utils\PathHelper;
 
 // セッション開始
 initSecureSession();
 
 // 認証チェック
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header('Location: ' . admin_url('login.php'));
+    header('Location: ' . PathHelper::getAdminUrl('login.php'));
     exit;
 }
 
@@ -36,7 +36,7 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
     <!-- ナビゲーションバー -->
     <nav class="navbar navbar-expand-lg navbar-dark mb-4">
         <div class="container-fluid">
-            <a class="navbar-brand" href="<?= admin_url('index.php') ?>">
+            <a class="navbar-brand" href="<?= PathHelper::getAdminUrl('index.php') ?>">
                 <i class="bi bi-palette-fill me-2"></i>管理ダッシュボード
             </a>
             <div class="navbar-nav ms-auto">
@@ -46,7 +46,7 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                 <span class="nav-link">
                     <i class="bi bi-person-circle me-1"></i><?= escapeHtml($username) ?>
                 </span>
-                <form method="POST" action="<?= admin_url('logout.php') ?>" class="d-inline">
+                <form method="POST" action="<?= PathHelper::getAdminUrl('logout.php') ?>" class="d-inline">
                     <input type="hidden" name="csrf_token" value="<?= escapeHtml($csrfToken) ?>">
                     <button type="submit" class="btn btn-link nav-link text-light" style="text-decoration: none;">
                         <i class="bi bi-box-arrow-right me-1"></i>ログアウト
@@ -676,6 +676,8 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                                 <form id="settingsForm">
                                     <input type="hidden" name="csrf_token" value="<?= escapeHtml($csrfToken) ?>">
 
+                                    <!-- 表示設定 -->
+                                    <h5 class="mb-3"><i class="bi bi-eye me-2"></i>表示設定</h5>
                                     <div class="mb-4">
                                         <div class="form-check form-switch">
                                             <input class="form-check-input" type="checkbox" id="showViewCount" checked>
@@ -685,6 +687,57 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                                         </div>
                                         <div class="form-text mt-2">
                                             オフにすると、すべての投稿で閲覧回数が非表示になります
+                                        </div>
+                                    </div>
+
+                                    <hr class="my-4">
+
+                                    <!-- OGP/SNSシェア設定 -->
+                                    <h5 class="mb-3"><i class="bi bi-share me-2"></i>OGP/SNSシェア設定</h5>
+                                    <p class="text-muted small mb-3">
+                                        TwitterやFacebookなどのSNSでシェアされた際に表示される情報を設定します
+                                    </p>
+
+                                    <div class="mb-3">
+                                        <label for="ogpTitle" class="form-label">OGPタイトル</label>
+                                        <input type="text" class="form-control" id="ogpTitle" name="ogp_title" placeholder="空欄の場合はサイトタイトルを使用">
+                                        <div class="form-text">SNSでシェアされた際のタイトル（60文字以内推奨）</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="ogpDescription" class="form-label">OGP説明文</label>
+                                        <textarea class="form-control" id="ogpDescription" name="ogp_description" rows="3" placeholder="空欄の場合はサイト説明を使用"></textarea>
+                                        <div class="form-text">SNSでシェアされた際の説明文（120文字以内推奨）</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">OGP画像</label>
+                                        <div id="ogpImagePreview" class="mb-2">
+                                            <img src="" alt="OGP画像プレビュー" style="max-width: 300px; display: none;" id="ogpImagePreviewImg">
+                                        </div>
+                                        <input type="file" class="form-control" id="ogpImageFile" accept="image/*">
+                                        <button type="button" class="btn btn-sm btn-primary mt-2" id="uploadOgpImage">
+                                            <i class="bi bi-upload me-1"></i>アップロード
+                                        </button>
+                                        <div class="form-text">推奨サイズ: 1200x630px（横長）。Twitterでは2:1の比率が推奨されます</div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="twitterCard" class="form-label">Twitter Cardタイプ</label>
+                                            <select class="form-select" id="twitterCard" name="twitter_card">
+                                                <option value="summary">summary（正方形）</option>
+                                                <option value="summary_large_image" selected>summary_large_image（大きな画像）</option>
+                                            </select>
+                                            <div class="form-text">Twitterでの表示タイプ</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="twitterSite" class="form-label">Twitterアカウント</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">@</span>
+                                                <input type="text" class="form-control" id="twitterSite" name="twitter_site" placeholder="username">
+                                            </div>
+                                            <div class="form-text">@なしで入力</div>
                                         </div>
                                     </div>
 
@@ -813,9 +866,9 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script>
         // 管理画面パスをJavaScriptで使用可能にする
-        const ADMIN_PATH = '<?= admin_path() ?>';
+        const ADMIN_PATH = '<?= PathHelper::getAdminPath() ?>';
     </script>
-    <script src="<?= admin_url('js/admin.js') ?>"></script>
-    <script src="<?= admin_url('js/sns-share.js') ?>"></script>
+    <script src="<?= PathHelper::getAdminUrl('js/admin.js') ?>"></script>
+    <script src="<?= PathHelper::getAdminUrl('js/sns-share.js') ?>"></script>
 </body>
 </html>

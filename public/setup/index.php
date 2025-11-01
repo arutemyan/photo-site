@@ -12,9 +12,9 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../src/Security/SecurityUtil.php';
-require_once __DIR__ . '/../../src/Utils/path_helpers.php';
 
 use App\Database\Connection;
+use App\Utils\PathHelper;
 
 session_start();
 
@@ -48,7 +48,7 @@ try {
             $setupFile = __FILE__;
             if (@unlink($setupFile)) {
                 // 削除成功、リダイレクト
-                header('Location: ' . admin_url('login.php?setup_deleted=1&migration_completed=1'));
+                header('Location: ' . PathHelper::getAdminUrl('login.php?setup_deleted=1&migration_completed=1'));
                 exit;
             } else {
                 $success .= ' セットアップファイルの自動削除に失敗しました。手動で削除してください。';
@@ -82,7 +82,7 @@ try {
                 $setupFile = __FILE__;
                 if (@unlink($setupFile)) {
                     // 削除成功、リダイレクト
-                    header('Location: ' . admin_url('login.php?setup_deleted=1'));
+                    header('Location: ' . PathHelper::getAdminUrl('login.php?setup_deleted=1'));
                     exit;
                 } else {
                     throw new Exception('ファイルの削除に失敗しました。権限を確認してください。');
@@ -252,7 +252,7 @@ try {
 
                 <div class="button-group">
                     <a href="/" class="btn">トップページへ</a>
-                    <a href="<?= admin_url('login.php') ?>" class="btn" style="background: #8B5AFA;">ログイン</a>
+                    <a href="<?= PathHelper::getAdminUrl('login.php') ?>" class="btn" style="background: #8B5AFA;">ログイン</a>
                 </div>
 
                 <div class="migration-section">
@@ -608,7 +608,7 @@ if (!isset($_SESSION['setup_csrf_token'])) {
                     管理者アカウントの作成が完了しました。<br>
                     これでログインできます。
                 </p>
-                <a href="<?= admin_url('login.php') ?>" class="btn">ログインページへ</a>
+                <a href="<?= PathHelper::getAdminUrl('login.php') ?>" class="btn">ログインページへ</a>
 
                 <?php if (!@unlink(__FILE__)): ?>
                 <div class="security-note">

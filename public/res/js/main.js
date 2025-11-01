@@ -446,7 +446,7 @@ function appendPostCard(grid, post) {
     if (isSensitive) {
         cardHTML += `
             <div class="nsfw-overlay">
-                <div class="nsfw-text">センシティブな内容を含む</div>
+                <div class="nsfw-text">センシティブな内容</div>
             </div>
         `;
     }

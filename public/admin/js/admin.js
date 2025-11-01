@@ -382,6 +382,23 @@ $(document).ready(function() {
         }
     });
 
+    // OGP画像アップロード
+    $('#uploadOgpImage').on('click', function() {
+        uploadOgpImage();
+    });
+
+    // OGP画像プレビュー
+    $('#ogpImageFile').on('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                $('#ogpImagePreviewImg').attr('src', e.target.result).show();
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
     // 編集モーダルの保存ボタン
     $('#saveEditBtn').on('click', function() {
         savePost();
@@ -1018,6 +1035,18 @@ function loadSettings() {
                 response.settings.forEach(function(setting) {
                     if (setting.key === 'show_view_count') {
                         $('#showViewCount').prop('checked', setting.value === '1');
+                    } else if (setting.key === 'ogp_title') {
+                        $('#ogpTitle').val(setting.value || '');
+                    } else if (setting.key === 'ogp_description') {
+                        $('#ogpDescription').val(setting.value || '');
+                    } else if (setting.key === 'ogp_image') {
+                        if (setting.value) {
+                            $('#ogpImagePreviewImg').attr('src', '/' + setting.value).show();
+                        }
+                    } else if (setting.key === 'twitter_card') {
+                        $('#twitterCard').val(setting.value || 'summary_large_image');
+                    } else if (setting.key === 'twitter_site') {
+                        $('#twitterSite').val(setting.value || '');
                     }
                 });
             }
@@ -1092,10 +1121,84 @@ function uploadThemeImage(imageType) {
 }
 
 /**
+ * OGP画像をアップロード
+ */
+function uploadOgpImage() {
+    const file = $('#ogpImageFile')[0].files[0];
+
+    if (!file) {
+        alert('画像ファイルを選択してください');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('csrf_token', $('input[name="csrf_token"]').val());
+
+    const $uploadBtn = $('#uploadOgpImage');
+    const originalText = $uploadBtn.html();
+
+    // ボタンを無効化
+    $uploadBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>アップロード中...');
+    $('#settingsAlert').addClass('d-none');
+
+    $.ajax({
+        url: '/' + ADMIN_PATH + '/api/ogp-image.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                // 成功メッセージ
+                $('#settingsAlert')
+                    .addClass('alert-success')
+                    .text(response.message || 'OGP画像がアップロードされました')
+                    .removeClass('d-none');
+
+                // プレビュー画像を更新
+                $('#ogpImagePreviewImg').attr('src', '/' + response.image_path).show();
+
+                // 設定を再読み込み
+                loadSettings();
+
+                // 3秒後にメッセージを消す
+                setTimeout(function() {
+                    $('#settingsAlert').addClass('d-none');
+                }, 3000);
+            } else {
+                $('#settingsAlert')
+                    .addClass('alert-danger')
+                    .text(response.error || 'アップロードに失敗しました')
+                    .removeClass('d-none');
+            }
+        },
+        error: function(xhr) {
+            let errorMsg = 'サーバーエラーが発生しました';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMsg = xhr.responseJSON.error;
+            }
+            $('#settingsAlert')
+                .addClass('alert-danger')
+                .text(errorMsg)
+                .removeClass('d-none');
+        },
+        complete: function() {
+            // ボタンを有効化
+            $uploadBtn.prop('disabled', false).html(originalText);
+        }
+    });
+}
+
+/**
  * サイト設定を保存
  */
 function saveSettings() {
     const showViewCount = $('#showViewCount').is(':checked') ? '1' : '0';
+    const ogpTitle = $('#ogpTitle').val();
+    const ogpDescription = $('#ogpDescription').val();
+    const twitterCard = $('#twitterCard').val();
+    const twitterSite = $('#twitterSite').val();
     const csrfToken = $('input[name="csrf_token"]').val();
 
     $('#settingsAlert').addClass('d-none').removeClass('alert-success alert-danger');
@@ -1105,6 +1208,10 @@ function saveSettings() {
         type: 'POST',
         data: {
             show_view_count: showViewCount,
+            ogp_title: ogpTitle,
+            ogp_description: ogpDescription,
+            twitter_card: twitterCard,
+            twitter_site: twitterSite,
             csrf_token: csrfToken
         },
         dataType: 'json',

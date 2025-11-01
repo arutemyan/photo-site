@@ -174,6 +174,21 @@ try {
     $settingModel = new Setting();
     $showViewCount = $settingModel->get('show_view_count', '1') === '1';
 
+    // OGP設定を取得
+    $ogpTitle = $settingModel->get('ogp_title', '') ?: ($theme['site_title'] ?? 'イラストポートフォリオ');
+    $ogpDescription = $settingModel->get('ogp_description', '') ?: ($theme['site_description'] ?? 'イラストレーターのポートフォリオサイト');
+    $ogpImage = $settingModel->get('ogp_image', '');
+    $twitterCard = $settingModel->get('twitter_card', 'summary_large_image');
+    $twitterSite = $settingModel->get('twitter_site', '');
+
+    // OGP画像の絶対URLを生成
+    $ogpImageUrl = '';
+    if ($ogpImage) {
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $ogpImageUrl = $protocol . '://' . $host . '/' . $ogpImage;
+    }
+
     // 設定を読み込み
     $config = require __DIR__ . '/../config/config.php';
     $nsfwConfig = $config['nsfw'];
@@ -215,10 +230,16 @@ try {
     error_log('Index Error: ' . $e->getMessage());
     $posts = [];
     $tags = [];
-    $theme = ['header_html' => '', 'footer_html' => ''];
+    $theme = ['header_html' => '', 'footer_html' => '', 'site_title' => 'イラストポートフォリオ', 'site_description' => 'イラストレーターのポートフォリオサイト'];
     $showViewCount = true;
     $ageVerificationMinutes = 10080;
     $nsfwConfigVersion = 1;
+    $ogpTitle = 'イラストポートフォリオ';
+    $ogpDescription = 'イラストレーターのポートフォリオサイト';
+    $ogpImage = '';
+    $ogpImageUrl = '';
+    $twitterCard = 'summary_large_image';
+    $twitterSite = '';
 }
 ?>
 <!DOCTYPE html>
@@ -229,10 +250,25 @@ try {
     <title><?= escapeHtml($theme['site_title'] ?? 'イラストポートフォリオ') ?></title>
     <meta name="description" content="<?= escapeHtml($theme['site_description'] ?? 'イラストレーターのポートフォリオサイト') ?>">
 
-    <!-- OGP -->
-    <meta property="og:title" content="<?= escapeHtml($theme['site_title'] ?? 'イラストポートフォリオ') ?>">
+    <!-- OGP (Open Graph Protocol) -->
+    <meta property="og:title" content="<?= escapeHtml($ogpTitle ?? $theme['site_title'] ?? 'イラストポートフォリオ') ?>">
     <meta property="og:type" content="website">
-    <meta property="og:description" content="<?= escapeHtml($theme['site_description'] ?? 'イラストレーターのポートフォリオサイト') ?>">
+    <meta property="og:description" content="<?= escapeHtml($ogpDescription ?? $theme['site_description'] ?? 'イラストレーターのポートフォリオサイト') ?>">
+    <meta property="og:url" content="<?= htmlspecialchars((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . $_SERVER['REQUEST_URI'], ENT_QUOTES) ?>">
+    <?php if (!empty($ogpImageUrl)): ?>
+    <meta property="og:image" content="<?= escapeHtml($ogpImageUrl) ?>">
+    <?php endif; ?>
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="<?= escapeHtml($twitterCard ?? 'summary_large_image') ?>">
+    <?php if (!empty($twitterSite)): ?>
+    <meta name="twitter:site" content="@<?= escapeHtml($twitterSite) ?>">
+    <?php endif; ?>
+    <meta name="twitter:title" content="<?= escapeHtml($ogpTitle ?? $theme['site_title'] ?? 'イラストポートフォリオ') ?>">
+    <meta name="twitter:description" content="<?= escapeHtml($ogpDescription ?? $theme['site_description'] ?? 'イラストレーターのポートフォリオサイト') ?>">
+    <?php if (!empty($ogpImageUrl)): ?>
+    <meta name="twitter:image" content="<?= escapeHtml($ogpImageUrl) ?>">
+    <?php endif; ?>
 
     <!-- CSS -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
@@ -403,7 +439,7 @@ try {
                             <?php endif; ?>
                             <?php if ($isSensitive): ?>
                                 <div class="nsfw-overlay">
-                                    <div class="nsfw-text">センシティブな内容を含む</div>
+                                    <div class="nsfw-text">センシティブな内容</div>
                                 </div>
                             <?php endif; ?>
 

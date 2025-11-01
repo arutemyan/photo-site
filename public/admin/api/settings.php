@@ -36,8 +36,23 @@ try {
             exit;
         }
 
+        // 表示設定
         $showViewCount = $_POST['show_view_count'] ?? '0';
         $settingModel->set('show_view_count', $showViewCount);
+
+        // OGP設定
+        if (isset($_POST['ogp_title'])) {
+            $settingModel->set('ogp_title', trim($_POST['ogp_title']));
+        }
+        if (isset($_POST['ogp_description'])) {
+            $settingModel->set('ogp_description', trim($_POST['ogp_description']));
+        }
+        if (isset($_POST['twitter_card'])) {
+            $settingModel->set('twitter_card', $_POST['twitter_card']);
+        }
+        if (isset($_POST['twitter_site'])) {
+            $settingModel->set('twitter_site', trim($_POST['twitter_site']));
+        }
 
         echo json_encode(['success' => true, 'message' => '設定が保存されました']);
     }

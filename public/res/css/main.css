@@ -294,6 +294,8 @@ header p {
     font-size: 0.95em;
     margin-right: 8px;
     margin-bottom: 8px;
+
+    max-width: 200px;
 }
 
 .detail-description {
@@ -1059,17 +1061,16 @@ body.hide-titles .card-content {
 /* グループ投稿バッジ */
 .group-badge {
     position: absolute;
-    top: 10px;
-    left: 10px;
-    background: rgba(139, 90, 250, 0.9);
-    color: white;
-    padding: 6px 12px;
+    top: 5px;
+    left: 5px;
+    background: var(--tag-bg-color);
+    color: var(--tag-text-color);
+    padding: 4px 10px;
     border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: clamp(0.4em, 1.25vw, 0.85em);
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 3px;
     z-index: 2;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
