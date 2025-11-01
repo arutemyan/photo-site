@@ -1168,3 +1168,87 @@ body.hide-titles .card-content {
 .group-card .card-img-wrapper {
     position: relative;
 }
+
+/* 画像ギャラリー（グループ投稿用） */
+.image-gallery {
+    position: relative;
+    width: 100%;
+    max-height: 80vh;
+    background: var(--background-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.gallery-image {
+    display: none;
+    width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+}
+
+.gallery-image.active {
+    display: block;
+}
+
+.gallery-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 20px;
+    background: var(--card-bg-color);
+    border-top: 1px solid var(--card-border-color);
+}
+
+.gallery-prev,
+.gallery-next {
+    padding: 10px 20px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.gallery-prev:hover,
+.gallery-next:hover {
+    background: var(--secondary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.gallery-prev:active,
+.gallery-next:active {
+    transform: translateY(0);
+}
+
+.gallery-counter {
+    font-size: 1.1em;
+    color: var(--text-color);
+    font-weight: 600;
+    min-width: 80px;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .gallery-nav {
+        gap: 10px;
+        padding: 15px;
+    }
+
+    .gallery-prev,
+    .gallery-next {
+        padding: 8px 16px;
+        font-size: 0.9em;
+    }
+
+    .gallery-counter {
+        font-size: 1em;
+        min-width: 60px;
+    }
+}
