@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 /**
  * セットアップスクリプト
-require_once __DIR__ . '/../src/Utils/path_helpers.php';
  *
  * 初回セットアップ用のブラウザベース設定画面
  * セキュリティのため、このファイルはランダムな名前にリネームできます
  * セットアップ完了後、このファイルは自動的に削除されます
  */
 
-require_once __DIR__ . '/../vendor/autoload.php';
-require_once __DIR__ . '/../src/Security/SecurityUtil.php';
+require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../src/Security/SecurityUtil.php';
+require_once __DIR__ . '/../../src/Utils/path_helpers.php';
 
 use App\Database\Connection;
 
@@ -33,19 +33,7 @@ try {
 
     if ($result['count'] > 0) {
         // 既にセットアップ済み
-
-        // マイグレーション実行リクエストの処理
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'migrate') {
             try {
-                // CSRF検証
-                if (!isset($_POST['csrf_token']) || !isset($_SESSION['migrate_csrf_token'])) {
-                    throw new Exception('不正なリクエストです。');
-                }
-
-                if (!hash_equals($_SESSION['migrate_csrf_token'], $_POST['csrf_token'])) {
-                    throw new Exception('不正なリクエストです。');
-                }
-
                 // マイグレーションを実行
                 $runner = Connection::getMigrationRunner();
                 $results = $runner->run();
@@ -56,21 +44,15 @@ try {
                     $successCount = count(array_filter($results, fn($r) => $r['status'] === 'success'));
                     $success = "{$successCount}件のマイグレーションが完了しました。";
                 }
-
-                unset($_SESSION['migrate_csrf_token']);
-
-                // マイグレーション完了後に自動削除オプションが有効な場合
-                if (isset($_POST['auto_delete']) && $_POST['auto_delete'] === '1') {
-                    $setupFile = __FILE__;
-                    if (@unlink($setupFile)) {
-                        // 削除成功、リダイレクト
-                        header('Location: ' . admin_url('login.php?setup_deleted=1&migration_completed=1'));
-                        exit;
-                    } else {
-                        $success .= ' セットアップファイルの自動削除に失敗しました。手動で削除してください。';
-                    }
+                // マイグレーション完了後に自動削除
+                $setupFile = __FILE__;
+                if (@unlink($setupFile)) {
+                    // 削除成功、リダイレクト
+                    header('Location: ' . admin_url('login.php?setup_deleted=1&migration_completed=1'));
+                    exit;
+                } else {
+                    $success .= ' セットアップファイルの自動削除に失敗しました。手動で削除してください。';
                 }
-
             } catch (Exception $e) {
                 $error = $e->getMessage();
             }
