@@ -273,6 +273,54 @@ class GroupPost
     }
 
     /**
+     * 画像を更新（差し替え）
+     *
+     * @param int $imageId 画像ID
+     * @param string $imagePath 新しい画像パス
+     * @param string|null $thumbPath 新しいサムネイルパス
+     * @return bool 成功したらtrue
+     */
+    public function updateImage(int $imageId, string $imagePath, ?string $thumbPath): bool
+    {
+        $stmt = $this->db->prepare("
+            UPDATE group_post_images
+            SET image_path = ?, thumb_path = ?
+            WHERE id = ?
+        ");
+        return $stmt->execute([$imagePath, $thumbPath, $imageId]);
+    }
+
+    /**
+     * 画像を削除
+     *
+     * @param int $imageId 画像ID
+     * @return bool 成功したらtrue
+     */
+    public function deleteImage(int $imageId): bool
+    {
+        $stmt = $this->db->prepare("DELETE FROM group_post_images WHERE id = ?");
+        return $stmt->execute([$imageId]);
+    }
+
+    /**
+     * 画像情報を取得
+     *
+     * @param int $imageId 画像ID
+     * @return array|null 画像データ
+     */
+    public function getImageById(int $imageId): ?array
+    {
+        $stmt = $this->db->prepare("
+            SELECT id, group_post_id, image_path, thumb_path, display_order
+            FROM group_post_images
+            WHERE id = ?
+        ");
+        $stmt->execute([$imageId]);
+        $result = $stmt->fetch();
+        return $result ?: null;
+    }
+
+    /**
      * 閲覧回数をインクリメント
      *
      * @param int $id グループ投稿ID

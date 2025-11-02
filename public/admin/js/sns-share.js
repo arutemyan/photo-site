@@ -84,6 +84,9 @@ function shareToSNS(postId, title, isSensitive) {
     // モーダルが閉じられたらDOMから削除
     $('#shareModal').on('hidden.bs.modal', function() {
         $(this).remove();
+        // バックドロップも確実に削除
+        $('.modal-backdrop').remove();
+        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
     });
 }
 

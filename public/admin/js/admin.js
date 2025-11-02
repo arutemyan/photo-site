@@ -2020,9 +2020,21 @@ function editGroupPost(groupPostId) {
                                             <label class="form-label">グループ内の画像（${post.image_count}枚）</label>
                                             <div class="row g-2" id="editGroupImagesList">
                                                 ${post.images.map(img => `
-                                                    <div class="col-3">
-                                                        <img src="/${img.thumb_path}" class="img-thumbnail" style="width: 100%; aspect-ratio: 1; object-fit: cover;">
-                                                        <div class="text-center small text-muted">順序: ${img.display_order}</div>
+                                                    <div class="col-md-3 col-sm-4 col-6" data-image-id="${img.id}">
+                                                        <div class="card">
+                                                            <img src="/${img.thumb_path}" class="card-img-top" style="aspect-ratio: 1; object-fit: cover;" alt="画像${img.display_order}">
+                                                            <div class="card-body p-2">
+                                                                <div class="text-center small text-muted mb-2">順序: ${img.display_order}</div>
+                                                                <div class="d-grid gap-1">
+                                                                    <button type="button" class="btn btn-sm btn-primary" onclick="replaceGroupImage(${img.id}, ${post.id})">
+                                                                        <i class="bi bi-arrow-repeat"></i> 差し替え
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-sm btn-danger" onclick="deleteGroupImage(${img.id}, ${post.id})" ${post.image_count <= 1 ? 'disabled' : ''}>
+                                                                        <i class="bi bi-trash"></i> 削除
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 `).join('')}
                                             </div>
@@ -2051,6 +2063,9 @@ function editGroupPost(groupPostId) {
                 // モーダルが閉じられたらDOMから削除
                 $('#editGroupModal').on('hidden.bs.modal', function() {
                     $(this).remove();
+                    // バックドロップも確実に削除
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
                 });
 
                 // 保存ボタンのイベント
@@ -2171,6 +2186,9 @@ function addImagesToGroup(groupPostId) {
     // モーダルが閉じられたらDOMから削除
     $('#addGroupImagesModal').on('hidden.bs.modal', function() {
         $(this).remove();
+        // バックドロップも確実に削除
+        $('.modal-backdrop').remove();
+        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
     });
 
     // ファイル選択時のプレビュー
@@ -2334,6 +2352,9 @@ function shareGroupPostToSNS(groupPostId, title, isSensitive) {
     // モーダルが閉じられたらDOMから削除
     $('#shareGroupModal').on('hidden.bs.modal', function() {
         $(this).remove();
+        // バックドロップも確実に削除
+        $('.modal-backdrop').remove();
+        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
     });
 }
 
@@ -2357,4 +2378,162 @@ function copyShareGroupUrl() {
         btn.classList.remove('btn-success');
         btn.classList.add('btn-outline-secondary');
     }, 2000);
+}
+
+/**
+ * グループ画像を差し替え
+ */
+function replaceGroupImage(imageId, groupPostId) {
+    // ファイル選択ダイアログを作成
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // 確認ダイアログ
+        if (!confirm('この画像を差し替えますか？')) {
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('image_id', imageId);
+        formData.append('csrf_token', $('input[name="csrf_token"]').val());
+
+        // 画像要素を取得してローディング表示
+        const $imageCard = $(`[data-image-id="${imageId}"]`);
+        const $img = $imageCard.find('img');
+        const originalSrc = $img.attr('src');
+
+        // ボタンを無効化
+        $imageCard.find('button').prop('disabled', true);
+
+        $.ajax({
+            url: '/' + ADMIN_PATH + '/api/group_image_replace.php',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    // 画像を更新（キャッシュバスター付き）
+                    const timestamp = new Date().getTime();
+                    $img.attr('src', '/' + response.thumb_path + '?' + timestamp);
+
+                    // 成功メッセージ
+                    $('#editGroupAlert')
+                        .text(response.message || '画像を差し替えました')
+                        .removeClass('d-none');
+
+                    setTimeout(function() {
+                        $('#editGroupAlert').addClass('d-none');
+                    }, 3000);
+
+                    // グループ投稿一覧を再読み込み（バックグラウンドで）
+                    loadGroupPosts();
+                } else {
+                    const errorMsg = response.error || '不明なエラー';
+                    const debugInfo = response.debug ? '\n\nデバッグ情報:\n' + response.debug : '';
+                    alert('差し替えに失敗しました: ' + errorMsg + debugInfo);
+                    console.error('Replace error:', response);
+                    $img.attr('src', originalSrc);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('XHR Error:', xhr);
+                console.error('Status:', status);
+                console.error('Error:', error);
+                console.error('Response Text:', xhr.responseText);
+
+                let errorMsg = 'サーバーエラーが発生しました';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMsg = xhr.responseJSON.error;
+                } else if (xhr.responseText) {
+                    errorMsg = xhr.responseText.substring(0, 200);
+                }
+                alert('差し替えに失敗しました: ' + errorMsg);
+                $img.attr('src', originalSrc);
+            },
+            complete: function() {
+                // ボタンを有効化
+                $imageCard.find('button').prop('disabled', false);
+            }
+        });
+    };
+
+    // ファイル選択ダイアログを開く
+    input.click();
+}
+
+/**
+ * グループ画像を削除
+ */
+function deleteGroupImage(imageId, groupPostId) {
+    if (!confirm('この画像を削除しますか？\nこの操作は取り消せません。')) {
+        return;
+    }
+
+    const $imageCard = $(`[data-image-id="${imageId}"]`);
+
+    // ボタンを無効化
+    $imageCard.find('button').prop('disabled', true);
+
+    $.ajax({
+        url: '/' + ADMIN_PATH + '/api/group_image_replace.php',
+        type: 'POST',
+        data: {
+            _method: 'DELETE',
+            image_id: imageId,
+            csrf_token: $('input[name="csrf_token"]').val()
+        },
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                // 画像カードをフェードアウトして削除
+                $imageCard.fadeOut(300, function() {
+                    $(this).remove();
+
+                    // 残りの画像数を更新
+                    const remainingImages = $('#editGroupImagesList [data-image-id]').length;
+                    const $label = $('#editGroupImagesList').prev('label');
+                    $label.text('グループ内の画像（' + remainingImages + '枚）');
+
+                    // 残りが1枚になった場合、すべての削除ボタンを無効化
+                    if (remainingImages <= 1) {
+                        $('#editGroupImagesList').find('.btn-danger').prop('disabled', true);
+                    }
+                });
+
+                // 成功メッセージ
+                $('#editGroupAlert')
+                    .text(response.message || '画像を削除しました')
+                    .removeClass('d-none');
+
+                setTimeout(function() {
+                    $('#editGroupAlert').addClass('d-none');
+                }, 3000);
+
+                // グループ投稿一覧を再読み込み（バックグラウンドで）
+                loadGroupPosts();
+            } else {
+                const errorMsg = response.error || '不明なエラー';
+                const debugInfo = response.debug ? '\n\nデバッグ情報:\n' + response.debug : '';
+                alert('削除に失敗しました: ' + errorMsg + debugInfo);
+                console.error('Delete error:', response);
+                $imageCard.find('button').prop('disabled', false);
+            }
+        },
+        error: function(xhr) {
+            let errorMsg = 'サーバーエラーが発生しました';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMsg = xhr.responseJSON.error;
+            }
+            alert('削除に失敗しました: ' + errorMsg);
+            $imageCard.find('button').prop('disabled', false);
+        }
+    });
 }
