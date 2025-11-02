@@ -150,6 +150,7 @@ try {
         $detail = $_POST['detail'] ?? '';
         $isSensitive = isset($_POST['is_sensitive']) ? (int)$_POST['is_sensitive'] : 0;
         $isVisible = isset($_POST['is_visible']) ? (int)$_POST['is_visible'] : 0;
+        $sortOrder = isset($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0;
 
         // バリデーション
         if ($id <= 0) {
@@ -262,7 +263,7 @@ try {
             }
 
             // 投稿を更新（画像パスは変更なし）
-            $result = $postModel->updateTextOnly($id, $title, $tags, $detail, $isSensitive);
+            $result = $postModel->updateTextOnly($id, $title, $tags, $detail, $isSensitive, $sortOrder);
         }
 
         // 表示/非表示を更新

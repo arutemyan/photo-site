@@ -856,6 +856,9 @@ function editPost(postId) {
                 // センシティブフラグを設定
                 $('#editIsSensitive').prop('checked', post.is_sensitive == 1);
 
+                // 表示順序を設定
+                $('#editSortOrder').val(post.sort_order || 0);
+
                 // 表示/非表示フラグを設定
                 $('#editIsVisible').prop('checked', post.is_visible == 1);
 
@@ -1023,6 +1026,9 @@ function savePost() {
     // チェックボックスの値を明示的に設定
     formData.set('is_sensitive', $('#editIsSensitive').is(':checked') ? '1' : '0');
     formData.set('is_visible', $('#editIsVisible').is(':checked') ? '1' : '0');
+
+    // 表示順序を設定
+    formData.set('sort_order', $('#editSortOrder').val() || '0');
 
     $.ajax({
         url: '/' + ADMIN_PATH + '/api/posts.php?id=' + postId,

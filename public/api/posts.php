@@ -88,9 +88,15 @@ try {
     $groupPostModel = new GroupPost();
     $groupPosts = $groupPostModel->getAll($limit, $nsfwFilter, $tagId, 0);
 
-    // 両方をマージして作成日時でソート
+    // 両方をマージしてsort_order、作成日時でソート
     $allPosts = array_merge($singlePosts, $groupPosts);
     usort($allPosts, function($a, $b) {
+        // まずsort_orderで比較（降順：大きい方が先）
+        $sortOrderDiff = ($b['sort_order'] ?? 0) - ($a['sort_order'] ?? 0);
+        if ($sortOrderDiff !== 0) {
+            return $sortOrderDiff;
+        }
+        // sort_orderが同じなら作成日時で比較（降順：新しい方が先）
         return strtotime($b['created_at']) - strtotime($a['created_at']);
     });
 

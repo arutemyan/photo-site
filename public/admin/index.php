@@ -925,6 +925,16 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                                 </div>
 
                                 <div class="mb-3">
+                                    <label for="editSortOrder" class="form-label">表示順序</label>
+                                    <input type="number" class="form-control" id="editSortOrder" name="sort_order" value="0">
+                                    <div class="form-text">
+                                        0: 通常（作成日時順）<br>
+                                        プラス値: 優先度アップ（前方に表示）<br>
+                                        マイナス値: 優先度ダウン（後方に表示）
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
                                     <div class="form-check form-switch">
                                         <input class="form-check-input" type="checkbox" id="editIsVisible" name="is_visible" value="1" checked>
                                         <label class="form-check-label" for="editIsVisible">

@@ -46,7 +46,7 @@ class Post
 
         $sql = "
             SELECT id, title, detail, image_path, thumb_path, is_sensitive, is_visible, created_at, updated_at,
-                   tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10
+                   tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, sort_order
             FROM posts
             WHERE is_visible = 1
         ";
@@ -78,7 +78,7 @@ class Post
             }
         }
 
-        $sql .= " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        $sql .= " ORDER BY sort_order DESC, created_at DESC LIMIT ? OFFSET ?";
         $params[] = $limit;
         $params[] = $offset;
 
@@ -110,7 +110,7 @@ class Post
     {
         $stmt = $this->db->prepare("
             SELECT id, title, detail, image_path, thumb_path, is_sensitive, is_visible, created_at, updated_at,
-                   tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10
+                   tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, sort_order
             FROM posts
             WHERE id = ? AND is_visible = 1
         ");
@@ -213,6 +213,7 @@ class Post
      * @param string|null $tags タグ
      * @param string|null $detail 詳細説明
      * @param int $isSensitive センシティブ画像フラグ（0: 通常, 1: NSFW）
+     * @param int $sortOrder 表示順序（デフォルト: 0）
      * @return bool 成功した場合true
      */
     public function updateTextOnly(
@@ -220,21 +221,22 @@ class Post
         string $title,
         ?string $tags = null,
         ?string $detail = null,
-        int $isSensitive = 0
+        int $isSensitive = 0,
+        int $sortOrder = 0
     ): bool {
         // タグ文字列をタグID配列に変換
         $tagIds = $this->tagService->parseTagsToIds($tags);
 
         $stmt = $this->db->prepare("
             UPDATE posts
-            SET title = ?, detail = ?, is_sensitive = ?,
+            SET title = ?, detail = ?, is_sensitive = ?, sort_order = ?,
                 tag1 = ?, tag2 = ?, tag3 = ?, tag4 = ?, tag5 = ?,
                 tag6 = ?, tag7 = ?, tag8 = ?, tag9 = ?, tag10 = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         ");
         return $stmt->execute([
-            $title, $detail, $isSensitive,
+            $title, $detail, $isSensitive, $sortOrder,
             $tagIds[0], $tagIds[1], $tagIds[2], $tagIds[3], $tagIds[4],
             $tagIds[5], $tagIds[6], $tagIds[7], $tagIds[8], $tagIds[9],
             $id
@@ -298,9 +300,9 @@ class Post
 
         $stmt = $this->db->prepare("
             SELECT id, title, detail, image_path, thumb_path, is_sensitive, is_visible, created_at, updated_at,
-                   tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10
+                   tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, sort_order
             FROM posts
-            ORDER BY created_at DESC
+            ORDER BY sort_order DESC, created_at DESC
             LIMIT ? OFFSET ?
         ");
         $stmt->execute([$limit, $offset]);
@@ -342,7 +344,7 @@ class Post
     {
         $stmt = $this->db->prepare("
             SELECT id, title, detail, image_path, thumb_path, is_sensitive, is_visible, created_at, updated_at,
-                   tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10
+                   tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, sort_order
             FROM posts
             WHERE id = ?
         ");
@@ -435,10 +437,10 @@ class Post
 
         $stmt = $this->db->prepare("
             SELECT id, title, detail, image_path, thumb_path, is_sensitive, is_visible, created_at, updated_at,
-                   tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10
+                   tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, sort_order
             FROM posts
             WHERE is_visible = 1 AND {$condition['sql']}
-            ORDER BY created_at DESC
+            ORDER BY sort_order DESC, created_at DESC
             LIMIT ?
         ");
 
@@ -488,10 +490,10 @@ class Post
 
         $stmt = $this->db->prepare("
             SELECT id, title, detail, image_path, thumb_path, is_sensitive, is_visible, created_at, updated_at,
-                   tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10
+                   tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, sort_order
             FROM posts
             WHERE is_visible = 1 AND {$condition['sql']}
-            ORDER BY created_at DESC
+            ORDER BY sort_order DESC, created_at DESC
             LIMIT ?
         ");
 

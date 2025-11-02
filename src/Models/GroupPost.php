@@ -44,6 +44,7 @@ class GroupPost
         $sql = "
             SELECT gp.id, gp.title, gp.detail, gp.is_sensitive, gp.is_visible, gp.created_at, gp.updated_at,
                    gp.tag1, gp.tag2, gp.tag3, gp.tag4, gp.tag5, gp.tag6, gp.tag7, gp.tag8, gp.tag9, gp.tag10,
+                   gp.sort_order,
                    (SELECT COUNT(*) FROM group_post_images WHERE group_post_id = gp.id) as image_count
             FROM group_posts gp
             WHERE gp.is_visible = 1
@@ -64,7 +65,7 @@ class GroupPost
             $params = array_merge($params, $tagCondition['params']);
         }
 
-        $sql .= " ORDER BY gp.created_at DESC LIMIT ? OFFSET ?";
+        $sql .= " ORDER BY gp.sort_order DESC, gp.created_at DESC LIMIT ? OFFSET ?";
         $params[] = $limit;
         $params[] = $offset;
 
@@ -111,7 +112,7 @@ class GroupPost
     {
         $sql = "
             SELECT id, title, detail, is_sensitive, is_visible, created_at, updated_at,
-                   tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10
+                   tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, sort_order
             FROM group_posts
             WHERE id = ?
         ";
