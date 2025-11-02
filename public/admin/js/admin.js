@@ -568,6 +568,12 @@ function renderPosts(posts, hasMore = false) {
         const createdAt = new Date(post.created_at).toLocaleDateString('ja-JP');
         const isSensitive = post.is_sensitive == 1;
         const isVisible = post.is_visible == 1;
+        const isGroupPost = post.post_type == 1;
+
+        // post_typeに応じて編集関数を切り替え
+        const editFunction = isGroupPost ? 'editGroupPost' : 'editPost';
+        const deleteFunction = isGroupPost ? 'deleteGroupPost' : 'deletePost';
+        const shareFunction = isGroupPost ? 'shareGroupPostToSNS' : 'shareToSNS';
 
         html += `
             <div class="post-card ${!isVisible ? 'post-card-hidden' : ''}" data-id="${post.id}">
@@ -576,15 +582,16 @@ function renderPosts(posts, hasMore = false) {
                 </div>
                 <div class="post-card-image">
                     <img src="/${thumbPath}" alt="${escapeHtml(post.title)}" onerror="this.src='/uploads/thumbs/placeholder.webp'">
+                    ${isGroupPost && post.image_count ? '<span class="badge bg-info position-absolute top-0 end-0 m-2"><i class="bi bi-images"></i> ' + post.image_count + '</span>' : ''}
                     <div class="post-card-overlay">
                         <div class="btn-group" role="group">
-                            <button class="btn btn-sm btn-primary" onclick="editPost(${post.id})" title="編集">
+                            <button class="btn btn-sm btn-primary" onclick="${editFunction}(${post.id})" title="編集">
                                 <i class="bi bi-pencil"></i>
                             </button>
-                            <button class="btn btn-sm btn-success" onclick="shareToSNS(${post.id}, '${escapeHtml(post.title)}', ${isSensitive})" title="SNS共有">
+                            <button class="btn btn-sm btn-success" onclick="${shareFunction}(${post.id}, '${escapeHtml(post.title).replace(/'/g, "\\'")}', ${isSensitive})" title="SNS共有">
                                 <i class="bi bi-share"></i>
                             </button>
-                            <button class="btn btn-sm btn-danger" onclick="deletePost(${post.id})" title="削除">
+                            <button class="btn btn-sm btn-danger" onclick="${deleteFunction}(${post.id}${isGroupPost ? ", '" + escapeHtml(post.title).replace(/'/g, "\\'") + "'" : ''})" title="削除">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
@@ -596,6 +603,7 @@ function renderPosts(posts, hasMore = false) {
                     <div class="post-card-meta">
                         ${!isVisible ? '<span class="badge bg-warning text-dark me-1"><i class="bi bi-eye-slash"></i> 非表示</span>' : ''}
                         ${isSensitive ? '<span class="badge bg-danger me-1">NSFW</span>' : ''}
+                        ${isGroupPost ? '<span class="badge bg-primary me-1"><i class="bi bi-images"></i> グループ</span>' : ''}
                         ${tags ? '<span class="badge bg-secondary me-1">' + escapeHtml(tags) + '</span>' : ''}
                     </div>
                     <div class="post-card-date text-muted">${createdAt}</div>
@@ -952,6 +960,7 @@ function updatePostCard(post) {
     const detail = post.detail || '';
     const isSensitive = post.is_sensitive == 1;
     const isVisible = post.is_visible == 1;
+    const isGroupPost = post.post_type == 1;
 
     // カードの表示状態を更新
     if (isVisible) {
@@ -962,6 +971,18 @@ function updatePostCard(post) {
 
     // 画像を更新
     $card.find('.post-card-image img').attr('src', '/' + thumbPath);
+
+    // グループ投稿の画像数バッジを更新
+    const $imageBadge = $card.find('.post-card-image .badge.bg-info');
+    if (isGroupPost && post.image_count) {
+        if ($imageBadge.length > 0) {
+            $imageBadge.html(`<i class="bi bi-images"></i> ${post.image_count}`);
+        } else {
+            $card.find('.post-card-image').append(`<span class="badge bg-info position-absolute top-0 end-0 m-2"><i class="bi bi-images"></i> ${post.image_count}</span>`);
+        }
+    } else {
+        $imageBadge.remove();
+    }
 
     // タイトルを更新
     $card.find('.post-card-title').text(post.title);
@@ -990,6 +1011,11 @@ function updatePostCard(post) {
     // センシティブバッジ
     if (isSensitive) {
         $meta.append('<span class="badge bg-danger me-1">NSFW</span>');
+    }
+
+    // グループ投稿バッジ
+    if (isGroupPost) {
+        $meta.append('<span class="badge bg-primary me-1"><i class="bi bi-images"></i> グループ</span>');
     }
 
     // タグバッジ

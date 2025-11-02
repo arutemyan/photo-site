@@ -7,6 +7,7 @@ require_once __DIR__ . '/../auth_check.php';
 require_once __DIR__ . '/../../../src/Security/SecurityUtil.php';
 
 use App\Models\Post;
+use App\Models\GroupPostImage;
 use App\Security\CsrfProtection;
 use App\Cache\CacheManager;
 use App\Utils\ImageUploader;
@@ -39,6 +40,12 @@ try {
                     'error' => '投稿が見つかりません'
                 ], JSON_UNESCAPED_UNICODE);
                 exit;
+            }
+
+            // グループ投稿の場合は画像一覧を追加
+            if ($post['post_type'] == 1) {
+                $groupPostImageModel = new GroupPostImage();
+                $post['images'] = $groupPostImageModel->getImagesByPostId($postId);
             }
 
             echo json_encode([
