@@ -10,9 +10,11 @@ composer.lock
 /work/*.db
 
 # アップロードファイル
+/public/uploads/ogp/*
 /public/uploads/images/*
 /public/uploads/thumbs/*
 /public/uploads/theme/*
+!public/uploads/ogp/.gitkeep
 !public/uploads/images/.gitkeep
 !public/uploads/thumbs/.gitkeep
 !public/uploads/theme/.gitkeep
