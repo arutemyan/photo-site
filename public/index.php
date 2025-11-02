@@ -230,7 +230,7 @@ try {
                     $viewType = ($isGroup ? 1 : 0);
                     $detailUrl = '/detail.php?id=' . $post['id'] . "&viewtype=" . $viewType;
                     ?>
-                    <div class="card <?= $isSensitive ? 'nsfw-card' : '' ?><?= $isGroup ? ' group-card' : '' ?>" data-post-id="<?= $post['id'] ?>" data-post-type="<?= $isGroup ? 'group' : 'single' ?>">
+                    <div class="card <?= $isSensitive ? 'nsfw-card' : '' ?><?= $isGroup ? ' group-card' : '' ?>" data-post-id="<?= $post['id'] ?>" data-post-type="<?= $isGroup ? 'group' : 'single' ?>" data-view-type="<?= $viewType ?>">
                         <div class="card-img-wrapper <?= $isSensitive ? 'nsfw-wrapper' : '' ?>"
                              <?= $isGroup ? 'onclick="window.location.href=\'' . $detailUrl . '\'"' : 'onclick="openImageOverlay(' . $post['id'] . ', ' . ($isSensitive ? 'true' : 'false') . ', '.$viewType.')"' ?>
                              style="cursor: pointer;">

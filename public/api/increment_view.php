@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\Models\Post;
+use App\Models\GroupPost;
 use App\Security\RateLimiter;
 
 header('Content-Type: application/json; charset=utf-8');
@@ -27,6 +28,7 @@ $rateLimiter->record($clientIp, 'api_increment_view');
 
 try {
     $postId = $_POST['id'] ?? $_GET['id'] ?? null;
+    $viewType = $_POST['viewtype'] ?? $_GET['viewtype'] ?? 0;
 
     if (empty($postId) || !is_numeric($postId)) {
         http_response_code(400);
@@ -34,8 +36,22 @@ try {
         exit;
     }
 
-    $postModel = new Post();
-    $success = $postModel->incrementViewCount((int)$postId);
+    if (!is_numeric($viewType)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Invalid view type']);
+        exit;
+    }
+
+    $viewType = (int)$viewType;
+
+    // viewTypeに応じて適切なモデルを使用（0=single, 1=group）
+    if ($viewType === 1) {
+        $model = new GroupPost();
+    } else {
+        $model = new Post();
+    }
+
+    $success = $model->incrementViewCount((int)$postId);
 
     if ($success) {
         echo json_encode(['success' => true]);

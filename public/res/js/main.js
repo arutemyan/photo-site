@@ -380,7 +380,8 @@ function appendPosts(posts) {
  */
 function appendPostCard(grid, post) {
     const isSensitive = post.is_sensitive == 1;
-    const viewType = post.post_type === 'group' ? 1 : 0;
+    const isGroup = post.post_type === 'group';
+    const viewType = isGroup ? 1 : 0;
 
     // NSFWサムネイルのパス生成
     let imagePath;
@@ -398,14 +399,23 @@ function appendPostCard(grid, post) {
     }
 
     const card = document.createElement('div');
-    card.className = 'card';
+    card.className = 'card' + (isSensitive ? ' nsfw-card' : '') + (isGroup ? ' group-card' : '');
     card.dataset.postId = post.id;
+    card.dataset.postType = isGroup ? 'group' : 'single';
     card.dataset.viewType = viewType;
 
     let cardHTML = '';
 
-    // 画像ラッパー
-    cardHTML += `<div class="card-img-wrapper ${isSensitive ? 'nsfw-wrapper' : ''}">`;
+    // 画像ラッパー - グループの場合はdetail.phpへ、シングルの場合はオーバーレイ
+    const detailUrl = '/detail.php?id=' + post.id + '&viewtype=' + viewType;
+    const wrapperOnclick = isGroup
+        ? `onclick="window.location.href='${detailUrl}'"`
+        : '';
+
+    cardHTML += `<div class="card-img-wrapper ${isSensitive ? 'nsfw-wrapper' : ''}" ${wrapperOnclick} style="cursor: pointer;">`;
+
+    const imgOnclick = isGroup ? '' : `onclick="openImageOverlay(${post.id}, ${isSensitive}, ${viewType})"`;
+
     cardHTML += `
         <img
             src="${imagePath}"
@@ -413,12 +423,20 @@ function appendPostCard(grid, post) {
             class="card-image"
             loading="lazy"
             onerror="if(!this.dataset.errorHandled){this.dataset.errorHandled='1';this.src='/res/images/nsfw-placeholder.svg';}"
-            data-full-image="${'/' + (post.image_path || post.thumb_path || '')}"
+            ${!isGroup ? `data-full-image="${'/' + (post.image_path || post.thumb_path || '')}"` : ''}
             data-is-sensitive="${isSensitive ? '1' : '0'}"
-            onclick="openImageOverlay(${post.id}, ${isSensitive}, ${viewType})"
-            style="cursor: pointer;"
+            ${imgOnclick}
         >
     `;
+
+    // グループバッジ
+    if (isGroup && post.image_count) {
+        cardHTML += `
+            <div class="group-badge">
+                <i class="bi bi-images"></i> ${post.image_count}枚
+            </div>
+        `;
+    }
 
     if (isSensitive) {
         cardHTML += `
@@ -472,8 +490,26 @@ function escapeHtml(text) {
  * 画像オーバーレイを開く
  * @param {number} postId 投稿ID
  * @param {boolean} isSensitive センシティブフラグ
+ * @param {number} viewType 投稿タイプ（0=single, 1=group）
  */
 function openImageOverlay(postId, isSensitive, viewType) {
+    viewType = viewType || 0; // デフォルトは0（single）
+
+    // グループ投稿（viewType === 1）の場合は、オーバーレイではなく詳細ページにリダイレクト
+    if (viewType === 1) {
+        // センシティブ画像で年齢確認が必要な場合
+        if (isSensitive && !checkAgeVerification()) {
+            currentSensitivePostId = postId;
+            currentSensitiveViewType = viewType;
+            showAgeVerificationModal();
+            return;
+        }
+        // 詳細ページに遷移
+        window.location.href = '/detail.php?id=' + postId + '&viewtype=1';
+        return;
+    }
+
+    // シングル投稿の場合はオーバーレイで表示
     // センシティブ画像で年齢確認が必要な場合
     if (isSensitive && !checkAgeVerification()) {
         currentSensitivePostId = postId;
@@ -490,7 +526,7 @@ function openImageOverlay(postId, isSensitive, viewType) {
 
     // 現在の投稿のインデックスを取得
     currentOverlayIndex = allPostElements.findIndex(card =>
-        parseInt(card.dataset.postId) === parseInt(postId)
+        parseInt(card.dataset.postId) === parseInt(postId) && parseInt(card.dataset.viewType) === parseInt(viewType)
     );
 
     if (currentOverlayIndex === -1) {
@@ -526,11 +562,21 @@ function closeImageOverlay(event) {
  * @param {number} postId 投稿ID
  */
 function displayOverlayImage(postId, viewType) {
-    const card = document.querySelector(`.card[data-post-id="${postId}"]`);
-    if (!card) {
+    const cardElements = document.querySelectorAll(`.card[data-post-id="${postId}"]`);
+    if (!cardElements) {
         console.error('[Overlay] Card not found:', postId);
         return;
     }
+    const cards = Array.from(cardElements);
+        // 現在の投稿のインデックスを取得
+    const currentImageIndex = cards.findIndex(card =>
+        parseInt(card.dataset.postId) === parseInt(postId) && parseInt(card.dataset.viewType) === parseInt(viewType)
+    );
+    if (currentImageIndex === -1) {
+        console.error('[Overlay] Card not found2:', postId);
+        return;
+    }
+    const card = cards[currentImageIndex];
 
     const img = card.querySelector('.card-image');
     if (!img) {
@@ -569,7 +615,7 @@ function displayOverlayImage(postId, viewType) {
         updateNavigationButtons();
 
         // 閲覧回数をインクリメント
-        incrementViewCount(postId);
+        incrementViewCount(postId, viewType);
     }
 }
 
@@ -594,13 +640,19 @@ function navigateOverlay(event, direction) {
     // 年齢確認状態を取得
     const isAgeVerified = checkAgeVerification();
 
-    // 年齢確認が必要な場合、NSFW画像をスキップして次の非NSFW画像を探す
+    // グループ投稿とNSFW画像（年齢確認未済）をスキップして次の表示可能な画像を探す
     while (newIndex >= 0 && newIndex < allPostElements.length) {
         const nextCard = allPostElements[newIndex];
         const nextPostId = parseInt(nextCard.dataset.postId);
         const nextImg = nextCard.querySelector('.card-image');
         const nextIsSensitive = nextImg.dataset.isSensitive === '1';
-        const nextViewType = nextImg.dataset.viewType;
+        const nextViewType = parseInt(nextCard.dataset.viewType) || 0;
+
+        // グループ投稿はオーバーレイで表示できないのでスキップ
+        if (nextViewType === 1) {
+            newIndex += direction;
+            continue;
+        }
 
         // 年齢確認が必要でNSFW画像の場合はスキップして次へ
         if (nextIsSensitive && !isAgeVerified) {
@@ -629,8 +681,9 @@ function navigateOverlay(event, direction) {
 /**
  * NSFW警告モーダルを表示（オーバーレイナビゲーション用）
  * @param {number} postId 投稿ID
+ * @param {number} viewType 投稿タイプ（0=single, 1=group）
  */
-function showNsfwWarningModal(postId) {
+function showNsfwWarningModal(postId, viewType) {
     // まずNSFWフィルター画像を表示
     const card = document.querySelector(`.card[data-post-id="${postId}"]`);
     if (!card) return;
@@ -772,14 +825,16 @@ function handleScroll() {
 /**
  * 閲覧回数をインクリメント
  * @param {number} postId 投稿ID
+ * @param {number} viewType 投稿タイプ（0=single, 1=group）
  */
-function incrementViewCount(postId) {
+function incrementViewCount(postId, viewType) {
+    viewType = viewType || 0; // デフォルトは0（single）
     fetch('/api/increment_view', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: 'id=' + postId
+        body: 'id=' + postId + '&viewtype=' + viewType
     }).catch(function(error) {
         console.error('View count increment failed:', error);
     });

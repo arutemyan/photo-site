@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\Cache\CacheManager;
 use App\Models\Post;
+use App\Models\GroupPost;
 use App\Security\RateLimiter;
 
 // CORSヘッダー（必要に応じて）
@@ -81,7 +82,30 @@ try {
     }
 
     // キャッシュが無い場合またはフィルタがある場合はDBから取得
-    $posts = $postModel->getAll($limit, $nsfwFilter, $tagId, $offset);
+    // シングル投稿とグループ投稿の両方を取得
+    $singlePosts = $postModel->getAll($limit, $nsfwFilter, $tagId, 0);
+
+    $groupPostModel = new GroupPost();
+    $groupPosts = $groupPostModel->getAll($limit, $nsfwFilter, $tagId, 0);
+
+    // 両方をマージして作成日時でソート
+    $allPosts = array_merge($singlePosts, $groupPosts);
+    usort($allPosts, function($a, $b) {
+        return strtotime($b['created_at']) - strtotime($a['created_at']);
+    });
+
+    // 各投稿にタイプを追加
+    foreach ($allPosts as &$post) {
+        // image_countがあればグループ投稿
+        if (isset($post['image_count'])) {
+            $post['post_type'] = 'group';
+        } else {
+            $post['post_type'] = 'single';
+        }
+    }
+
+    // オフセットと件数制限を適用
+    $posts = array_slice($allPosts, $offset, $limit);
 
     // JSONレスポンスを生成
     $response = [
