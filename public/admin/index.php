@@ -821,9 +821,14 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                                                             <img src="" alt="OGP画像プレビュー" style="max-width: 300px; display: none;" id="ogpImagePreviewImg">
                                                         </div>
                                                         <input type="file" class="form-control" id="ogpImageFile" accept="image/*">
-                                                        <button type="button" class="btn btn-sm btn-primary mt-2" id="uploadOgpImage">
-                                                            <i class="bi bi-upload me-1"></i>アップロード
-                                                        </button>
+                                                        <div class="mt-2">
+                                                            <button type="button" class="btn btn-sm btn-primary" id="uploadOgpImage">
+                                                                <i class="bi bi-upload me-1"></i>アップロード
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-danger" id="deleteOgpImage" style="display: none;">
+                                                                <i class="bi bi-trash me-1"></i>削除
+                                                            </button>
+                                                        </div>
                                                         <div class="form-text">推奨サイズ: 1200x630px（横長）。Twitterでは2:1の比率が推奨されます</div>
                                                     </div>
 

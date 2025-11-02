@@ -21,10 +21,16 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 
 header('Content-Type: application/json; charset=utf-8');
 
-// POSTリクエストのみ許可
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+// HTTPメソッドを確認
+$method = $_SERVER['REQUEST_METHOD'];
+if ($method === 'POST' && isset($_POST['_method']) && strtoupper($_POST['_method']) === 'DELETE') {
+    $method = 'DELETE';
+}
+
+// POSTまたはDELETEのみ許可
+if ($method !== 'POST' && $method !== 'DELETE') {
     http_response_code(405);
-    echo json_encode(['success' => false, 'error' => 'POSTメソッドのみ許可されています'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['success' => false, 'error' => 'POSTまたはDELETEメソッドのみ許可されています'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -32,10 +38,47 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 if (!CsrfProtection::validatePost() && !CsrfProtection::validateHeader()) {
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'CSRFトークンが無効です'], JSON_UNESCAPED_UNICODE);
-    logSecurityEvent('CSRF token validation failed on OGP image upload', ['ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+    logSecurityEvent('CSRF token validation failed on OGP image operation', ['ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
     exit;
 }
 
+// DELETEリクエスト: OGP画像削除
+if ($method === 'DELETE') {
+    try {
+        // 現在のOGP画像パスを取得
+        $settingModel = new Setting();
+        $currentImagePath = $settingModel->get('ogp_image');
+
+        // 画像ファイルを削除
+        if ($currentImagePath) {
+            $fullPath = __DIR__ . '/../../' . $currentImagePath;
+            if (file_exists($fullPath)) {
+                unlink($fullPath);
+            }
+        }
+
+        // データベースを更新（画像パスを空に）
+        $settingModel->set('ogp_image', '');
+
+        // 成功レスポンス
+        echo json_encode([
+            'success' => true,
+            'message' => 'OGP画像が削除されました'
+        ], JSON_UNESCAPED_UNICODE);
+
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE);
+
+        error_log('OGP Image Delete Error: ' . $e->getMessage());
+    }
+    exit;
+}
+
+// POSTリクエスト: OGP画像アップロード
 try {
     // 画像ファイルチェック
     if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {

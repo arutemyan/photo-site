@@ -418,6 +418,13 @@ $(document).ready(function() {
         uploadOgpImage();
     });
 
+    // OGP画像削除
+    $('#deleteOgpImage').on('click', function() {
+        if (confirm('OGP画像を削除しますか？')) {
+            deleteOgpImage();
+        }
+    });
+
     // OGP画像プレビュー
     $('#ogpImageFile').on('change', function(e) {
         const file = e.target.files[0];
@@ -1087,6 +1094,10 @@ function loadSettings() {
                     } else if (setting.key === 'ogp_image') {
                         if (setting.value) {
                             $('#ogpImagePreviewImg').attr('src', '/' + setting.value).show();
+                            $('#deleteOgpImage').show();
+                        } else {
+                            $('#ogpImagePreviewImg').hide();
+                            $('#deleteOgpImage').hide();
                         }
                     } else if (setting.key === 'twitter_card') {
                         $('#twitterCard').val(setting.value || 'summary_large_image');
@@ -1257,6 +1268,7 @@ function uploadOgpImage() {
 
                 // プレビュー画像を更新
                 $('#ogpImagePreviewImg').attr('src', '/' + response.image_path).show();
+                $('#deleteOgpImage').show();
 
                 // 設定を再読み込み
                 loadSettings();
@@ -1285,6 +1297,68 @@ function uploadOgpImage() {
         complete: function() {
             // ボタンを有効化
             $uploadBtn.prop('disabled', false).html(originalText);
+        }
+    });
+}
+
+/**
+ * OGP画像を削除
+ */
+function deleteOgpImage() {
+    const $deleteBtn = $('#deleteOgpImage');
+    const originalText = $deleteBtn.html();
+
+    // ボタンを無効化
+    $deleteBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>削除中...');
+    $('#settingsAlert').addClass('d-none');
+
+    $.ajax({
+        url: '/' + ADMIN_PATH + '/api/ogp-image.php',
+        type: 'POST',
+        data: {
+            _method: 'DELETE',
+            csrf_token: $('input[name="csrf_token"]').val()
+        },
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                // 成功メッセージ
+                $('#settingsAlert')
+                    .addClass('alert-success')
+                    .text(response.message || 'OGP画像が削除されました')
+                    .removeClass('d-none');
+
+                // プレビュー画像を非表示
+                $('#ogpImagePreviewImg').hide();
+                $deleteBtn.hide();
+
+                // 設定を再読み込み
+                loadSettings();
+
+                // 3秒後にメッセージを消す
+                setTimeout(function() {
+                    $('#settingsAlert').addClass('d-none');
+                }, 3000);
+            } else {
+                $('#settingsAlert')
+                    .addClass('alert-danger')
+                    .text(response.error || '削除に失敗しました')
+                    .removeClass('d-none');
+            }
+        },
+        error: function(xhr) {
+            let errorMsg = 'サーバーエラーが発生しました';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMsg = xhr.responseJSON.error;
+            }
+            $('#settingsAlert')
+                .addClass('alert-danger')
+                .text(errorMsg)
+                .removeClass('d-none');
+        },
+        complete: function() {
+            // ボタンを有効化
+            $deleteBtn.prop('disabled', false).html(originalText);
         }
     });
 }
