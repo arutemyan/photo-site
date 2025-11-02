@@ -7,8 +7,9 @@
  * - NSFW_CONFIG_VERSION: NSFW設定のバージョン
  */
 
-// 現在クリックされた投稿ID（モーダル用）
+// 現在クリックされた投稿参照情報
 let currentSensitivePostId = null;
+let currentSensitiveViewType = null;
 
 // フィルタ状態
 let currentNSFWFilter = 'all';  // all, safe, nsfw
@@ -24,7 +25,7 @@ const POSTS_PER_PAGE = 18;
 let allPostElements = [];  // 全投稿要素の配列
 let currentOverlayIndex = -1;  // 現在表示中の投稿のインデックス
 let pendingNsfwPostId = null;  // NSFW警告待ちの投稿ID
-
+let pendingNsfwViewType = null;
 /**
  * 年齢確認済みかチェック
  * @returns {boolean} 確認済みならtrue
@@ -50,7 +51,6 @@ function checkAgeVerification() {
     const expiryMs = (AGE_VERIFICATION_MINUTES) * 60 * 1000;
     const timeSince = now - verifiedTime;
     const isValid = timeSince < expiryMs;
-
     return isValid;
 }
 
@@ -61,32 +61,6 @@ function setAgeVerification() {
     const currentVersion = NSFW_CONFIG_VERSION;
     localStorage.setItem('age_verified', Date.now().toString());
     localStorage.setItem('age_verified_version', String(currentVersion));
-}
-
-/**
- * センシティブ画像クリック処理
- * @param {number} postId 投稿ID
- * @param {boolean} isSensitive センシティブフラグ
- */
-function handleSensitiveClick(event, postId, isSensitive) {
-    // センシティブでない場合は通常遷移
-    if (!isSensitive) {
-        return true;
-    }
-
-    // イベントをキャンセル
-    event.preventDefault();
-
-    // 年齢確認済みなら直接遷移
-    if (checkAgeVerification()) {
-        window.location.href = '/detail.php?id=' + postId;
-        return false;
-    }
-
-    // 未確認なら年齢確認モーダルを表示
-    currentSensitivePostId = postId;
-    showAgeVerificationModal();
-    return false;
 }
 
 /**
@@ -108,6 +82,7 @@ function hideAgeVerificationModal() {
         modal.classList.remove('show');
     }
     currentSensitivePostId = null;
+    currentSensitiveViewType = null;
 }
 
 /**
@@ -119,7 +94,7 @@ function confirmAge() {
 
     // 詳細ページへ遷移
     if (currentSensitivePostId) {
-        window.location.href = '/detail.php?id=' + currentSensitivePostId;
+        window.location.href = '/detail.php?id=' + currentSensitivePostId + '&viewtype=' + currentSensitiveViewType;
     }
 }
 
@@ -405,6 +380,7 @@ function appendPosts(posts) {
  */
 function appendPostCard(grid, post) {
     const isSensitive = post.is_sensitive == 1;
+    const viewType = post.post_type === 'group' ? 1 : 0;
 
     // NSFWサムネイルのパス生成
     let imagePath;
@@ -424,6 +400,7 @@ function appendPostCard(grid, post) {
     const card = document.createElement('div');
     card.className = 'card';
     card.dataset.postId = post.id;
+    card.dataset.viewType = viewType;
 
     let cardHTML = '';
 
@@ -438,7 +415,7 @@ function appendPostCard(grid, post) {
             onerror="if(!this.dataset.errorHandled){this.dataset.errorHandled='1';this.src='/res/images/nsfw-placeholder.svg';}"
             data-full-image="${'/' + (post.image_path || post.thumb_path || '')}"
             data-is-sensitive="${isSensitive ? '1' : '0'}"
-            onclick="openImageOverlay(${post.id}, ${isSensitive})"
+            onclick="openImageOverlay(${post.id}, ${isSensitive}, ${viewType})"
             style="cursor: pointer;"
         >
     `;
@@ -496,10 +473,11 @@ function escapeHtml(text) {
  * @param {number} postId 投稿ID
  * @param {boolean} isSensitive センシティブフラグ
  */
-function openImageOverlay(postId, isSensitive) {
+function openImageOverlay(postId, isSensitive, viewType) {
     // センシティブ画像で年齢確認が必要な場合
     if (isSensitive && !checkAgeVerification()) {
         currentSensitivePostId = postId;
+        currentSensitiveViewType = viewType;
         showAgeVerificationModal();
         return;
     }
@@ -521,7 +499,7 @@ function openImageOverlay(postId, isSensitive) {
     }
 
     // 画像を表示
-    displayOverlayImage(postId);
+    displayOverlayImage(postId, viewType);
 }
 
 /**
@@ -547,7 +525,7 @@ function closeImageOverlay(event) {
  * オーバーレイに画像を表示
  * @param {number} postId 投稿ID
  */
-function displayOverlayImage(postId) {
+function displayOverlayImage(postId, viewType) {
     const card = document.querySelector(`.card[data-post-id="${postId}"]`);
     if (!card) {
         console.error('[Overlay] Card not found:', postId);
@@ -584,7 +562,7 @@ function displayOverlayImage(postId) {
 
         // 詳細ボタンのリンクを設定
         if (detailButton) {
-            detailButton.href = '/detail.php?id=' + postId;
+            detailButton.href = '/detail.php?id=' + postId + '&viewtype=' + viewType;
         }
 
         // ナビゲーションボタンの表示/非表示
@@ -622,6 +600,7 @@ function navigateOverlay(event, direction) {
         const nextPostId = parseInt(nextCard.dataset.postId);
         const nextImg = nextCard.querySelector('.card-image');
         const nextIsSensitive = nextImg.dataset.isSensitive === '1';
+        const nextViewType = nextImg.dataset.viewType;
 
         // 年齢確認が必要でNSFW画像の場合はスキップして次へ
         if (nextIsSensitive && !isAgeVerified) {
@@ -635,10 +614,11 @@ function navigateOverlay(event, direction) {
         if (nextIsSensitive) {
             // NSFW画像で年齢確認済みの場合、警告モーダルを表示
             pendingNsfwPostId = nextPostId;
-            showNsfwWarningModal(nextPostId);
+            pendingNsfwViewType = nextViewType;
+            showNsfwWarningModal(nextPostId, nextViewType);
         } else {
             // 通常画像の場合、そのまま表示
-            displayOverlayImage(nextPostId);
+            displayOverlayImage(nextPostId, nextViewType);
         }
         return;
     }
@@ -679,7 +659,7 @@ function showNsfwWarningModal(postId) {
     // 詳細ボタンのリンクを更新
     const detailButton = document.getElementById('overlayDetailButton');
     if (detailButton) {
-        detailButton.href = '/detail.php?id=' + postId;
+        detailButton.href = '/detail.php?id=' + postId + '&viewtype=' + viewType;
     }
 
     // ナビゲーションボタンの表示/非表示
@@ -702,6 +682,7 @@ function acceptNsfwWarning() {
             overlayImg.src = overlayImg.dataset.originalPath;
         }
         pendingNsfwPostId = null;
+        pendingNsfwViewType = null;
     }
 }
 
@@ -715,6 +696,7 @@ function cancelNsfwWarning() {
     }
     // フィルター画像のままにする（何もしない）
     pendingNsfwPostId = null;
+    pendingNsfwViewType = null;
 }
 
 /**

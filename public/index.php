@@ -143,7 +143,7 @@ try {
 <body data-age-verification-minutes="<?= $ageVerificationMinutes ?>" data-nsfw-config-version="<?= $nsfwConfigVersion ?>">
     <script>
         // 設定値をdata属性から読み込み（const定義で改ざん防止）
-        const AGE_VERIFICATION_MINUTES = parseInt(document.body.dataset.ageVerificationMinutes) || 10080;
+        const AGE_VERIFICATION_MINUTES = parseFloat(document.body.dataset.ageVerificationMinutes) || 10080;
         const NSFW_CONFIG_VERSION = parseInt(document.body.dataset.nsfwConfigVersion) || 1;
         // タグ一覧（ID, name, post_count）
         const TAGS_DATA = <?= json_encode($tags, JSON_UNESCAPED_UNICODE) ?>;
@@ -227,11 +227,12 @@ try {
                         $imagePath = $thumbPath;
                     }
                     $isGroup = isset($post['post_type']) && $post['post_type'] === 'group';
-                    $detailUrl = $isGroup ? '/group_detail.php?id=' . $post['id'] : '/detail.php?id=' . $post['id'];
+                    $viewType = ($isGroup ? 1 : 0);
+                    $detailUrl = '/detail.php?id=' . $post['id'] . "&viewtype=" . $viewType;
                     ?>
                     <div class="card <?= $isSensitive ? 'nsfw-card' : '' ?><?= $isGroup ? ' group-card' : '' ?>" data-post-id="<?= $post['id'] ?>" data-post-type="<?= $isGroup ? 'group' : 'single' ?>">
                         <div class="card-img-wrapper <?= $isSensitive ? 'nsfw-wrapper' : '' ?>"
-                             <?= $isGroup ? 'onclick="window.location.href=\'' . $detailUrl . '\'"' : 'onclick="openImageOverlay(' . $post['id'] . ', ' . ($isSensitive ? 'true' : 'false') . ')"' ?>
+                             <?= $isGroup ? 'onclick="window.location.href=\'' . $detailUrl . '\'"' : 'onclick="openImageOverlay(' . $post['id'] . ', ' . ($isSensitive ? 'true' : 'false') . ', '.$viewType.')"' ?>
                              style="cursor: pointer;">
                             <img
                                 src="<?= $imagePath ?>"

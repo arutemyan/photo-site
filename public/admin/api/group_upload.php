@@ -141,6 +141,12 @@ try {
         }
 
         try {
+
+            // NSFW設定を読み込み
+            $config = require __DIR__ . '/../../../config/config.php';
+            $nsfwConfig = $config['nsfw'];
+            $filterSettings = $nsfwConfig['filter_settings'];
+
             // ユニークなファイル名を生成
             $uniqueName = $imageUploader->generateUniqueFilename('group_');
 
@@ -149,7 +155,8 @@ try {
                 $tmpPath,
                 $validation['mime_type'],
                 $uniqueName,
-                $isSensitive == 1 // NSFWフィルター版を作成
+                $isSensitive == 1, // NSFWフィルター版を作成
+                $filterSettings
             );
 
             if (!$uploadResult['success']) {

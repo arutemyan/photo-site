@@ -15,17 +15,17 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     header('Location: /index.php');
     exit;
 }
-
-$id = (int)$_GET['id'];
-$type = $_GET['type'] ?? 'single'; // デフォルトは単一投稿
-
-// タイプの検証
-if (!in_array($type, ['single', 'group'], true)) {
+if (!isset($_GET['viewtype']) || !is_numeric($_GET['viewtype'])) {
     header('Location: /index.php');
     exit;
 }
-
-$isGroupPost = ($type === 'group');
+$id = (int)$_GET['id'];
+$type = (int)$_GET['viewtype'];
+if (!(0 <= $type && $type <= 1)) {
+    header('Location: /index.php');
+    exit;
+}
+$isGroupPost = ($type === 1);
 
 try {
     // テーマ設定を取得
@@ -69,6 +69,29 @@ try {
     header('Location: /index.php');
     exit;
 }
+
+function createNsfwThumb($post) {
+    // NSFW画像の場合はNSFWフィルター版を使用
+    $pathInfo = pathinfo($post['image_path'] ?? $data['thumb_path'] ?? '');
+    // basename()でディレクトリトラバーサルを防止
+    $nsfwFilename = basename($pathInfo['filename'] . '_nsfw.' . ($pathInfo['extension'] ?? 'webp'));
+    $shareImagePath = $pathInfo['dirname'] . '/' . $nsfwFilename;
+
+    // パスの検証（uploadsディレクトリ内であることを確認）
+    $fullPath = realpath(__DIR__ . '/' . $shareImagePath);
+    $uploadsDir = realpath(__DIR__ . '/uploads/');
+
+    // NSFWフィルター版が存在しない、または不正なパスの場合はサムネイルのNSFWフィルター版を使用
+    if (!$fullPath || !$uploadsDir || strpos($fullPath, $uploadsDir) !== 0 || !file_exists($fullPath)) {
+        if (!empty($post['thumb_path'])) {
+            $thumbInfo = pathinfo($post['thumb_path']);
+            $nsfwThumbFilename = basename($thumbInfo['filename'] . '_nsfw.' . ($thumbInfo['extension'] ?? 'webp'));
+            return $thumbInfo['dirname'] . '/' . $nsfwThumbFilename;
+        }
+    }
+    return "";
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -76,7 +99,7 @@ try {
 <body data-age-verification-minutes="<?= $ageVerificationMinutes ?>" data-nsfw-config-version="<?= $nsfwConfigVersion ?>" data-post-id="<?= $id ?>" data-is-sensitive="<?= isset($data['is_sensitive']) && $data['is_sensitive'] == 1 ? '1' : '0' ?>">
     <script>
         // 設定値をdata属性から読み込み（const定義で改ざん防止）
-        const AGE_VERIFICATION_MINUTES = parseInt(document.body.dataset.ageVerificationMinutes) || 10080;
+        const AGE_VERIFICATION_MINUTES = parseFloat(document.body.dataset.ageVerificationMinutes) || 10080;
         const NSFW_CONFIG_VERSION = parseInt(document.body.dataset.nsfwConfigVersion) || 1;
     </script>
 
@@ -124,17 +147,15 @@ try {
                         <?php foreach ($data['images'] as $index => $image):
                             $isSensitive = isset($data['is_sensitive']) && $data['is_sensitive'] == 1;
                             $imagePath = '/' . escapeHtml($image['image_path']);
-
                             // センシティブ画像の場合、最初はNSFWフィルター版を表示
                             if ($isSensitive) {
-                                $pathInfo = pathinfo($imagePath);
-                                $nsfwPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_nsfw.' . ($pathInfo['extension'] ?? '');
-                                $displayPath = $nsfwPath;
+                                $displayPath = createNsfwThumb($image);
                             } else {
                                 $displayPath = $imagePath;
                             }
                         ?>
                             <img
+                                id="detailImage"
                                 class="gallery-image<?= $index === 0 ? ' active' : '' ?>"
                                 src="<?= $displayPath ?>"
                                 <?= $isSensitive ? 'data-original="' . $imagePath . '"' : '' ?>
@@ -160,12 +181,9 @@ try {
                 <?php
                 $isSensitive = isset($data['is_sensitive']) && $data['is_sensitive'] == 1;
                 $imagePath = '/' . escapeHtml($data['image_path'] ?? $data['thumb_path'] ?? '');
-
                 // センシティブ画像の場合、最初はNSFWフィルター版を表示
                 if ($isSensitive) {
-                    $pathInfo = pathinfo($imagePath);
-                    $nsfwPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_nsfw.' . ($pathInfo['extension'] ?? '');
-                    $displayPath = $nsfwPath;
+                    $displayPath = createNsfwThumb($data);
                 } else {
                     $displayPath = $imagePath;
                 }
@@ -218,6 +236,14 @@ try {
 
     <!-- JavaScript -->
     <script src="/res/js/detail.js?v=<?= $nsfwConfigVersion ?>"></script>
+    <script>
+        // DOMロード後に初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 年齢確認チェック
+            initDetailPage(<?= isset($data['is_sensitive']) && $data['is_sensitive'] == 1 ? 'true' : 'false' ?>, <?= $type ?>);
+        });
+    </script>
+
 
     <?php if ($isGroupPost): ?>
     <!-- グループ投稿用のギャラリーJS -->

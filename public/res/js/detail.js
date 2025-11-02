@@ -92,12 +92,11 @@ function denyAge() {
 /**
  * ページロード時の処理
  */
-function initDetailPage(isSensitive) {
+function initDetailPage(isSensitive, $viewType) {
     // センシティブでない場合は何もしない
     if (!isSensitive) {
         return;
     }
-
     // 年齢確認済みなら画像を表示
     if (checkAgeVerification()) {
         const img = document.getElementById('detailImage');
