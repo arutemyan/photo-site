@@ -6,7 +6,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../src/Security/SecurityUtil.php';
 
 use App\Models\Post;
-use App\Models\GroupPost;
+use App\Models\GroupPostImage;
 use App\Models\Theme;
 use App\Models\Setting;
 
@@ -42,30 +42,29 @@ try {
     $ageVerificationMinutes = $nsfwConfig['age_verification_minutes'];
     $nsfwConfigVersion = $nsfwConfig['config_version'];
 
-    // 投稿を取得（タイプに応じて切り替え）
-    if ($isGroupPost) {
-        $model = new GroupPost();
-        $data = $model->getById($id);
+    // 投稿を取得（統一されたPostモデルを使用）
+    $model = new Post();
+    $data = $model->getById($id);
 
-        if ($data === null) {
-            header('Location: /index.php');
-            exit;
-        }
-
-        // グループ投稿の閲覧数をインクリメント
-        $model->incrementViewCount($id);
-    } else {
-        $model = new Post();
-        $data = $model->getById($id);
-
-        if ($data === null) {
-            header('Location: /index.php');
-            exit;
-        }
-
-        // シングル投稿の閲覧数をインクリメント
-        $model->incrementViewCount($id);
+    if ($data === null) {
+        header('Location: /index.php');
+        exit;
     }
+
+    // post_typeが一致するか確認
+    if ($data['post_type'] != $type) {
+        header('Location: /index.php');
+        exit;
+    }
+
+    // グループ投稿の場合は画像を取得
+    if ($isGroupPost) {
+        $groupPostImageModel = new GroupPostImage();
+        $data['images'] = $groupPostImageModel->getImagesByPostId($id);
+    }
+
+    // 閲覧数をインクリメント
+    $model->incrementViewCount($id);
 
 } catch (Exception $e) {
     error_log('Post Detail Error (' . $type . '): ' . $e->getMessage());

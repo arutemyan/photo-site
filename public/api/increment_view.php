@@ -5,7 +5,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\Models\Post;
-use App\Models\GroupPost;
 use App\Security\RateLimiter;
 
 header('Content-Type: application/json; charset=utf-8');
@@ -44,12 +43,8 @@ try {
 
     $viewType = (int)$viewType;
 
-    // viewTypeに応じて適切なモデルを使用（0=single, 1=group）
-    if ($viewType === 1) {
-        $model = new GroupPost();
-    } else {
-        $model = new Post();
-    }
+    // 統一されたPostモデルを使用（post_typeは内部で管理）
+    $model = new Post();
 
     $success = $model->incrementViewCount((int)$postId);
 

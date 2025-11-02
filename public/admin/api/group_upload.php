@@ -6,7 +6,8 @@ require_once __DIR__ . '/../../../vendor/autoload.php';
 require_once __DIR__ . '/../auth_check.php';
 require_once __DIR__ . '/../../../src/Security/SecurityUtil.php';
 
-use App\Models\GroupPost;
+use App\Models\Post;
+use App\Models\GroupPostImage;
 use App\Utils\ImageUploader;
 use App\Security\CsrfProtection;
 use App\Cache\CacheManager;
@@ -52,7 +53,8 @@ try {
         exit;
     }
 
-    $groupPostModel = new GroupPost();
+    $postModel = new Post();
+    $groupPostImageModel = new GroupPostImage();
     $groupPostId = isset($_POST['group_post_id']) ? (int)$_POST['group_post_id'] : 0;
     $isAddingToExisting = $groupPostId > 0;
 
@@ -75,8 +77,8 @@ try {
     $maxDisplayOrder = 0;
 
     if ($isAddingToExisting) {
-        $groupPost = $groupPostModel->getById($groupPostId, true);
-        if (!$groupPost) {
+        $groupPost = $postModel->getById($groupPostId);
+        if (!$groupPost || $groupPost['post_type'] != 1) {
             http_response_code(404);
             echo json_encode([
                 'success' => false,
@@ -89,7 +91,8 @@ try {
         $isSensitive = $groupPost['is_sensitive'];
 
         // 現在のグループ内の最大display_orderを取得
-        foreach ($groupPost['images'] as $img) {
+        $images = $groupPostImageModel->getImagesByPostId($groupPostId);
+        foreach ($images as $img) {
             if ($img['display_order'] > $maxDisplayOrder) {
                 $maxDisplayOrder = $img['display_order'];
             }
@@ -166,7 +169,7 @@ try {
             // 新規作成の場合は配列に追加、既存グループへの追加の場合は直接DB登録
             if ($isAddingToExisting) {
                 $maxDisplayOrder++;
-                $groupPostModel->addImage(
+                $groupPostImageModel->addImage(
                     $groupPostId,
                     $uploadResult['image_path'],
                     $uploadResult['thumb_path'],
@@ -212,7 +215,7 @@ try {
         $detail = $_POST['detail'] ?? '';
         $isVisible = isset($_POST['is_visible']) ? (int)$_POST['is_visible'] : 1;
 
-        $groupPostId = $groupPostModel->create(
+        $groupPostId = $postModel->createGroupPost(
             $title,
             $imagePaths,
             $tags,

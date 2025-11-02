@@ -101,6 +101,117 @@ class Post
     }
 
     /**
+     * すべての投稿を統合取得（single + group）
+     *
+     * post_type=0（single）とpost_type=1（group）の両方を取得
+     * 正しいページネーションと絞り込みが可能
+     *
+     * @param int $limit 取得件数
+     * @param string $nsfwFilter NSFWフィルタ（all/safe/nsfw）
+     * @param int|null $tagId タグフィルタ（タグID）
+     * @param int $offset オフセット
+     * @return array 投稿データの配列
+     */
+    public function getAllUnified(int $limit = 18, string $nsfwFilter = 'all', ?int $tagId = null, int $offset = 0): array
+    {
+        // セキュリティ: 上限値を強制
+        $limit = min($limit, 50);
+        $offset = max($offset, 0);
+
+        $sql = "
+            SELECT id, post_type, title, detail, image_path, thumb_path, is_sensitive, is_visible, created_at, updated_at,
+                   tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, sort_order
+            FROM posts
+            WHERE is_visible = 1
+        ";
+        $params = [];
+
+        // NSFWフィルタ
+        if ($nsfwFilter === 'safe') {
+            $sql .= " AND (is_sensitive = 0 OR is_sensitive IS NULL)";
+        } elseif ($nsfwFilter === 'nsfw') {
+            $sql .= " AND is_sensitive = 1";
+        }
+
+        // セキュリティチェック
+        function checkNGTag($t) {
+            if (empty($t)) return false;
+            return false
+                || strpos($t, ";") !== false
+                || strpos($t, '"') !== false
+                || strpos($t, "'") !== false;
+        }
+        if ((!empty($tagId) && !is_numeric($tagId)) || checkNGTag($nsfwFilter)) {
+            return [];
+        }
+
+        // タグフィルタ
+        if ($tagId !== null && $tagId > 0) {
+            $sql .= " AND (tag1 = ? OR tag2 = ? OR tag3 = ? OR tag4 = ? OR tag5 = ? OR tag6 = ? OR tag7 = ? OR tag8 = ? OR tag9 = ? OR tag10 = ?)";
+            for ($i = 0; $i < 10; $i++) {
+                $params[] = $tagId;
+            }
+        }
+
+        $sql .= " ORDER BY sort_order DESC, created_at DESC LIMIT ? OFFSET ?";
+        $params[] = $limit;
+        $params[] = $offset;
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $posts = $stmt->fetchAll();
+
+        // 投稿タイプごとに処理
+        if (!empty($posts)) {
+            // GroupPostImageモデルのインスタンス化
+            $groupPostImageModel = new GroupPostImage();
+
+            // 閲覧数を一括取得（post_typeごと）
+            $singlePostIds = [];
+            $groupPostIds = [];
+
+            foreach ($posts as $post) {
+                if ($post['post_type'] == 0) {
+                    $singlePostIds[] = $post['id'];
+                } else {
+                    $groupPostIds[] = $post['id'];
+                }
+            }
+
+            $singleViewCounts = !empty($singlePostIds) ? $this->viewCounter->getBatch($singlePostIds, 0) : [];
+            $groupViewCounts = !empty($groupPostIds) ? $this->viewCounter->getBatch($groupPostIds, 1) : [];
+
+            // 各投稿にデータを付加
+            foreach ($posts as &$post) {
+                $post['tags'] = $this->tagService->getTagsFromRow($post);
+
+                if ($post['post_type'] == 0) {
+                    // シングル投稿
+                    $post['view_count'] = $singleViewCounts[$post['id']] ?? 0;
+                } else {
+                    // グループ投稿
+                    $post['view_count'] = $groupViewCounts[$post['id']] ?? 0;
+
+                    // 代表画像を取得
+                    $firstImage = $groupPostImageModel->getFirstImageByPostId($post['id']);
+                    if ($firstImage) {
+                        $post['image_path'] = $firstImage['image_path'];
+                        $post['thumb_path'] = $firstImage['thumb_path'];
+                    } else {
+                        $post['image_path'] = null;
+                        $post['thumb_path'] = null;
+                    }
+
+                    // 画像数を取得
+                    $post['image_count'] = $groupPostImageModel->getImageCountByPostId($post['id']);
+                }
+            }
+        }
+
+        return $posts;
+    }
+
+    /**
      * 投稿IDで投稿を取得
      *
      * @param int $id 投稿ID
@@ -163,6 +274,55 @@ class Post
         ]);
 
         $postId = (int)$this->db->lastInsertId();
+
+        return $postId;
+    }
+
+    /**
+     * グループ投稿を作成
+     *
+     * @param string $title タイトル
+     * @param array $imagePaths 画像パス配列 [['image' => '...', 'thumb' => '...'], ...]
+     * @param string|null $tags タグ
+     * @param string|null $detail 詳細説明
+     * @param int $isSensitive センシティブ画像フラグ
+     * @param int $isVisible 表示フラグ
+     * @return int 作成された投稿ID
+     */
+    public function createGroupPost(
+        string $title,
+        array $imagePaths,
+        ?string $tags = null,
+        ?string $detail = null,
+        int $isSensitive = 0,
+        int $isVisible = 1
+    ): int {
+        // タグ文字列をタグID配列に変換
+        $tagIds = $this->tagService->parseTagsToIds($tags);
+
+        // post_type=1 でグループ投稿を作成
+        $sql = "INSERT INTO posts (post_type, title, detail, is_sensitive, is_visible, tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            $title, $detail, $isSensitive, $isVisible,
+            $tagIds[0], $tagIds[1], $tagIds[2], $tagIds[3], $tagIds[4],
+            $tagIds[5], $tagIds[6], $tagIds[7], $tagIds[8], $tagIds[9]
+        ]);
+
+        $postId = (int)$this->db->lastInsertId();
+
+        // 画像を group_post_images に登録
+        $groupPostImageModel = new GroupPostImage();
+        $displayOrder = 0;
+        foreach ($imagePaths as $imagePath) {
+            $groupPostImageModel->addImage(
+                $postId,
+                $imagePath['image'],
+                $imagePath['thumb'],
+                $displayOrder++
+            );
+        }
 
         return $postId;
     }

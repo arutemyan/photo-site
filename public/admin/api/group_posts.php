@@ -5,7 +5,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../../vendor/autoload.php';
 require_once __DIR__ . '/../auth_check.php';
 
-use App\Models\GroupPost;
+use App\Models\Post;
+use App\Models\GroupPostImage;
 use App\Security\CsrfProtection;
 use App\Cache\CacheManager;
 
@@ -27,25 +28,35 @@ if ($method === 'POST' && isset($_POST['_method'])) {
     $method = strtoupper($_POST['_method']);
 }
 
-$groupPostModel = new GroupPost();
+$postModel = new Post();
+$groupPostImageModel = new GroupPostImage();
 
 try {
     switch ($method) {
         case 'GET':
             // グループ投稿一覧または詳細取得
             if (isset($_GET['id'])) {
-                $groupPost = $groupPostModel->getById((int)$_GET['id'], true);
-                if ($groupPost) {
+                $groupPost = $postModel->getById((int)$_GET['id']);
+                if ($groupPost && $groupPost['post_type'] == 1) {
+                    // グループ投稿の画像を取得
+                    $groupPost['images'] = $groupPostImageModel->getImagesByPostId($groupPost['id']);
                     echo json_encode(['success' => true, 'data' => $groupPost], JSON_UNESCAPED_UNICODE);
                 } else {
                     http_response_code(404);
                     echo json_encode(['success' => false, 'error' => 'グループ投稿が見つかりません'], JSON_UNESCAPED_UNICODE);
                 }
             } else {
-                // 一覧取得
+                // 一覧取得 - post_type=1のみ
                 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
                 $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
-                $groupPosts = $groupPostModel->getAll($limit, 'all', null, $offset);
+                $groupPosts = $postModel->getAllUnified($limit, 'all', null, $offset);
+
+                // post_type=1のみフィルタ
+                $groupPosts = array_filter($groupPosts, function($post) {
+                    return $post['post_type'] == 1;
+                });
+                $groupPosts = array_values($groupPosts); // 配列のインデックスを詰める
+
                 $count = count($groupPosts);
 
                 echo json_encode([
@@ -73,13 +84,13 @@ try {
                 exit;
             }
 
-            $success = $groupPostModel->update(
+            $success = $postModel->updateTextOnly(
                 $id,
                 $putData['title'] ?? '',
                 $putData['tags'] ?? null,
                 $putData['detail'] ?? null,
                 (int)($putData['is_sensitive'] ?? 0),
-                (int)($putData['is_visible'] ?? 1)
+                (int)($putData['sort_order'] ?? 0)
             );
 
             if ($success) {
@@ -109,7 +120,7 @@ try {
                 exit;
             }
 
-            $success = $groupPostModel->delete($id);
+            $success = $postModel->delete($id);
 
             if ($success) {
                 $cache = new CacheManager();

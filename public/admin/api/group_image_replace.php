@@ -6,7 +6,8 @@ require_once __DIR__ . '/../../../vendor/autoload.php';
 require_once __DIR__ . '/../auth_check.php';
 require_once __DIR__ . '/../../../src/Security/SecurityUtil.php';
 
-use App\Models\GroupPost;
+use App\Models\Post;
+use App\Models\GroupPostImage;
 use App\Utils\ImageUploader;
 use App\Security\CsrfProtection;
 use App\Cache\CacheManager;
@@ -42,7 +43,8 @@ if (!CsrfProtection::validatePost()) {
     exit;
 }
 
-$groupPostModel = new GroupPost();
+$postModel = new Post();
+$groupPostImageModel = new GroupPostImage();
 
 // DELETEリクエスト: 画像削除
 if ($method === 'DELETE') {
@@ -56,7 +58,7 @@ if ($method === 'DELETE') {
         }
 
         // 画像情報を取得
-        $image = $groupPostModel->getImageById($imageId);
+        $image = $groupPostImageModel->getImageById($imageId);
         if (!$image) {
             http_response_code(404);
             echo json_encode(['success' => false, 'error' => '画像が見つかりません'], JSON_UNESCAPED_UNICODE);
@@ -64,8 +66,9 @@ if ($method === 'DELETE') {
         }
 
         // グループ内の画像数を確認（最低1枚は必要）
-        $groupPost = $groupPostModel->getById($image['group_post_id'], true);
-        if ($groupPost && count($groupPost['images']) <= 1) {
+        $postId = $image['post_id'];
+        $imageCount = $groupPostImageModel->getImageCountByPostId($postId);
+        if ($imageCount <= 1) {
             http_response_code(400);
             echo json_encode(['success' => false, 'error' => 'グループ内の最後の画像は削除できません'], JSON_UNESCAPED_UNICODE);
             exit;
@@ -96,7 +99,7 @@ if ($method === 'DELETE') {
         }
 
         // DBから削除
-        $success = $groupPostModel->deleteImage($imageId);
+        $success = $groupPostImageModel->deleteImage($imageId);
 
         if ($success) {
             $cache = new CacheManager();
@@ -135,7 +138,7 @@ try {
     }
 
     // 画像情報を取得
-    $image = $groupPostModel->getImageById($imageId);
+    $image = $groupPostImageModel->getImageById($imageId);
     if (!$image) {
         http_response_code(404);
         echo json_encode(['success' => false, 'error' => '画像が見つかりません'], JSON_UNESCAPED_UNICODE);
@@ -150,8 +153,9 @@ try {
     }
 
     // グループ投稿情報を取得（is_sensitive設定のため）
-    $groupPost = $groupPostModel->getById($image['group_post_id'], true);
-    if (!$groupPost) {
+    $postId = $image['post_id'];
+    $groupPost = $postModel->getById($postId);
+    if (!$groupPost || $groupPost['post_type'] != 1) {
         http_response_code(404);
         echo json_encode(['success' => false, 'error' => 'グループ投稿が見つかりません'], JSON_UNESCAPED_UNICODE);
         exit;
@@ -220,7 +224,7 @@ try {
     }
 
     // DBを更新
-    $success = $groupPostModel->updateImage(
+    $success = $groupPostImageModel->updateImage(
         $imageId,
         $uploadResult['image_path'],
         $uploadResult['thumb_path']

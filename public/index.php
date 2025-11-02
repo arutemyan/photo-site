@@ -6,7 +6,6 @@ require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../src/Security/SecurityUtil.php';
 
 use App\Models\Post;
-use App\Models\GroupPost;
 use App\Models\Theme;
 use App\Models\Setting;
 use App\Models\Tag;
@@ -56,37 +55,13 @@ try {
     $ageVerificationMinutes = $nsfwConfig['age_verification_minutes'];
     $nsfwConfigVersion = $nsfwConfig['config_version'];
 
-    // シングル投稿を取得
+    // 統一されたPostモデルで全投稿を取得（シングル・グループ両方）
     $postModel = new Post();
-    $singlePosts = $postModel->getAll(18);
+    $posts = $postModel->getAllUnified(18, 'all', null, 0);
 
-    // グループ投稿を取得
-    $groupPostModel = new GroupPost();
-    $groupPosts = $groupPostModel->getAll(18);
-
-    // 両方をマージしてsort_order、作成日時でソート
-    $allPosts = array_merge($singlePosts, $groupPosts);
-    usort($allPosts, function($a, $b) {
-        // まずsort_orderで比較（降順：大きい方が先）
-        $sortOrderDiff = ($b['sort_order'] ?? 0) - ($a['sort_order'] ?? 0);
-        if ($sortOrderDiff !== 0) {
-            return $sortOrderDiff;
-        }
-        // sort_orderが同じなら作成日時で比較（降順：新しい方が先）
-        return strtotime($b['created_at']) - strtotime($a['created_at']);
-    });
-
-    // 最大18件に制限
-    $posts = array_slice($allPosts, 0, 18);
-
-    // 各投稿にタイプを追加
+    // post_typeを文字列に変換（互換性のため）
     foreach ($posts as &$post) {
-        // image_countがあればグループ投稿
-        if (isset($post['image_count'])) {
-            $post['post_type'] = 'group';
-        } else {
-            $post['post_type'] = 'single';
-        }
+        $post['post_type'] = $post['post_type'] == 1 ? 'group' : 'single';
     }
 
     // タグ一覧を取得（ID, name, post_count）
