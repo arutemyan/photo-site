@@ -19,6 +19,9 @@
     let erasing = false;
     const undoStacks = layers.map(() => []);
     const redoStacks = layers.map(() => []);
+    // timelapse events and current id for updates
+    const timelapseEvents = [];
+    let currentIllustId = null;
 
     function setStatus(msg) { status.textContent = msg; }
 
@@ -88,6 +91,8 @@
         ctx.strokeStyle = erasing ? 'rgba(0,0,0,1)' : colorInput.value;
         if (erasing) ctx.globalCompositeOperation = 'destination-out'; else ctx.globalCompositeOperation = 'source-over';
         ctx.moveTo(p.x, p.y);
+        // record timelapse start
+        try { timelapseEvents.push({ t: Date.now(), type: 'start', layer: active, x: p.x, y: p.y, color: colorInput.value, size: parseInt(sizeInput.value,10), erasing: !!erasing }); } catch (e) {}
     }
 
     function moveDraw(e) {
@@ -97,9 +102,10 @@
         const ctx = ctxs[active];
         ctx.lineTo(p.x, p.y);
         ctx.stroke();
+        try { timelapseEvents.push({ t: Date.now(), type: 'move', layer: active, x: p.x, y: p.y }); } catch (e) {}
     }
 
-    function endDraw() { drawing = false; }
+    function endDraw() { drawing = false; try { timelapseEvents.push({ t: Date.now(), type: 'end', layer: active }); } catch (e) {} }
 
     eraserBtn.addEventListener('click', () => { erasing = !erasing; eraserBtn.textContent = erasing ? '描画' : '消しゴム'; });
     undoBtn.addEventListener('click', doUndo);
@@ -126,6 +132,21 @@
             timelapse: { enabled: false }
         };
 
+        // prepare timelapse payload (gzipped base64) if pako available
+        let timelapsePayload = null;
+        if (timelapseEvents.length > 0 && typeof pako !== 'undefined') {
+            try {
+                const jsonStr = JSON.stringify(timelapseEvents);
+                const gz = pako.gzip(jsonStr);
+                // convert gz (Uint8Array) to binary string for btoa
+                let bin = '';
+                for (let i = 0; i < gz.length; i++) bin += String.fromCharCode(gz[i]);
+                timelapsePayload = 'data:application/octet-stream;base64,' + btoa(bin);
+            } catch (err) {
+                console.error('timelapse gzip failed', err);
+            }
+        }
+
         const payload = {
             title: 'canvas save',
             canvas_width: w,
@@ -133,8 +154,9 @@
             background_color: '#FFFFFF',
             illust_data: JSON.stringify(illust),
             image_data: dataUrl,
-            timelapse_data: null,
-            csrf_token: window.CSRF_TOKEN
+            timelapse_data: timelapsePayload,
+            csrf_token: window.CSRF_TOKEN,
+            id: currentIllustId
         };
 
         try {
@@ -147,6 +169,10 @@
             const json = await res.json();
             if (json.success) {
                 setStatus('保存完了 (id=' + json.data.id + ')');
+                // persist id for subsequent saves
+                if (json.data && json.data.id) currentIllustId = json.data.id;
+                // clear events on successful save
+                timelapseEvents.length = 0;
             } else {
                 setStatus('保存失敗: ' + (json.error || 'unknown'));
             }

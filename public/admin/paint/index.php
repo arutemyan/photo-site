@@ -63,6 +63,8 @@ $csrf = CsrfProtection::getToken();
 </div>
 
 <script>window.CSRF_TOKEN = '<?php echo htmlspecialchars($csrf, ENT_QUOTES, "UTF-8"); ?>';</script>
+<!-- pako (gzip) for timelapse compression -->
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
 <script src="/admin/paint/js/paint.js"></script>
 </body>
 </html>
