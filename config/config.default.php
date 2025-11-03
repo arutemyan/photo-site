@@ -76,6 +76,10 @@ return [
         // データベースディレクトリのパーミッション（SQLiteのみ）
         'directory_permission' => 0755,
 
+    // 自動的に接続時にマイグレーションを実行するか
+    // CIやテストで明示的にマイグレーションを実行したい場合は false に設定してください
+    'run_migrations_on_connect' => false,
+
         // PDO接続オプション
         'pdo_options' => [
             'errmode' => 'exception',

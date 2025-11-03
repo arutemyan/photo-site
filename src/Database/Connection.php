@@ -154,11 +154,31 @@ class Connection
                     self::$instance->exec("SET search_path TO {$schema}");
                 }
 
+                // SQLiteではロック待ちタイムアウトやWALモード、外部キーを有効にしておく
+                if ($driver === 'sqlite') {
+                    try {
+                        // 待機タイムアウト (ms)
+                        self::$instance->exec('PRAGMA busy_timeout = 5000');
+                        // WALモード（可能であれば）を試す。失敗しても致命的ではない。
+                        @self::$instance->exec("PRAGMA journal_mode = WAL");
+                        // 外部キー制約を有効化
+                        self::$instance->exec('PRAGMA foreign_keys = ON');
+                    } catch (PDOException $e) {
+                        // ログに残すが処理は継続
+                        error_log('SQLite PRAGMA setup failed: ' . $e->getMessage());
+                    }
+                }
+
                 // データベーススキーマを初期化
                 self::initializeSchema();
 
-                // マイグレーションを実行
-                self::runMigrations();
+                // マイグレーションを自動実行するかどうかは設定で制御
+                $runMigrations = self::$config['database']['run_migrations_on_connect'] ?? true;
+                if ($runMigrations) {
+                    self::runMigrations();
+                } else {
+                    error_log('Connection: auto-run migrations disabled by configuration');
+                }
             } catch (PDOException $e) {
                 throw new PDOException('データベース接続エラー: ' . $e->getMessage());
             }

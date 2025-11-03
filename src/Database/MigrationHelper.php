@@ -215,4 +215,45 @@ class MigrationHelper
             throw $e;
         }
     }
+
+    /**
+     * テーブルを安全に削除（存在する場合のみ）。ロック等のトランジェントな失敗に対してリトライする。
+     *
+     * @param PDO $db
+     * @param string $table
+     * @param int $maxRetries
+     * @param int $delayUs マイクロ秒
+     * @return bool true: 削除された / 既に存在しなかった, false: 削除に失敗
+     */
+    public function dropTableIfExistsSafe(PDO $db, string $table, int $maxRetries = 5, int $delayUs = 500000): bool
+    {
+        if (!$this->tableExists($db, $table)) {
+            error_log("MigrationHelper: Table {$table} does not exist (nothing to drop)");
+            return true;
+        }
+
+        $attempt = 0;
+        while ($attempt < $maxRetries) {
+            try {
+                $db->exec("DROP TABLE {$table}");
+                error_log("MigrationHelper: Dropped table {$table} successfully");
+                return true;
+            } catch (\Exception $e) {
+                $msg = $e->getMessage();
+                if (strpos($msg, 'database is locked') !== false || stripos($msg, 'busy') !== false) {
+                    $attempt++;
+                    error_log("MigrationHelper: DROP TABLE {$table} locked, retrying ({$attempt}/{$maxRetries})");
+                    usleep($delayUs);
+                    continue;
+                }
+
+                // その他の例外は再スロー
+                error_log("MigrationHelper: DROP TABLE {$table} failed: " . $msg);
+                throw $e;
+            }
+        }
+
+        error_log("MigrationHelper: Failed to drop table {$table} after {$maxRetries} attempts");
+        return false;
+    }
 }

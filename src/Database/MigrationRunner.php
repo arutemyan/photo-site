@@ -53,8 +53,51 @@ class MigrationRunner
             }
 
             try {
-                // マイグレーション実行
-                $name = $this->executeMigration($file, $version);
+                // マイグレーション実行（トランジェントなロックに備えてリトライ）
+                $maxRetries = 5;
+                $attempt = 0;
+                $lastException = null;
+
+                while ($attempt < $maxRetries) {
+                    try {
+                        $name = $this->executeMigration($file, $version);
+                        $lastException = null;
+                        break;
+                    } catch (\Exception $e) {
+                        $lastException = $e;
+                        $msg = $e->getMessage();
+                        // トランジェントなロックを判定（メッセージ内の 'database is locked' または SQLite のエラーコード 6）
+                        $isLocked = false;
+                        if (strpos($msg, 'database is locked') !== false) {
+                            $isLocked = true;
+                        } else {
+                            // PDOException の場合、コードが 6（SQLite internal error）になることがある
+                            try {
+                                $code = (string)$e->getCode();
+                                if ($code === '6' || $code === 'SQLITE_BUSY' || stripos($code, 'HY000') !== false) {
+                                    $isLocked = true;
+                                }
+                            } catch (\Throwable $t) {
+                                // ignore
+                            }
+                        }
+
+                        if ($isLocked) {
+                            $attempt++;
+                            error_log("Migration {$version}: database is locked, retrying ({$attempt}/{$maxRetries}) - msg: {$msg}");
+                            usleep(500000); // 0.5s
+                            continue;
+                        }
+
+                        // その他の例外は即時再スロー
+                        throw $e;
+                    }
+                }
+
+                if ($lastException !== null) {
+                    // 最後までロックが解除されなかった場合は例外を投げる
+                    throw $lastException;
+                }
 
                 // 実行済みとして記録
                 $this->recordMigration($version, $name);
