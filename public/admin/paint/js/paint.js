@@ -878,7 +878,7 @@
 
         state.undoStacks[layerIndex].push(snapshot);
 
-        if (state.undoStacks[layerIndex].length > MAX_UNDO_STEPS) {
+        if (state.undoStacks[layerIndex].length > CONFIG.CANVAS.MAX_UNDO_STEPS) {
             state.undoStacks[layerIndex].shift();
         }
 
