@@ -12,6 +12,7 @@ initSecureSession();
 
 // Note: 通常は管理者の認証フローを通すこと。
 // テスト環境では /test/session_setup.php を使ってセッションを準備できます。
+$isAdmin = !empty($_SESSION['admin']);
 $csrf = CsrfProtection::getToken();
 ?><!doctype html>
 <html lang="ja">
@@ -31,6 +32,27 @@ $csrf = CsrfProtection::getToken();
     <button id="save">保存</button>
     <span id="status"></span>
 </div>
+
+<?php if (!$isAdmin): ?>
+    <div style="padding:8px;background:#ffe; border:1px solid #fcc;margin:12px;">
+        <strong>未ログイン</strong> — テスト目的で管理セッションを作成するには下のボタンをクリックしてください。
+        <button id="create-test-session" style="margin-left:8px;">テストセッション作成</button>
+        <small>（本番では管理者ログインを行ってください）</small>
+    </div>
+    <script>
+        document.getElementById('create-test-session').addEventListener('click', async function(){
+            // open session_setup which will set session cookie, then reload
+            try {
+                const r = await fetch('/test/session_setup.php', {credentials: 'same-origin'});
+                if (r.ok) {
+                    location.reload();
+                } else {
+                    alert('テストセッションの作成に失敗しました');
+                }
+            } catch (e) { alert('通信エラー'); }
+        });
+    </script>
+<?php endif; ?>
 
 <div id="canvas-wrap">
     <!-- 4 layers -->
