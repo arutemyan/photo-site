@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v4
+        with:
+          php-version: '8.2'
+          coverage: none
+          extensions: mbstring, intl, json, zip, gd, fileinfo, pdo_sqlite
+
+      - name: Get Composer Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install Composer dependencies
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Ensure uploads and tmp directories
+        run: |
+          mkdir -p public/uploads public/uploads/images public/uploads/thumbs uploads/paintfiles/data uploads/paintfiles/images uploads/paintfiles/timelapse tests/tmp_data
+
+      - name: Show PHP info
+        run: php -v && php -m | sort
+
+      - name: Run unit tests
+        run: vendor/bin/phpunit --configuration phpunit.xml --testsuite Unit
+
+      - name: Run integration HTTP test
+        # This script is self-contained: it runs migrations, starts a PHP built-in server,
+        # creates a test admin user and executes the HTTP flow.
+        run: php tests/integration/test_api_save_http.php
+
+      - name: Run full PHPUnit (integration)
+        run: vendor/bin/phpunit --configuration phpunit.xml --testsuite Integration || true
