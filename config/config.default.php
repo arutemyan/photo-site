@@ -206,4 +206,85 @@ return [
         // ログフォーマット
         'format' => '%timestamp [%level] %file:%line %message',
     ],
+
+    /**
+     * お絵描き機能設定
+     */
+    'paint' => [
+        // キャンバス設定
+        'canvas' => [
+            'max_width' => 4096,
+            'max_height' => 4096,
+            'default_width' => 800,
+            'default_height' => 600,
+            'background_color' => '#FFFFFF',
+        ],
+
+        // 履歴設定
+        'history' => [
+            'max_steps' => 50,  // Undo/Redo最大履歴数
+        ],
+
+        // タイムラプス設定
+        'timelapse' => [
+            'max_size' => 52428800,  // 50MB
+            'chunk_size' => 1048576, // 1MB (分割保存用)
+            'enabled' => true,
+        ],
+
+        // ファイルサイズ制限
+        'files' => [
+            'max_image_size' => 10485760,    // 10MB (画像)
+            'max_illust_size' => 20971520,   // 20MB (.illustファイル)
+            'max_temp_size' => 5242880,      // 5MB (一時ファイル)
+        ],
+
+        // カラーパレット設定
+        'palette' => [
+            'presets' => [
+                'default' => [
+                    '#000000', '#FFFFFF', '#FF0000', '#00FF00',
+                    '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF',
+                    '#FFA500', '#800080', '#FFC0CB', '#A52A2A',
+                    '#808080', '#000080', '#008000', '#FF4500'
+                ],
+                'warm' => [
+                    '#FF6B35', '#F7931E', '#FFD23F', '#FF6B35',
+                    '#F7931E', '#FFD23F', '#FF8C42', '#FF6B35'
+                ],
+                'cool' => [
+                    '#4A90E2', '#7ED321', '#BD10E0', '#4A90E2',
+                    '#7ED321', '#BD10E0', '#50E3C2', '#4A90E2'
+                ],
+                'pastel' => [
+                    '#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFBA',
+                    '#BAE1FF', '#E8BAFF', '#FFB3F7', '#FFB3BA'
+                ],
+                'vivid' => [
+                    '#FF0000', '#00FF00', '#0000FF', '#FFFF00',
+                    '#FF00FF', '#00FFFF', '#FF8000', '#8000FF'
+                ]
+            ]
+        ],
+
+        // レイヤー設定
+        'layers' => [
+            'max_count' => 4,
+            'default_layers' => [
+                ['name' => '背景', 'visible' => true, 'opacity' => 1.0],
+                ['name' => '下書き', 'visible' => true, 'opacity' => 1.0],
+                ['name' => '清書', 'visible' => true, 'opacity' => 1.0],
+                ['name' => '着色', 'visible' => true, 'opacity' => 1.0]
+            ]
+        ],
+
+        // UI設定
+        'ui' => [
+            'grid_enabled' => true,
+            'grid_size' => 20,
+            'zoom_min' => 0.1,
+            'zoom_max' => 5.0,
+            'pan_sensitivity' => 1.0
+        ]
+    ],
 ];
