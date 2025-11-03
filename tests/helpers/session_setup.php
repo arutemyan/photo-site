@@ -12,9 +12,17 @@ use App\Security\CsrfProtection;
 initSecureSession();
 
 // Set minimal admin session data for integration testing
+// NOTE: This helper is intended to be used from the test suite only, not served by the web server.
 $_SESSION['admin'] = ['id' => 1, 'username' => 'testadmin'];
 
 $token = CsrfProtection::getToken();
 
-header('Content-Type: application/json; charset=utf-8');
-echo json_encode(['csrf_token' => $token], JSON_UNESCAPED_UNICODE);
+// Print token for developer consumption
+fwrite(STDOUT, json_encode(['csrf_token' => $token], JSON_UNESCAPED_UNICODE));
+
+/**
+ * Usage (CLI):
+ *   php tests/helpers/session_setup.php
+ * This prints a JSON object with a csrf_token. The helper DOES NOT set cookies for the web server; it's
+ * intended for use by CLI integration helpers, unit tests, or to show how to generate a token locally.
+ */

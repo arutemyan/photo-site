@@ -11,7 +11,8 @@ use App\Security\CsrfProtection;
 initSecureSession();
 
 // Note: 通常は管理者の認証フローを通すこと。
-// テスト環境では /test/session_setup.php を使ってセッションを準備できます。
+// 開発者向け: 自動テスト用のセッション生成ヘルパは public からは削除されています。ローカルでのテストは
+// `tests/helpers/session_setup.php` を参照してください。
 $isAdmin = !empty($_SESSION['admin']);
 $csrf = CsrfProtection::getToken();
 ?><!doctype html>
@@ -35,23 +36,9 @@ $csrf = CsrfProtection::getToken();
 
 <?php if (!$isAdmin): ?>
     <div style="padding:8px;background:#ffe; border:1px solid #fcc;margin:12px;">
-        <strong>未ログイン</strong> — テスト目的で管理セッションを作成するには下のボタンをクリックしてください。
-        <button id="create-test-session" style="margin-left:8px;">テストセッション作成</button>
-        <small>（本番では管理者ログインを行ってください）</small>
+        <strong>未ログイン</strong> — 管理セッションが必要です。管理者アカウントでログインしてください。
+        <small style="display:block;margin-top:6px;">開発環境での自動テスト用ヘルパは本番からは削除されています。ローカルでテストする場合は <code>tests/helpers/session_setup.php</code> を参照してください。</small>
     </div>
-    <script>
-        document.getElementById('create-test-session').addEventListener('click', async function(){
-            // open session_setup which will set session cookie, then reload
-            try {
-                const r = await fetch('/test/session_setup.php', {credentials: 'same-origin'});
-                if (r.ok) {
-                    location.reload();
-                } else {
-                    alert('テストセッションの作成に失敗しました');
-                }
-            } catch (e) { alert('通信エラー'); }
-        });
-    </script>
 <?php endif; ?>
 
 <div id="canvas-wrap">

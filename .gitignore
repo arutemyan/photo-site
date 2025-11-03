@@ -63,3 +63,9 @@ config/*.local.php
 
 # ビルド時の一時ファイル
 .git-archive-exclude
+uploads/paintfiles/
+workspace.code-workspace
+GROUP_POSTS_*.md
+GROUP_POSTS_QUICK_REF.txt
+scripts/integration/
+scripts/test_save_illust.php
