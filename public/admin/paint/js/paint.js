@@ -751,13 +751,20 @@
         const x = (e.clientX ?? e.touches?.[0]?.clientX ?? 0) - rect.left;
         const y = (e.clientY ?? e.touches?.[0]?.clientY ?? 0) - rect.top;
 
-        // Scale for canvas coordinates
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
+        // Reverse the canvas-wrap transform: scale and translate
+        // Transform is: scale(zoom) translate(offsetX/zoom, offsetY/zoom)
+        // So reverse is: translate(-offsetX/zoom, -offsetY/zoom) scale(1/zoom)
+        const reverseTranslateX = -state.panOffset.x / state.zoomLevel;
+        const reverseTranslateY = -state.panOffset.y / state.zoomLevel;
+        const reverseScale = 1 / state.zoomLevel;
+
+        // Apply reverse transform to get canvas coordinates
+        const canvasX = (x - reverseTranslateX) * reverseScale;
+        const canvasY = (y - reverseTranslateY) * reverseScale;
 
         return {
-            x: x * scaleX,
-            y: y * scaleY
+            x: canvasX,
+            y: canvasY
         };
     }
 
