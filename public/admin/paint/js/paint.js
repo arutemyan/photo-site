@@ -261,11 +261,11 @@
     // ===== Color Palette =====
     function initColorPalette() {
         // Generate 16-color palette (will be populated from DB)
-        for (let i = 0; i < 16; i++) {
+        for (let i = 0; i < CONFIG.COLORS.PALETTE_SIZE; i++) {
             const swatch = document.createElement('div');
             swatch.className = 'color-swatch';
-            swatch.style.background = DEFAULT_COLORS[i];
-            swatch.title = DEFAULT_COLORS[i];
+            swatch.style.background = CONFIG.COLORS.DEFAULT_PALETTE[i];
+            swatch.title = CONFIG.COLORS.DEFAULT_PALETTE[i];
             swatch.dataset.slotIndex = i;
             
             // Single click to select
