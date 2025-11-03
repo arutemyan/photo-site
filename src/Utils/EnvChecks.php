@@ -5,15 +5,10 @@ namespace App\Utils;
 
 /**
  * 環境チェックユーティリティ
- * - msgpack, zlib, gd/imagick などのサポートを確認するための簡易ユーティリティ
+ * - zlib, gd/imagick などのサポートを確認するための簡易ユーティリティ
  */
 class EnvChecks
 {
-    public static function isMsgpackAvailable(): bool
-    {
-        return extension_loaded('msgpack');
-    }
-
     public static function isZlibAvailable(): bool
     {
         return function_exists('gzcompress') && function_exists('gzuncompress');
@@ -51,7 +46,6 @@ class EnvChecks
     public static function checkAll(): array
     {
         return [
-            'msgpack' => self::isMsgpackAvailable(),
             'zlib' => self::isZlibAvailable(),
             'fileinfo' => self::isFileinfoAvailable(),
             'webp' => self::isWebpSupported(),

@@ -4,6 +4,7 @@ composer.lock
 
 # データベース（実行時に自動作成されるため全体を除外）
 /data/
+/config/tests/
 
 # 旧データベース場所（非推奨、実行時に自動作成）
 /public/data/
@@ -14,10 +15,12 @@ composer.lock
 /public/uploads/images/*
 /public/uploads/thumbs/*
 /public/uploads/theme/*
+/public/uploads/paintfiles/*
 !public/uploads/ogp/.gitkeep
 !public/uploads/images/.gitkeep
 !public/uploads/thumbs/.gitkeep
 !public/uploads/theme/.gitkeep
+!public/uploads/paintfiles/.gitkeep
 
 # キャッシュ（実行時に自動作成されるため全体を除外）
 /cache/

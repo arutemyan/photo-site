@@ -35,13 +35,13 @@ if (!CsrfProtection::validateToken($_POST['csrf_token'])) {
 ## ファイルアップロードセキュリティ
 
 ### ファイルタイプ検証
-- **許可拡張子**: `.png`, `.jpg`, `.jpeg`, `.msgpack.gz`
+ **許可拡張子**: `.png`, `.jpg`, `.jpeg`, `.csv.gz`
 - **MIMEタイプ確認**: `image/png`, `image/jpeg`, `application/octet-stream`
-- **コンテンツ検証**: ファイルヘッダーを確認して実際のファイルタイプを検証
+ **許可拡張子**: `.png`, `.jpg`, `.jpeg`, `.webp`, `.csv.gz`
 - **拡張子検査**: 二重拡張子や危険な拡張子を拒否
-
+ タイムラプス の処理には zlib（gzip 圧縮の対応）と CSV パーサのサポートが必要です。サーバ側では gzdecode を使って展開し、ヘッダ付き CSV を安全に解析してください。
 ### 更新: WebP対応
-- **許可拡張子**: `.png`, `.jpg`, `.jpeg`, `.webp`, `.msgpack.gz`
+- **許可拡張子**: `.png`, `.jpg`, `.jpeg`, `.webp`, `.csv.gz`
 - **MIMEタイプ確認**: `image/png`, `image/jpeg`, `image/webp`, `application/octet-stream`
 - **コンテンツ検証（強化）**:
     - `finfo_file()` / `Fileinfo` を使って実際の MIME を検証する。
@@ -51,7 +51,7 @@ if (!CsrfProtection::validateToken($_POST['csrf_token'])) {
 
 ### サムネイル生成とライブラリ要件
 - サムネイルは WebP 出力を推奨。サーバ側で WebP に変換するために `gd`（WebP対応）または `imagick` を使用する。どちらも無ければ変換を拒否してエラーを返す。
-- タイムラプス (msgpack.gz) の処理には zlib と msgpack のサポートが必要。サーバに `msgpack` 拡張が無ければ、代替ライブラリ（composer 経由）を導入するか、サーバ要件として明記する。
+ - タイムラプス (.csv.gz) の処理には zlib（gzip 圧縮の対応）とヘッダ付き CSV を安全に解析するための処理が必要です。サーバ側では gzdecode を使って展開し、`str_getcsv` や堅牢なCSVパーサで解析してください。
 
 ### サイズ制限
 - **画像ファイル**: 最大10MB

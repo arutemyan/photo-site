@@ -62,7 +62,9 @@ class FileValidator
     }
 
     /**
-     * Validate timelapse binary (expected gzipped msgpack). Returns true if OK.
+    * Validate timelapse binary (expected gzipped payload).
+    * Supported inner payloads: gzipped JSON or gzipped CSV (headered CSV text).
+     * Returns true if the basic checks pass.
      */
     public static function validateTimelapseBinary(string $data): bool
     {

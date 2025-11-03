@@ -1,17 +1,17 @@
 <?php
 declare(strict_types=1);
 
-
 require_once __DIR__ . '/../../../../vendor/autoload.php';
+require_once __DIR__ . '/../../../../src/Security/SecurityUtil.php';
 
 use App\Database\Connection;
 use App\Services\IllustService;
 use App\Security\CsrfProtection;
 
-session_start();
-// support existing admin session keys used elsewhere in the app
-// - normal app login sets $_SESSION['admin_logged_in']=true with admin_user_id
-// - our test helper uses $_SESSION['admin'] for convenience
+initSecureSession();
+// Support existing admin session keys used elsewhere in the app
+// - Normal app login sets $_SESSION['admin_logged_in']=true with admin_user_id
+// - Test helper uses $_SESSION['admin'] for convenience
 $userId = null;
 if (!empty($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
     $userId = $_SESSION['admin_user_id'] ?? null;
@@ -42,7 +42,7 @@ if (!$csrfOk) {
 }
 
 $db = Connection::getInstance();
-$service = new IllustService($db, __DIR__ . '/../../../../uploads');
+$service = new IllustService($db, __DIR__ . '/../../../uploads');
 
 if (!is_array($raw)) {
     echo json_encode(['success' => false, 'error' => 'Invalid request body']);

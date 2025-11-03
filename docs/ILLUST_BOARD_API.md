@@ -30,7 +30,7 @@
     "background_color": "#FFFFFF",
     "illust_data": "data:application/json;base64,...",  // .illustファイル内容のBase64
     "image_data": "data:image/png;base64,...",          // エクスポート画像のBase64
-    "timelapse_data": "data:application/octet-stream;base64,..."  // msgpack.gzのBase64
+    "timelapse_data": "data:application/octet-stream;base64,..."  // csv.gzのBase64
 }
 ```
 
@@ -43,7 +43,7 @@
         "data_path": "/uploads/paintfiles/data/001/illust_123.illust",
         "image_path": "/uploads/paintfiles/images/001/illust_123.png",
         "thumbnail_path": "/uploads/paintfiles/images/001/illust_123_thumb.webp",
-        "timelapse_path": "/uploads/paintfiles/timelapse/001/timelapse_123.msgpack.gz"
+    "timelapse_path": "/uploads/paintfiles/timelapse/001/timelapse_123.csv.gz"
     }
 }
 ```
@@ -72,7 +72,7 @@
         "data_url": "/uploads/paintfiles/data/001/illust_123.illust",
         "image_url": "/uploads/paintfiles/images/001/illust_123.png",
         "thumbnail_url": "/uploads/paintfiles/images/001/illust_123_thumb.webp",
-        "timelapse_url": "/uploads/paintfiles/timelapse/001/timelapse_123.msgpack.gz",
+    "timelapse_url": "/uploads/paintfiles/timelapse/001/timelapse_123.csv.gz",
         "timelapse_size": 1048576,
         "file_size": 2097152,
         "created_at": "2024-01-01 12:00:00",
@@ -342,5 +342,5 @@
 
 ## ファイルアップロード
 - **最大サイズ**: 画像10MB, タイムラプス50MB
-- **許可タイプ**: PNG, JPG, WEBP, msgpack.gz
+- **許可タイプ**: PNG, JPG, WEBP, csv.gz
 - **保存先**: `uploads/paintfiles/`

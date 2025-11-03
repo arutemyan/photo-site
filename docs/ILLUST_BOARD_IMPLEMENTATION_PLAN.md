@@ -38,11 +38,11 @@ HTML/CSS/JSの基本レイアウトとキャンバス操作。
   - ビジネスロジック
   - ファイル操作
 - [ ] `src/Services/TimelapseService.php` 作成
-  - msgpack圧縮/解凍
+  - CSV(ヘッダ付き) 圧縮/解凍
   - チャンク管理
 
 追加タスク（実装前に）:
-- [ ] `src/Utils/EnvChecks.php` を作成して、msgpack/zlib/画像変換ライブラリの有無チェック機能を実装
+- [ ] `src/Utils/EnvChecks.php` を作成して、zlib/画像変換ライブラリの有無チェック機能を実装
 - [ ] サムネイル生成は WebP 出力を優先するため、`IllustService` に WebP 生成ロジック（gd/imagick を利用）を追加
 
 ### 1.4 APIエンドポイント実装
@@ -62,7 +62,7 @@ HTML/CSS/JSの基本レイアウトとキャンバス操作。
 - [ ] レート制限適用
 
 ### 1.6 ユーティリティ実装
-- [ ] `src/Utils/FileCompressor.php` (zlib + msgpack)
+- [ ] `src/Utils/FileCompressor.php` (zlib + csv)
 - [ ] `src/Utils/ImageProcessor.php` (画像処理)
 - [ ] `src/Utils/IllustFileManager.php` (.illustファイル管理)
 - [ ] `src/Utils/PaintConfig.php` (お絵描き設定管理 - config.default.phpから読み込み)
@@ -226,7 +226,7 @@ HTML/CSS/JSの基本レイアウトとキャンバス操作。
 - Vanilla JavaScript (ES6+)
 - HTML5 Canvas API
 - CSS3 (Flexbox/Grid)
-- 外部ライブラリ: 最小限 (msgpackライブラリ検討)
+- 外部ライブラリ: 最小限（gzip 圧縮および CSV パーサ）
 
 ### 開発ツール
 - Composer (PHP依存管理)

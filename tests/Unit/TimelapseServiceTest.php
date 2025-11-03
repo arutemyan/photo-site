@@ -13,7 +13,7 @@ final class TimelapseServiceTest extends TestCase
         $svc = new TimelapseService($tmp);
 
         $subdir = '001';
-        $filename = 'timelapse_test.msgpack.gz';
+    $filename = 'timelapse_test.csv.gz';
         $data = gzencode('hello');
 
         $path = $svc->save($subdir, $filename, $data);

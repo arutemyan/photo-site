@@ -15,7 +15,7 @@ class TimelapseService
     }
 
     /**
-     * Save raw gzipped msgpack data to path. Caller should validate size/header.
+     * Save raw gzipped timelapse data (CSV or other gzipped payload) to path. Caller should validate size/header.
      */
     public function save(string $idSubdir, string $filename, string $binary): string
     {
@@ -34,8 +34,5 @@ class TimelapseService
         return file_get_contents($path);
     }
 
-    public static function isMsgpackAvailable(): bool
-    {
-        return EnvChecks::isMsgpackAvailable();
-    }
+    // msgpack support removed; timelapse uses gzipped CSV
 }

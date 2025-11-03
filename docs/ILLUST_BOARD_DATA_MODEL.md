@@ -117,22 +117,22 @@ data/paintfiles/
 │   └── 002/
 └── timelapse/
     ├── 001/
-    │   └── timelapse_1.msgpack.gz
+    │   └── timelapse_1.csv.gz
     └── 002/
 data/tmp/
     ├── sessions/
     │   └── sess_abc123/
     │       ├── temp_canvas.png
-    │       └── temp_timelapse.msgpack
+    │       └── temp_timelapse.csv
     └── uploads/
 ```
 
 ## タイムラプスデータ形式
 
 ### 全体構造
-- **形式**: MessagePack + Zlib圧縮
-- **拡張子**: `.msgpack.gz`
-- **構造**: 配列の配列 `[[action_type, timestamp, data], ...]`
+- **形式**: ヘッダ付き CSV テキスト を gzip 圧縮
+- **拡張子**: `.csv.gz`
+- **構造**: 各行が1イベントを表すヘッダ付き CSV（各列は event オブジェクトのキー）
 - **履歴考慮**: Undo/Redo操作も記録（完全再現のため）
 
 ### Action Types と Data 構造
@@ -310,24 +310,24 @@ uploads/
 │   │   └── 002/
 │   └── timelapse/
 │       ├── 001/
-│       │   ├── timelapse_1.msgpack.gz
+│       │   ├── timelapse_1.csv.gz
 │       │   └── chunks/
-│       │       ├── chunk_0.msgpack.gz
-│       │       └── chunk_1.msgpack.gz
+│       │       ├── chunk_0.csv.gz
+│       │       └── chunk_1.csv.gz
 │       └── 002/
 └── tmp/
     ├── sessions/
     │   └── sess_abc123/
     │       ├── temp_canvas.png
-    │       └── temp_timelapse.msgpack
+    │       └── temp_timelapse.csv
     └── uploads/
 ```
 
 ### 命名規則
 - **画像**: `illust_{id}.png`
 - **サムネイル**: `illust_{id}_thumb.webp`
-- **タイムラプス**: `timelapse_{id}.msgpack.gz`
-- **チャンク**: `chunk_{index}.msgpack.gz`
+- **タイムラプス**: `timelapse_{id}.csv.gz`
+- **チャンク**: `chunk_{index}.csv.gz`
 
 ## データ整合性
 

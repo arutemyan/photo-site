@@ -118,7 +118,7 @@ CREATE INDEX idx_illusts_created_at ON illusts(created_at);
 - **一時ファイル**: `data/tmp/` (セッション単位、非公開)
 
 ### データ形式
-- **タイムラプス**: msgpack + zlib圧縮
+- **タイムラプス**: ヘッダ付きCSV テキスト + gzip圧縮
 - **メタデータ**: JSON (DB + ファイル)
 
 ### 容量管理
