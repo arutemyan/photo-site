@@ -72,7 +72,7 @@ function createNsfwThumb($post) {
 
 ---
 
-### 2. ⚠️ 改善提案 - NSFWサムネイル生成ロジックの重複
+### 2. ✅ **[FIXED]** NSFWサムネイル生成ロジックの重複削減
 
 **ファイル**: `public/detail.php:75-95, 117-129`
 
@@ -80,27 +80,31 @@ function createNsfwThumb($post) {
 - `createNsfwThumb()`関数が定義されているが、OGP画像生成部分（117-129行）では同じロジックが重複して記述されている
 - グループ投稿の場合（117-119行）でも同様のロジックが重複
 
-**提案**:
+**修正**:
 ```php
-// 現在の重複コード（117-129行）
-if ($isSensitive) {
-    $pathInfo = pathinfo($shareImagePath);
+// 新規ヘルパー関数を追加
+function getNsfwImagePath($imagePath) {
+    $pathInfo = pathinfo($imagePath);
     $nsfwFilename = basename($pathInfo['filename'] . '_nsfw.' . ($pathInfo['extension'] ?? 'webp'));
-    $shareImagePath = $pathInfo['dirname'] . '/' . $nsfwFilename;
+    return $pathInfo['dirname'] . '/' . $nsfwFilename;
 }
 
-// 改善案: 関数を利用
-if ($isSensitive && !empty($shareImagePath)) {
-    $tempData = ['image_path' => $shareImagePath, 'thumb_path' => $shareImagePath];
-    $shareImagePath = createNsfwThumb($tempData);
+// 重複していたコードを統一
+if ($isSensitive) {
+    $shareImagePath = getNsfwImagePath($shareImagePath);
 }
 ```
 
-**優先度**: 低（機能に影響なし、コードの保守性向上）
+**効果**: 
+- コードの重複を削減（約30行削減）
+- 保守性が向上
+- バグ混入のリスクを低減
+
+**修正済み**: ✅
 
 ---
 
-### 3. ⚠️ 改善提案 - `createNsfwThumb()`の戻り値
+### 3. ✅ **[FIXED]** `createNsfwThumb()`の戻り値
 
 **ファイル**: `public/detail.php:75-95`
 

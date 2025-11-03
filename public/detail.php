@@ -72,12 +72,31 @@ try {
     exit;
 }
 
-function createNsfwThumb($post) {
-    // NSFW画像の場合はNSFWフィルター版を使用
-    $pathInfo = pathinfo($post['image_path'] ?? $post['thumb_path'] ?? '');
+/**
+ * NSFWフィルター版の画像パスを生成
+ * @param string $imagePath 元の画像パス
+ * @return string NSFWフィルター版の画像パス
+ */
+function getNsfwImagePath($imagePath) {
+    $pathInfo = pathinfo($imagePath);
     // basename()でディレクトリトラバーサルを防止
     $nsfwFilename = basename($pathInfo['filename'] . '_nsfw.' . ($pathInfo['extension'] ?? 'webp'));
-    $shareImagePath = $pathInfo['dirname'] . '/' . $nsfwFilename;
+    return $pathInfo['dirname'] . '/' . $nsfwFilename;
+}
+
+/**
+ * 投稿データからNSFWサムネイルパスを取得（フォールバック付き）
+ * @param array $post 投稿データ
+ * @return string NSFWサムネイルパス
+ */
+function createNsfwThumb($post) {
+    // NSFW画像の場合はNSFWフィルター版を使用
+    $imagePath = $post['image_path'] ?? $post['thumb_path'] ?? '';
+    if (empty($imagePath)) {
+        return '';
+    }
+    
+    $shareImagePath = getNsfwImagePath($imagePath);
 
     // パスの検証（uploadsディレクトリ内であることを確認）
     $fullPath = realpath(__DIR__ . '/' . $shareImagePath);
@@ -86,9 +105,7 @@ function createNsfwThumb($post) {
     // NSFWフィルター版が存在しない、または不正なパスの場合はサムネイルのNSFWフィルター版を使用
     if (!$fullPath || !$uploadsDir || strpos($fullPath, $uploadsDir) !== 0 || !file_exists($fullPath)) {
         if (!empty($post['thumb_path'])) {
-            $thumbInfo = pathinfo($post['thumb_path']);
-            $nsfwThumbFilename = basename($thumbInfo['filename'] . '_nsfw.' . ($thumbInfo['extension'] ?? 'webp'));
-            return $thumbInfo['dirname'] . '/' . $nsfwThumbFilename;
+            return getNsfwImagePath($post['thumb_path']);
         }
     }
     return $shareImagePath;
@@ -114,9 +131,7 @@ if ($isGroupPost) {
         $shareImagePath = $data['images'][0]['thumb_path'];
 
         if ($isSensitive) {
-            $pathInfo = pathinfo($shareImagePath);
-            $nsfwFilename = basename($pathInfo['filename'] . '_nsfw.' . ($pathInfo['extension'] ?? 'webp'));
-            $shareImagePath = $pathInfo['dirname'] . '/' . $nsfwFilename;
+            $shareImagePath = getNsfwImagePath($shareImagePath);
         }
     }
 } else {
@@ -124,9 +139,7 @@ if ($isGroupPost) {
     if (!empty($data['image_path'])) {
         if ($isSensitive) {
             // NSFW画像の場合はNSFWフィルター版を使用
-            $pathInfo = pathinfo($data['image_path']);
-            $nsfwFilename = basename($pathInfo['filename'] . '_nsfw.' . ($pathInfo['extension'] ?? 'webp'));
-            $shareImagePath = $pathInfo['dirname'] . '/' . $nsfwFilename;
+            $shareImagePath = getNsfwImagePath($data['image_path']);
 
             // パスの検証（uploadsディレクトリ内であることを確認）
             $fullPath = realpath(__DIR__ . '/../' . $shareImagePath);
@@ -135,9 +148,7 @@ if ($isGroupPost) {
             // NSFWフィルター版が存在しない、または不正なパスの場合はサムネイルのNSFWフィルター版を使用
             if (!$fullPath || !$uploadsDir || strpos($fullPath, $uploadsDir) !== 0 || !file_exists($fullPath)) {
                 if (!empty($data['thumb_path'])) {
-                    $thumbInfo = pathinfo($data['thumb_path']);
-                    $nsfwThumbFilename = basename($thumbInfo['filename'] . '_nsfw.' . ($thumbInfo['extension'] ?? 'webp'));
-                    $shareImagePath = $thumbInfo['dirname'] . '/' . $nsfwThumbFilename;
+                    $shareImagePath = getNsfwImagePath($data['thumb_path']);
                 } else {
                     $shareImagePath = '';
                 }
