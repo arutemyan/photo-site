@@ -13,43 +13,75 @@
 (function () {
     'use strict';
 
-    // ===== Constants =====
-    const DEFAULT_COLORS = [
-        '#000000', '#FFFFFF', '#FF0000', '#00FF00',
-        '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF',
-        '#800000', '#008000', '#000080', '#808000',
-        '#800080', '#008080', '#C0C0C0', '#808080'
-    ];
-
-    const LAYER_NAMES = ['背景', '下書き', '清書', '着色'];
-    const MAX_UNDO_STEPS = 50;
+    // ===== Configuration =====
+    const CONFIG = {
+        CANVAS: {
+            DEFAULT_WIDTH: 512,
+            DEFAULT_HEIGHT: 512,
+            LAYER_COUNT: 4,
+            MAX_UNDO_STEPS: 50
+        },
+        COLORS: {
+            DEFAULT: '#000000',
+            PALETTE_SIZE: 16,
+            DEFAULT_PALETTE: [
+                '#000000', '#FFFFFF', '#FF0000', '#00FF00',
+                '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF',
+                '#800000', '#008000', '#000080', '#808000',
+                '#800080', '#008080', '#C0C0C0', '#808080'
+            ]
+        },
+        TOOLS: {
+            DEFAULT: 'pen',
+            PEN_SIZE: 4,
+            ERASER_SIZE: 10,
+            BUCKET_TOLERANCE: 32
+        },
+        LAYER_NAMES: ['背景', '下書き', '清書', '着色'],
+        ZOOM: {
+            DEFAULT_LEVEL: 1,
+            MIN_LEVEL: 0.1,
+            MAX_LEVEL: 5.0
+        }
+    };
 
     // ===== State =====
     const state = {
+        // Canvas
         layers: [],
         contexts: [],
         activeLayer: 3,
-        currentTool: 'pen',
-        currentColor: '#000000',
-        penSize: 4,
-        eraserSize: 10,
-        bucketTolerance: 32,
+
+        // Tools
+        currentTool: CONFIG.TOOLS.DEFAULT,
+        currentColor: CONFIG.COLORS.DEFAULT,
+        penSize: CONFIG.TOOLS.PEN_SIZE,
+        eraserSize: CONFIG.TOOLS.ERASER_SIZE,
+        bucketTolerance: CONFIG.TOOLS.BUCKET_TOLERANCE,
         isDrawing: false,
-        undoStacks: [[], [], [], []],
-        redoStacks: [[], [], [], []],
-    timelapseEvents: [],
-    timelapseSnapshots: [], // { idx, t, data }
-    lastSnapshotTime: 0,
+
+        // History
+        undoStacks: Array(CONFIG.CANVAS.LAYER_COUNT).fill().map(() => []),
+        redoStacks: Array(CONFIG.CANVAS.LAYER_COUNT).fill().map(() => []),
+
+        // Timelapse
+        timelapseEvents: [],
+        timelapseSnapshots: [], // { idx, t, data }
+        lastSnapshotTime: 0,
+
+        // Illust
         currentIllustId: null,
         currentIllustTitle: '',
         currentIllustDescription: '',
         currentIllustTags: '',
-        zoomLevel: 1,
+
+        // View
+        zoomLevel: CONFIG.ZOOM.DEFAULT_LEVEL,
         isPanning: false,
         panStart: { x: 0, y: 0 },
         panOffset: { x: 0, y: 0 },
         spaceKeyPressed: false,
-        layerNames: [...LAYER_NAMES]
+        layerNames: [...CONFIG.LAYER_NAMES]
     };
 
     // ===== DOM Elements =====
@@ -178,7 +210,14 @@
     };
 
     // ===== Initialization =====
+    // ===== Initialization =====
     function init() {
+        initCanvas();
+        initUI();
+        setStatus('準備完了');
+    }
+
+    function initCanvas() {
         // Initialize contexts
         state.layers = elements.layers;
         state.contexts = state.layers.map(canvas => canvas.getContext('2d', { willReadFrequently: true }));
@@ -190,25 +229,33 @@
 
         // Load persisted ID
         loadPersistedId();
+    }
 
-        // Initialize UI
+    function initUI() {
+        // Color and tools
         initColorPalette();
         initRGBPicker();
+
+        // Layers
         initLayers();
         initLayerContextMenu();
+
+        // Tools and interactions
         initToolListeners();
         initCanvasListeners();
         initKeyboardShortcuts();
-        initTimelapseModal();
         initCanvasPan();
+
+        // Modals
+        initTimelapseModal();
         initOpenModal();
         initResizeModal();
         initTransformTools();
         initEditColorModal();
         initSaveModal();
-        loadColorPalette();
 
-        setStatus('準備完了');
+        // Load data
+        loadColorPalette();
     }
 
     // ===== Color Palette =====
@@ -522,6 +569,12 @@
 
     // ===== Tools =====
     function initToolListeners() {
+        initToolButtons();
+        initToolSettings();
+        initHeaderButtons();
+    }
+
+    function initToolButtons() {
         // Tool buttons
         elements.toolBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -538,13 +591,9 @@
         elements.toolZoomIn.addEventListener('click', () => zoom(0.1));
         elements.toolZoomOut.addEventListener('click', () => zoom(-0.1));
         elements.toolZoomFit.addEventListener('click', zoomFit);
+    }
 
-        // Header buttons
-        elements.btnSave.addEventListener('click', openSaveModal);
-        elements.btnTimelapse.addEventListener('click', openTimelapseModal);
-        elements.btnNew.addEventListener('click', newIllust);
-        elements.btnClear.addEventListener('click', clearCurrentLayer);
-
+    function initToolSettings() {
         // Tool settings
         elements.penSize.addEventListener('input', (e) => {
             state.penSize = parseInt(e.target.value);
@@ -560,6 +609,14 @@
             state.bucketTolerance = parseInt(e.target.value);
             elements.bucketToleranceValue.textContent = state.bucketTolerance;
         });
+    }
+
+    function initHeaderButtons() {
+        // Header buttons
+        elements.btnSave.addEventListener('click', openSaveModal);
+        elements.btnTimelapse.addEventListener('click', openTimelapseModal);
+        elements.btnNew.addEventListener('click', newIllust);
+        elements.btnClear.addEventListener('click', clearCurrentLayer);
     }
 
     function setTool(tool) {
@@ -1517,7 +1574,19 @@
     async function saveIllust(title, description = '', tags = '') {
         setStatus('保存中...');
 
-        // Composite layers
+        try {
+            const compositeImage = createCompositeImage();
+            const illustData = buildIllustData();
+            const timelapseData = await compressTimelapseData();
+
+            await sendSaveRequest(title, description, tags, compositeImage, illustData, timelapseData);
+        } catch (error) {
+            setStatus('保存エラー: ' + error.message);
+            console.error('Save error:', error);
+        }
+    }
+
+    function createCompositeImage() {
         const w = state.layers[0].width;
         const h = state.layers[0].height;
 
@@ -1538,10 +1607,14 @@
             }
         });
 
-        const dataUrl = offscreen.toDataURL('image/png');
+        return offscreen.toDataURL('image/png');
+    }
 
-        // Build illust data
-        const illust = {
+    function buildIllustData() {
+        const w = state.layers[0].width;
+        const h = state.layers[0].height;
+
+        return {
             version: '1.0',
             metadata: {
                 canvas_width: w,
@@ -1550,7 +1623,7 @@
             },
             layers: state.layers.map((canvas, idx) => ({
                 id: `layer_${idx}`,
-                name: LAYER_NAMES[idx] || `Layer ${idx}`,
+                name: state.layerNames[idx] || `Layer ${idx}`,
                 order: idx,
                 visible: canvas.style.display !== 'none',
                 opacity: parseFloat(canvas.style.opacity || '1'),
@@ -1563,57 +1636,62 @@
                 enabled: state.timelapseEvents.length > 0
             }
         };
+    }
 
-        // Compress timelapse as CSV.gz using a Web Worker to avoid blocking the UI
-        let timelapsePayload = null;
-        if (state.timelapseEvents.length > 0) {
-            try {
-                if (window.Worker) {
-                    // create worker lazily
-                    if (!window._timelapseWorker) {
-                        window._timelapseWorker = new Worker('/admin/paint/js/timelapse-worker.js');
-                    }
-                    timelapsePayload = await new Promise((resolve, reject) => {
-                        const worker = window._timelapseWorker;
-                        const onmsg = (ev) => {
-                            worker.removeEventListener('message', onmsg);
-                            if (ev.data && ev.data.success) resolve(ev.data.payload); else reject(ev.data && ev.data.error ? ev.data.error : 'worker error');
-                        };
-                        worker.addEventListener('message', onmsg);
-                        worker.postMessage({ events: state.timelapseEvents });
-                    });
-                } else if (typeof pako !== 'undefined') {
-                    // fallback to main-thread compression
-                    const headers = [];
-                    state.timelapseEvents.forEach(ev => { Object.keys(ev).forEach(k => { if (headers.indexOf(k) === -1) headers.push(k); }); });
-                    const lines = [headers.join(',')];
-                    state.timelapseEvents.forEach(ev => { const row = headers.map(h => { let v = ev[h]; if (v === undefined || v === null) return ''; if (Array.isArray(v) || typeof v === 'object') v = JSON.stringify(v); v = String(v); if (v.indexOf(',') !== -1 || v.indexOf('"') !== -1 || v.indexOf('\n') !== -1) { v = '"' + v.replace(/"/g, '""') + '"'; } return v; }); lines.push(row.join(',')); });
-                    const csv = lines.join('\n');
-                    const gz = pako.gzip(csv);
-                    let bin = '';
-                    for (let i = 0; i < gz.length; i++) bin += String.fromCharCode(gz[i]);
-                    timelapsePayload = 'data:application/octet-stream;base64,' + btoa(bin);
-                }
-            } catch (err) {
-                console.error('Timelapse compression error:', err);
-            }
+    async function compressTimelapseData() {
+        if (state.timelapseEvents.length === 0) {
+            return null;
         }
 
-        const payload = {
-            title: title,
-            description: description,
-            tags: tags,
-            canvas_width: w,
-            canvas_height: h,
-            background_color: '#FFFFFF',
-            illust_data: JSON.stringify(illust),
-            image_data: dataUrl,
-            timelapse_data: timelapsePayload,
-            csrf_token: window.CSRF_TOKEN,
-            id: state.currentIllustId
-        };
-
         try {
+            if (window.Worker) {
+                // Use Web Worker for compression
+                if (!window._timelapseWorker) {
+                    window._timelapseWorker = new Worker('/admin/paint/js/timelapse-worker.js');
+                }
+                return await new Promise((resolve, reject) => {
+                    const worker = window._timelapseWorker;
+                    const onmsg = (ev) => {
+                        worker.removeEventListener('message', onmsg);
+                        if (ev.data && ev.data.success) resolve(ev.data.payload); else reject(ev.data && ev.data.error ? ev.data.error : 'worker error');
+                    };
+                    worker.addEventListener('message', onmsg);
+                    worker.postMessage({ events: state.timelapseEvents });
+                });
+            } else if (typeof pako !== 'undefined') {
+                // Fallback to main-thread compression
+                const headers = [];
+                state.timelapseEvents.forEach(ev => { Object.keys(ev).forEach(k => { if (headers.indexOf(k) === -1) headers.push(k); }); });
+                const lines = [headers.join(',')];
+                state.timelapseEvents.forEach(ev => { const row = headers.map(h => { let v = ev[h]; if (v === undefined || v === null) return ''; if (Array.isArray(v) || typeof v === 'object') v = JSON.stringify(v); v = String(v); if (v.indexOf(',') !== -1 || v.indexOf('"') !== -1 || v.indexOf('\n') !== -1) { v = '"' + v.replace(/"/g, '""') + '"'; } return v; }); lines.push(row.join(',')); });
+                const csv = lines.join('\n');
+                const gz = pako.gzip(csv);
+                let bin = '';
+                for (let i = 0; i < gz.length; i++) bin += String.fromCharCode(gz[i]);
+                return 'data:application/octet-stream;base64,' + btoa(bin);
+            }
+        } catch (err) {
+            console.error('Timelapse compression error:', err);
+        }
+        return null;
+    }
+
+    async function sendSaveRequest(title, description, tags, compositeImage, illustData, timelapseData) {
+        try {
+            const payload = {
+                title: title,
+                description: description,
+                tags: tags,
+                canvas_width: state.layers[0].width,
+                canvas_height: state.layers[0].height,
+                background_color: '#FFFFFF',
+                illust_data: JSON.stringify(illustData),
+                image_data: compositeImage,
+                timelapse_data: timelapseData,
+                csrf_token: window.CSRF_TOKEN,
+                id: state.currentIllustId
+            };
+
             const res = await fetch('/admin/paint/api/save.php', {
                 method: 'POST',
                 headers: {
@@ -1623,6 +1701,10 @@
                 body: JSON.stringify(payload),
                 credentials: 'same-origin'
             });
+
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            }
 
             const json = await res.json();
 
@@ -1638,11 +1720,13 @@
                 // Clear timelapse events
                 state.timelapseEvents = [];
             } else {
-                setStatus(`保存失敗: ${json.error || 'unknown'}`);
+                throw new Error(json.error || 'unknown');
             }
-        } catch (e) {
-            setStatus('保存エラー');
-            console.error('Save error:', e);
+        } catch (error) {
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                throw new Error('ネットワークエラーが発生しました。接続を確認してください。');
+            }
+            throw error;
         }
     }
 
@@ -1887,59 +1971,82 @@
             return;
         }
 
-        // Store ID before closing modal (which resets selectedIllustId)
         const idToLoad = selectedIllustId;
-        
-        console.log('Loading illustration:', idToLoad);
         setStatus('イラストを読み込んでいます...');
         closeOpenModal();
 
         try {
-            const resp = await fetch(`/admin/paint/api/load.php?id=${idToLoad}`, {
-                credentials: 'same-origin'
-            });
+            const illustData = await fetchIllustData(idToLoad);
+            await loadIllustLayers(illustData);
 
-            if (!resp.ok) {
-                throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-            }
+            // Set current ID and metadata
+            setCurrentId(idToLoad);
+            state.currentIllustTitle = illustData.title || '';
+            state.currentIllustDescription = illustData.description || '';
+            state.currentIllustTags = illustData.tags || '';
 
-            const json = await resp.json();
-            console.log('Load response:', json);
+            renderLayers();
+            setStatus(`イラスト ID:${idToLoad} を読み込みました`);
+            console.log('Illustration loaded successfully');
 
-            if (!json.success || !json.data) {
-                setStatus('イラストの読み込みに失敗しました: ' + (json.error || 'データがありません'));
-                console.error('Load failed:', json);
-                return;
-            }
+        } catch (error) {
+            setStatus('イラストの読み込みに失敗しました: ' + error.message);
+            console.error('Failed to load illustration:', error);
+        }
+    }
 
-            const illust = json.data;
+    // ===== Illust Data Management =====
+    async function fetchIllustData(id) {
+        const resp = await fetch(`/admin/paint/api/load.php?id=${id}`, {
+            credentials: 'same-origin'
+        });
 
-            // Parse illust_data
-            let illustData = null;
-            try {
-                if (!illust.illust_data) {
-                    throw new Error('illust_data is empty');
-                }
-                illustData = JSON.parse(illust.illust_data);
-                console.log('Parsed illust_data:', illustData);
-            } catch (e) {
-                console.error('Failed to parse illust_data:', e, illust.illust_data);
-                setStatus('イラストデータの解析に失敗しました');
-                return;
-            }
+        if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+        }
 
+        const json = await resp.json();
+
+        if (!json.success || !json.data) {
+            throw new Error(json.error || 'データがありません');
+        }
+
+        const illust = json.data;
+
+        // Parse illust_data
+        if (!illust.illust_data) {
+            throw new Error('illust_data is empty');
+        }
+
+        try {
+            const parsedData = JSON.parse(illust.illust_data);
+            console.log('Parsed illust_data:', parsedData);
+
+            // Merge metadata
+            return {
+                ...illust,
+                ...parsedData
+            };
+        } catch (e) {
+            console.error('Failed to parse illust_data:', e, illust.illust_data);
+            throw new Error('イラストデータの解析に失敗しました');
+        }
+    }
+
+    async function loadIllustLayers(illustData) {
+        try {
             // Clear current canvas and reset all layer properties
             state.layers.forEach((canvas, i) => {
                 const ctx = state.contexts[i];
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 canvas.style.opacity = '1';
                 canvas.style.display = 'block';
-                state.layerNames[i] = `レイヤー ${i}`;
+                state.layerNames[i] = CONFIG.LAYER_NAMES[i] || `レイヤー ${i}`;
             });
 
             // Reset undo/redo stacks
-            state.undoStacks = [[], [], [], []];
-            state.redoStacks = [[], [], [], []];
+            state.undoStacks = Array(CONFIG.CANVAS.LAYER_COUNT).fill().map(() => []);
+            state.redoStacks = Array(CONFIG.CANVAS.LAYER_COUNT).fill().map(() => []);
             state.timelapseEvents = [];
 
             // Load layers
@@ -1956,25 +2063,29 @@
 
                         const img = new Image();
                         img.onload = () => {
-                            // Use layer order from saved data if available
-                            const targetIdx = layerData.order !== undefined ? layerData.order : idx;
-                            
-                            if (targetIdx < state.layers.length) {
-                                const ctx = state.contexts[targetIdx];
-                                ctx.clearRect(0, 0, state.layers[targetIdx].width, state.layers[targetIdx].height);
-                                ctx.drawImage(img, 0, 0);
+                            try {
+                                // Use layer order from saved data if available
+                                const targetIdx = layerData.order !== undefined ? layerData.order : idx;
+                                
+                                if (targetIdx < state.layers.length) {
+                                    const ctx = state.contexts[targetIdx];
+                                    ctx.clearRect(0, 0, state.layers[targetIdx].width, state.layers[targetIdx].height);
+                                    ctx.drawImage(img, 0, 0);
 
-                                // Restore layer properties
-                                state.layers[targetIdx].style.opacity = layerData.opacity !== undefined ? layerData.opacity.toString() : '1';
-                                state.layers[targetIdx].style.display = layerData.visible !== false ? 'block' : 'none';
+                                    // Restore layer properties
+                                    state.layers[targetIdx].style.opacity = layerData.opacity !== undefined ? layerData.opacity.toString() : '1';
+                                    state.layers[targetIdx].style.display = layerData.visible !== false ? 'block' : 'none';
 
-                                if (layerData.name) {
-                                    state.layerNames[targetIdx] = layerData.name;
+                                    if (layerData.name) {
+                                        state.layerNames[targetIdx] = layerData.name;
+                                    }
+
+                                    console.log(`Layer ${targetIdx} loaded: ${layerData.name || 'unnamed'}, visible: ${layerData.visible}, opacity: ${layerData.opacity}`);
                                 }
-
-                                console.log(`Layer ${targetIdx} loaded: ${layerData.name || 'unnamed'}, visible: ${layerData.visible}, opacity: ${layerData.opacity}`);
+                                resolve();
+                            } catch (error) {
+                                reject(new Error(`Failed to draw layer ${idx}: ${error.message}`));
                             }
-                            resolve();
                         };
                         img.onerror = (e) => {
                             console.error(`Layer ${idx} image load error:`, e);
@@ -1989,22 +2100,9 @@
             } else {
                 console.warn('No layers found in illust_data');
             }
-
-            // Set current ID
-            setCurrentId(idToLoad);
-            
-            // Store current illust info for save modal
-            state.currentIllustTitle = illust.title || '';
-            state.currentIllustDescription = illust.description || '';
-            state.currentIllustTags = illust.tags || '';
-
-            renderLayers();
-            setStatus(`イラスト ID:${idToLoad} を読み込みました`);
-            console.log('Illustration loaded successfully');
-
-        } catch (e) {
-            console.error('Failed to load illustration:', e);
-            setStatus('イラストの読み込みに失敗しました: ' + e.message);
+        } catch (error) {
+            console.error('Error loading illust layers:', error);
+            throw new Error(`レイヤーの読み込みに失敗しました: ${error.message}`);
         }
     }
 
@@ -2293,68 +2391,87 @@
     // ===== Color Palette Management =====
     
     // HSV <-> RGB conversion utilities
-    function rgbToHsv(r, g, b) {
-        r /= 255;
-        g /= 255;
-        b /= 255;
-        
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        const diff = max - min;
-        
-        let h = 0;
-        let s = max === 0 ? 0 : diff / max;
-        let v = max;
-        
-        if (diff !== 0) {
-            if (max === r) {
-                h = 60 * (((g - b) / diff) % 6);
-            } else if (max === g) {
-                h = 60 * ((b - r) / diff + 2);
-            } else {
-                h = 60 * ((r - g) / diff + 4);
+    // ===== Color Utilities =====
+    const ColorUtils = {
+        rgbToHsv(r, g, b) {
+            r /= 255;
+            g /= 255;
+            b /= 255;
+            
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const diff = max - min;
+            
+            let h = 0;
+            let s = max === 0 ? 0 : diff / max;
+            let v = max;
+            
+            if (diff !== 0) {
+                if (max === r) {
+                    h = 60 * (((g - b) / diff) % 6);
+                } else if (max === g) {
+                    h = 60 * ((b - r) / diff + 2);
+                } else {
+                    h = 60 * ((r - g) / diff + 4);
+                }
             }
+            
+            if (h < 0) h += 360;
+            
+            return {
+                h: Math.round(h),
+                s: Math.round(s * 100),
+                v: Math.round(v * 100)
+            };
+        },
+        
+        hsvToRgb(h, s, v) {
+            s /= 100;
+            v /= 100;
+            
+            const c = v * s;
+            const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+            const m = v - c;
+            
+            let r = 0, g = 0, b = 0;
+            
+            if (h >= 0 && h < 60) {
+                r = c; g = x; b = 0;
+            } else if (h >= 60 && h < 120) {
+                r = x; g = c; b = 0;
+            } else if (h >= 120 && h < 180) {
+                r = 0; g = c; b = x;
+            } else if (h >= 180 && h < 240) {
+                r = 0; g = x; b = c;
+            } else if (h >= 240 && h < 300) {
+                r = x; g = 0; b = c;
+            } else if (h >= 300 && h < 360) {
+                r = c; g = 0; b = x;
+            }
+            
+            return {
+                r: Math.round((r + m) * 255),
+                g: Math.round((g + m) * 255),
+                b: Math.round((b + m) * 255)
+            };
+        },
+
+        rgbToHex(r, g, b) {
+            return '#' + [r, g, b].map(x => {
+                const hex = x.toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            }).join('');
+        },
+
+        hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
         }
-        
-        if (h < 0) h += 360;
-        
-        return {
-            h: Math.round(h),
-            s: Math.round(s * 100),
-            v: Math.round(v * 100)
-        };
-    }
-    
-    function hsvToRgb(h, s, v) {
-        s /= 100;
-        v /= 100;
-        
-        const c = v * s;
-        const x = c * (1 - Math.abs((h / 60) % 2 - 1));
-        const m = v - c;
-        
-        let r = 0, g = 0, b = 0;
-        
-        if (h >= 0 && h < 60) {
-            r = c; g = x; b = 0;
-        } else if (h >= 60 && h < 120) {
-            r = x; g = c; b = 0;
-        } else if (h >= 120 && h < 180) {
-            r = 0; g = c; b = x;
-        } else if (h >= 180 && h < 240) {
-            r = 0; g = x; b = c;
-        } else if (h >= 240 && h < 300) {
-            r = x; g = 0; b = c;
-        } else {
-            r = c; g = 0; b = x;
-        }
-        
-        return {
-            r: Math.round((r + m) * 255),
-            g: Math.round((g + m) * 255),
-            b: Math.round((b + m) * 255)
-        };
-    }
+    };
     
     function rgbToHex(r, g, b) {
         return '#' + 
@@ -2514,7 +2631,7 @@
             const s = parseInt(elements.editHsvS.value);
             const v = parseInt(elements.editHsvV.value);
             
-            const rgb = hsvToRgb(h, s, v);
+            const rgb = ColorUtils.hsvToRgb(h, s, v);
             const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
             
             elements.editColorPreview.style.background = hex;
@@ -2540,7 +2657,7 @@
             const b = parseInt(elements.editRgbB.value);
             
             const hex = rgbToHex(r, g, b);
-            const hsv = rgbToHsv(r, g, b);
+            const hsv = ColorUtils.rgbToHsv(r, g, b);
             
             elements.editColorPreview.style.background = hex;
             elements.editColorInput.value = hex.toUpperCase();
@@ -2561,7 +2678,7 @@
             isUpdating = true;
 
             const rgb = hexToRgb(hex);
-            const hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
+            const hsv = ColorUtils.rgbToHsv(rgb.r, rgb.g, rgb.b);
             
             elements.editColorPreview.style.background = hex;
             
