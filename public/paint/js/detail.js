@@ -14,19 +14,46 @@ class TimelapsePlayer {
         // アルファチャンネルなしのコンテキストを取得（常に不透明な白背景）
         this.ctx = this.canvas.getContext('2d', { alpha: false });
         this.frames = timelapseData;
-        this.currentFrame = 0;
+        // -1 を初期値として、まだ何も描画していない状態を表す
+        // これにより再生開始前はプログレスが0%のままになる
+        this.currentFrame = -1;
         this.isPlaying = false;
         this.speed = 1;
         this.animationId = null;
         this.lastFrameTime = 0;
         this.frameInterval = 50; // 基本フレーム間隔(ms)
+        this.ignoreTimestamps = true; // デフォルトで等間隔再生（安定性重視）
         
         console.log('TimelapsePlayer initialized with', timelapseData.length, 'frames');
         
         this.setupCanvas();
     }
+
+    // Helper: get duration (ms) for a given frame index
+    getFrameDuration(index) {
+        if (this.ignoreTimestamps) return this.frameInterval;
+        if (!this.frames || this.frames.length === 0) return this.frameInterval;
+        const f = this.frames[index];
+        if (f && typeof f.durationMs === 'number' && f.durationMs >= 0) {
+            return f.durationMs;
+        }
+        return this.frameInterval;
+    }
     
-    setupCanvas() {
+    // Set whether to ignore timestamps (equal-interval playback)
+    setIgnoreTimestamps(ignore) {
+        this.ignoreTimestamps = ignore;
+    }
+    
+    // Reset player to initial state
+    reset() {
+        this.pause();
+        this.currentFrame = -1;
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.updateProgress();
+        this.updatePlayButton();
+    }    setupCanvas() {
         if (this.frames.length === 0) return;
         
         // キャンバスサイズを設定（デフォルトは800x600）
@@ -52,6 +79,11 @@ class TimelapsePlayer {
             this.seek(0);
         }
         
+        // If not started yet, start from frame 0 and render it
+        if (this.currentFrame < 0) {
+            this.seek(0);
+        }
+
         this.isPlaying = true;
         this.lastFrameTime = performance.now();
         this.animate();
@@ -81,12 +113,21 @@ class TimelapsePlayer {
         const now = performance.now();
         const deltaTime = now - this.lastFrameTime;
         
-        // 速度に応じたフレーム間隔
-        const interval = this.frameInterval / this.speed;
+        // 次のフレームを表示するまでの待ち時間を取得
+        // currentFrame が -1 の場合は 0 フレーム目の duration を使う
+        const nextFrameIndex = this.currentFrame + 1;
+        if (nextFrameIndex >= this.frames.length) {
+            // 最後まで到達
+            this.pause();
+            return;
+        }
         
-        if (deltaTime >= interval) {
+        // 速度に応じたフレーム間隔
+        const duration = this.getFrameDuration(nextFrameIndex) / this.speed;
+
+        if (deltaTime >= duration) {
             this.nextFrame();
-            this.lastFrameTime = now - (deltaTime % interval);
+            this.lastFrameTime = now - (deltaTime % duration);
         }
         
         this.animationId = requestAnimationFrame(() => this.animate());
@@ -95,8 +136,10 @@ class TimelapsePlayer {
     nextFrame() {
         this.currentFrame++;
         if (this.currentFrame >= this.frames.length) {
-            // 最後まで到達したら停止
+            // 最後まで到達したら停止（set to last index and pause)
             this.currentFrame = this.frames.length - 1;
+            this.renderFrame(this.currentFrame);
+            this.updateProgress();
             this.pause();
             return;
         }
@@ -152,9 +195,9 @@ class TimelapsePlayer {
         this.ctx.fillStyle = '#ffffff';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // フレーム0の場合は白背景のみ、それ以外は最初から指定フレームまで描画
-        if (frameIndex > 0) {
-            for (let i = 0; i < frameIndex; i++) {
+        // フレーム0の場合も含め、指定フレームまで（inclusive）描画する
+        if (frameIndex >= 0) {
+            for (let i = 0; i <= frameIndex; i++) {
                 this.renderFrame(i);
             }
         }
@@ -171,7 +214,8 @@ class TimelapsePlayer {
     }
     
     updateProgress() {
-        const progress = this.frames.length > 0 ? (this.currentFrame / this.frames.length) * 100 : 0;
+        // 表示上は "現在のフレームを含めた割合" を用いる（最後のフレームで100%になるように）
+        const progress = this.frames.length > 0 ? ((this.currentFrame + 1) / this.frames.length) * 100 : 0;
         const progressBar = document.getElementById('timelapseProgressBar');
         if (progressBar) {
             progressBar.style.width = progress + '%';
@@ -180,8 +224,8 @@ class TimelapsePlayer {
         const timeDisplay = document.getElementById('timelapseTime');
         if (timeDisplay) {
             // フレーム番号を秒数に変換（50msごと = 20fps）
-            const currentSeconds = Math.floor(this.currentFrame * this.frameInterval / 1000);
-            const totalSeconds = Math.floor(this.frames.length * this.frameInterval / 1000);
+            const currentSeconds = Math.floor((this.currentFrame + 1) * this.frameInterval / 1000);
+            const totalSeconds = Math.ceil(this.frames.length * this.frameInterval / 1000);
             timeDisplay.textContent = `${this.formatTime(currentSeconds)} / ${this.formatTime(totalSeconds)}`;
         }
     }
@@ -243,6 +287,17 @@ async function initTimelapse(illustId) {
             console.warn('No frames found');
             hideTimelapseSection();
             return;
+        }
+        
+        // 重いタイムラプスの警告（1000フレーム以上）
+        if (frames.length > 1000) {
+            console.warn('Large timelapse detected:', frames.length, 'frames. Playback may be slow.');
+            // ユーザーに通知（オプション）
+            const warningDiv = document.createElement('div');
+            warningDiv.style.cssText = 'position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: #fff3cd; color: #856404; padding: 12px 20px; border: 1px solid #ffeeba; border-radius: 4px; z-index: 10000; box-shadow: 0 2px 8px rgba(0,0,0,0.15);';
+            warningDiv.innerHTML = `⚠️ このタイムラプスは${frames.length}フレームあり、再生が重くなる可能性があります。`;
+            document.body.appendChild(warningDiv);
+            setTimeout(() => warningDiv.remove(), 5000);
         }
         
         showTimelapseSection();
@@ -330,7 +385,7 @@ function parseCSVLine(line) {
 function convertEventsToStrokes(events) {
     const strokes = [];
     let currentStroke = null;
-    
+    let lastEventTime = null;
     for (const event of events) {
         if (event.type === 'start') {
             // 新しいストロークを開始
@@ -340,16 +395,23 @@ function convertEventsToStrokes(events) {
                 size: event.size || 5,
                 tool: event.tool || 'pen',
                 layer: event.layer || 0,
-                path: [{ x: event.x, y: event.y }]
+                path: [{ x: event.x, y: event.y }],
+                // 開始時刻と終了時刻を保持
+                startTime: event.t !== undefined ? event.t : null,
+                endTime: null
             };
+            lastEventTime = event.t !== undefined ? event.t : lastEventTime;
         } else if (event.type === 'move' && currentStroke) {
             // ストロークにポイントを追加
             currentStroke.path.push({ x: event.x, y: event.y });
+            if (event.t !== undefined) lastEventTime = event.t;
         } else if (event.type === 'end' && currentStroke) {
             // ストロークを完成
             if (event.x !== undefined && event.y !== undefined) {
                 currentStroke.path.push({ x: event.x, y: event.y });
             }
+            currentStroke.endTime = event.t !== undefined ? event.t : lastEventTime;
+            
             strokes.push(currentStroke);
             currentStroke = null;
         }
@@ -360,7 +422,44 @@ function convertEventsToStrokes(events) {
         strokes.push(currentStroke);
     }
     
-    console.log('Converted to', strokes.length, 'strokes');
+    // フレーム間のdurationを計算
+    return calculateFrameDurations(strokes);
+}
+
+/**
+ * ストローク間の時間間隔を考慮したフレームdurationを計算
+ */
+function calculateFrameDurations(strokes) {
+    if (strokes.length === 0) return [];
+    
+    for (let i = 0; i < strokes.length; i++) {
+        let durationMs;
+        
+        if (i === 0) {
+            // 最初のフレーム：即座に描画
+            durationMs = 0;
+        } else {
+            // ストローク間の時間間隔（ミリ秒単位）
+            const prevStroke = strokes[i - 1];
+            const currentStroke = strokes[i];
+            
+            let intervalMs = 0;
+            if (prevStroke.endTime !== null && currentStroke.startTime !== null) {
+                const dt = currentStroke.startTime - prevStroke.endTime;
+                if (dt > 0) {
+                    intervalMs = dt;
+                }
+            }
+            
+            // 間隔を適切な範囲に制限
+            const minInterval = 10; // 最小10ms
+            const maxInterval = 10000; // 最大10秒
+            durationMs = Math.max(minInterval, Math.min(intervalMs, maxInterval));
+        }
+        
+        strokes[i].durationMs = durationMs;
+    }
+    
     return strokes;
 }
 
@@ -403,6 +502,15 @@ function changeSpeed(speed) {
 }
 
 /**
+ * タイムスタンプ無視切り替え
+ */
+function toggleIgnoreTimestamps(ignore) {
+    if (timelapsePlayer) {
+        timelapsePlayer.setIgnoreTimestamps(ignore);
+    }
+}
+
+/**
  * オーバーレイを開く
  */
 function openTimelapseOverlay() {
@@ -410,10 +518,10 @@ function openTimelapseOverlay() {
     if (overlay) {
         overlay.classList.add('show');
         if (timelapsePlayer) {
+            // プレイヤーをリセット（最初から再生できるように）
+            timelapsePlayer.reset();
             // キャンバスの表示サイズを調整
             resizeCanvas();
-            timelapsePlayer.updateProgress();
-            timelapsePlayer.updatePlayButton();
         }
     }
 }
@@ -467,8 +575,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const rect = progressBar.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const percent = x / rect.width;
-            const frameIndex = Math.floor(percent * timelapsePlayer.frames.length);
-            
+            let frameIndex = Math.floor(percent * timelapsePlayer.frames.length);
+            // Clamp to valid range
+            if (frameIndex < 0) frameIndex = 0;
+            if (frameIndex >= timelapsePlayer.frames.length) frameIndex = timelapsePlayer.frames.length - 1;
+
             // シーク実行（即座に反映）
             timelapsePlayer.seek(frameIndex);
         });

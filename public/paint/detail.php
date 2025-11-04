@@ -291,6 +291,17 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
                         <button class="speed-btn" data-speed="2" onclick="changeSpeed(2)">2x</button>
                         <button class="speed-btn" data-speed="4" onclick="changeSpeed(4)">4x</button>
                     </div>
+                    <div class="timelapse-options" style="margin-top: 10px; text-align: center;">
+                        <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="ignoreTimestamps" onchange="toggleIgnoreTimestamps(this.checked)" checked>
+                            <span>時間を無視（等間隔再生）</span>
+                        </label>
+                        <div>
+                            <small style="display: block; margin-top: 4px; color: #666; font-size: 0.85em;">
+                                ※ チェックを外すと制作時の実時間で再生します（タイムスタンプが記録されている場合）
+                            </small>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
