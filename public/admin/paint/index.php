@@ -6,11 +6,18 @@ require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../../src/Security/SecurityUtil.php';
 
 use App\Security\CsrfProtection;
+use App\Utils\PathHelper;
 
 // 管理画面用お絵描き機能
 initSecureSession();
 
-// Admin check - support both session formats
+// 必要なら管理画面へリダイレクト（未ログインは管理ログインへ）
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    header('Location: ' . PathHelper::getAdminUrl('login.php'));
+    exit;
+}
+
+// Admin check - support both session formats (legacy compatibility)
 $isAdmin = false;
 if (!empty($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
     $isAdmin = true;
