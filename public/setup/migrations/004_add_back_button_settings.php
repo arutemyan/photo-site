@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../../src/Utils/Logger.php';
+
 /**
  * マイグレーション 004: ナビゲーション設定（一覧に戻るボタン）を追加
  *
