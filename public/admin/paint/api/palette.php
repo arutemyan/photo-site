@@ -1,8 +1,4 @@
 <?php
-/**
- * Color Palette API
- * カラーパレットの取得・更新
- */
 
 declare(strict_types=1);
 
@@ -10,31 +6,50 @@ require_once __DIR__ . '/../../../../vendor/autoload.php';
 require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../../../src/Security/SecurityUtil.php';
 
+use App\Controllers\AdminControllerBase;
 use App\Security\CsrfProtection;
+use App\Database\Connection;
 
-header('Content-Type: application/json');
+/**
+ * Color Palette API
+ * カラーパレットの取得・更新
+ */
+class PaletteController extends AdminControllerBase
+{
+    private bool $isAdmin = false;
 
-initSecureSession();
+    protected function checkAuthentication(): void
+    {
+        // Admin check
+        if (!empty($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
+            $this->isAdmin = true;
+        } elseif (!empty($_SESSION['admin']) && is_array($_SESSION['admin'])) {
+            $this->isAdmin = true;
+        }
 
-// Admin check
-$isAdmin = false;
-if (!empty($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
-    $isAdmin = true;
-} elseif (!empty($_SESSION['admin']) && is_array($_SESSION['admin'])) {
-    $isAdmin = true;
-}
+        if (!$this->isAdmin) {
+            $this->sendError('Unauthorized', 403);
+        }
+    }
 
-if (!$isAdmin) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
+    protected function onProcess(string $method): void
+    {
+        switch ($method) {
+            case 'GET':
+                $this->handleGet();
+                break;
+            case 'POST':
+                $this->handlePost();
+                break;
+            default:
+                $this->sendError('Method not allowed', 405);
+        }
+    }
 
-$db = App\Database\Connection::getInstance();
-
-// GET: カラーパレットを取得
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    try {
+    private function handleGet(): void
+    {
+        $db = Connection::getInstance();
+        
         $stmt = $db->prepare("
             SELECT slot_index, color 
             FROM color_palettes 
@@ -53,37 +68,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
         }
         
-        echo json_encode(['success' => true, 'colors' => $colors]);
-        
-    } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        $this->sendSuccess(['colors' => $colors]);
     }
-    exit;
-}
 
-// POST: カラーパレットを更新
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // CSRF check
-    $input = json_decode(file_get_contents('php://input'), true);
-    
-    if (!CsrfProtection::validateToken($input['csrf_token'] ?? '')) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'error' => 'Invalid CSRF token']);
-        exit;
-    }
-    
-    try {
+    private function handlePost(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        
         $slotIndex = (int)($input['slot_index'] ?? -1);
         $color = strtoupper($input['color'] ?? '');
         
         if ($slotIndex < 0 || $slotIndex >= 16) {
-            throw new Exception('Invalid slot index');
+            $this->sendError('Invalid slot index', 400);
         }
         
         if (!preg_match('/^#[0-9A-F]{6}$/', $color)) {
-            throw new Exception('Invalid color format');
+            $this->sendError('Invalid color format', 400);
         }
+        
+        $db = Connection::getInstance();
         
         // Get driver type
         $driver = $db->getAttribute(PDO::ATTR_DRIVER_NAME);
@@ -106,14 +109,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$slotIndex, $color, $color]);
         }
         
-        echo json_encode(['success' => true]);
-        
-    } catch (Exception $e) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        $this->sendSuccess([]);
     }
-    exit;
 }
 
-http_response_code(405);
-echo json_encode(['success' => false, 'error' => 'Method not allowed']);
+// コントローラーを実行
+$controller = new PaletteController();
+$controller->execute();
