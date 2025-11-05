@@ -20,9 +20,14 @@ class IllustSaveController extends AdminControllerBase
         $this->illustService = new IllustService($db, __DIR__ . '/../../../uploads');
     }
 
+    /**
+     * 認証チェック（paint API用にuser_idを取得）
+     */
     protected function checkAuthentication(): void
     {
-        // Support both session formats
+        // Support existing admin session keys used elsewhere in the app
+        // - Normal app login sets $_SESSION['admin_logged_in']=true with admin_user_id
+        // - Test helper uses $_SESSION['admin'] for convenience
         if (!empty($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
             $this->userId = $_SESSION['admin_user_id'] ?? null;
         } elseif (!empty($_SESSION['admin']) && is_array($_SESSION['admin'])) {
@@ -31,24 +36,6 @@ class IllustSaveController extends AdminControllerBase
 
         if ($this->userId === null) {
             $this->sendError('Unauthorized', 403);
-        }
-    }
-
-    protected function validateCsrf(): void
-    {
-        // CSRF validation: accept header X-CSRF-Token or JSON field csrf_token
-        $rawBody = file_get_contents('php://input');
-        $raw = json_decode($rawBody, true);
-        $csrfOk = false;
-        
-        if (CsrfProtection::validateHeader('X-CSRF-Token')) {
-            $csrfOk = true;
-        } elseif (is_array($raw) && isset($raw['csrf_token']) && CsrfProtection::validateToken($raw['csrf_token'])) {
-            $csrfOk = true;
-        }
-
-        if (!$csrfOk) {
-            $this->sendError('CSRF token missing or invalid', 400);
         }
     }
 

@@ -18,20 +18,6 @@ class PaletteController extends AdminControllerBase
 {
     private bool $isAdmin = false;
 
-    protected function checkAuthentication(): void
-    {
-        // Admin check
-        if (!empty($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
-            $this->isAdmin = true;
-        } elseif (!empty($_SESSION['admin']) && is_array($_SESSION['admin'])) {
-            $this->isAdmin = true;
-        }
-
-        if (!$this->isAdmin) {
-            $this->sendError('Unauthorized', 403);
-        }
-    }
-
     protected function onProcess(string $method): void
     {
         switch ($method) {
