@@ -337,29 +337,24 @@
             }
         }
         
-        // Create a hidden color input (only the dialog will be visible)
-        const tempInput = document.createElement('input');
-        tempInput.type = 'color';
-        tempInput.value = currentColor;
-        tempInput.style.position = 'absolute';
-        tempInput.style.opacity = '0';
-        tempInput.style.width = '0';
-        tempInput.style.height = '0';
-        tempInput.style.pointerEvents = 'none';
+        // Store the original current color to restore later
+        const originalColor = state.currentColor;
         
-        activeColorPicker = tempInput;
-        document.body.appendChild(tempInput);
-
-        // Auto-click to open the picker dialog
-        setTimeout(() => {
-            tempInput.click();
-        }, 10);
-
-        // Handle color change
-        const handleChange = async (e) => {
-            const newColor = e.target.value;
+        // Temporarily set the palette color as current color
+        setColor(currentColor);
+        
+        // Get the EDIT button and trigger it programmatically
+        const editBtn = document.getElementById('current-color-edit-btn');
+        if (!editBtn) {
+            console.error('EDIT button not found');
+            return;
+        }
+        
+        // Create a one-time listener to handle the color change
+        const handlePaletteColorChange = async () => {
+            const newColor = state.currentColor;
             
-            // Update the swatch immediately
+            // Update the swatch
             swatchElement.style.background = newColor;
             swatchElement.title = newColor + ' (ダブルクリックで編集)';
             
@@ -368,7 +363,6 @@
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
                 if (!csrfToken) {
                     console.error('CSRF token not found');
-                    cleanup();
                     return;
                 }
 
@@ -387,44 +381,41 @@
                 const result = await response.json();
                 if (!result.success) {
                     console.error('Failed to save color:', result.error);
-                    // Revert on error
                     swatchElement.style.background = currentColor;
                     swatchElement.title = currentColor + ' (ダブルクリックで編集)';
                     alert('色の保存に失敗しました: ' + (result.error || ''));
                 }
             } catch (error) {
                 console.error('Error saving color:', error);
-                // Revert on error
                 swatchElement.style.background = currentColor;
                 swatchElement.title = currentColor + ' (ダブルクリックで編集)';
                 alert('色の保存中にエラーが発生しました');
             }
-
-            cleanup();
         };
-
-        // Handle cancel
-        const handleCancel = () => {
-            setTimeout(() => {
-                cleanup();
-            }, 150);
-        };
-
-        // Cleanup function
-        const cleanup = () => {
-            if (tempInput && document.body.contains(tempInput)) {
-                tempInput.removeEventListener('change', handleChange);
-                tempInput.removeEventListener('blur', handleCancel);
-                document.body.removeChild(tempInput);
+        
+        // Store the handler for cleanup
+        swatchElement._paletteChangeHandler = handlePaletteColorChange;
+        
+        // Click the EDIT button
+        editBtn.click();
+        
+        // Wait for color picker to close, then handle the change
+        // We'll use a MutationObserver or polling to detect when the color picker closes
+        const checkInterval = setInterval(() => {
+            // Check if there's no active color input (picker closed)
+            const colorInputs = document.querySelectorAll('input[type="color"]');
+            if (colorInputs.length === 0) {
+                clearInterval(checkInterval);
+                
+                // Only update if color actually changed
+                if (state.currentColor !== currentColor) {
+                    handlePaletteColorChange();
+                } else {
+                    // Restore original color if user cancelled
+                    setColor(originalColor);
+                }
             }
-            activeColorPicker = null;
-        };
-
-        tempInput.addEventListener('change', handleChange);
-        tempInput.addEventListener('blur', handleCancel);
-
-        // Trigger the color picker
-        tempInput.click();
+        }, 100);
     }
 
     function setColor(color) {
@@ -457,15 +448,28 @@
         if (!editBtn) return;
 
         editBtn.addEventListener('click', (e) => {
-            // Create a hidden color input (only the dialog will be visible)
+            // Get the right panel position
+            const rightPanel = document.querySelector('.right-panel');
+            const panelRect = rightPanel ? rightPanel.getBoundingClientRect() : null;
+            
+            // Calculate position (left of the right panel)
+            const inputRight = panelRect ? (window.innerWidth - panelRect.left + 10) : 320;
+            const inputTop = panelRect ? panelRect.top + 50 : 100;
+            
+            // Create a small visible color input positioned left of the right panel
             const tempInput = document.createElement('input');
             tempInput.type = 'color';
             tempInput.value = state.currentColor;
-            tempInput.style.position = 'absolute';
-            tempInput.style.opacity = '0';
-            tempInput.style.width = '0';
-            tempInput.style.height = '0';
-            tempInput.style.pointerEvents = 'none';
+            tempInput.style.position = 'fixed';
+            tempInput.style.top = inputTop + 'px';
+            tempInput.style.right = inputRight + 'px';
+            tempInput.style.width = '40px';
+            tempInput.style.height = '40px';
+            tempInput.style.border = 'none';
+            tempInput.style.padding = '0';
+            tempInput.style.opacity = '0.01'; // Nearly invisible but browser can detect position
+            tempInput.style.cursor = 'pointer';
+            tempInput.style.zIndex = '9999';
             
             document.body.appendChild(tempInput);
 
