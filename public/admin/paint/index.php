@@ -120,45 +120,20 @@ $csrf = CsrfProtection::getToken();
             <h3 class="panel-title">カラーパレット</h3>
 
             <div class="color-current">
-                <div class="color-swatch" id="current-color" style="background:#000000;"></div>
-                <div>
-                    <div style="font-size:11px;color:#666;">現在の色</div>
-                    <div id="current-color-hex" style="font-weight:500;">#000000</div>
+                <div class="color-swatch" id="current-color" style="background:#000000;" title="現在の色"></div>
+                <div style="flex: 1;">
+                    <div id="current-color-hex" style="font-size:12px;font-weight:600;color:#666;">#000000</div>
+                    <div id="current-color-rgb" style="font-size:10px;color:#999;">RGB(0, 0, 0)</div>
                 </div>
+                <button class="color-edit-btn" id="current-color-edit-btn" title="色を編集">EDIT</button>
+            </div>
+
+            <div style="font-size:10px;color:#999;margin-bottom:8px;text-align:center;">
+                パレット: クリック=選択 / ダブルクリック=編集
             </div>
 
             <div class="color-grid" id="color-palette-grid">
                 <!-- 16色パレット (動的生成) -->
-            </div>
-
-            <div class="color-picker-wrapper">
-                <input type="color" id="color-picker" class="color-picker" value="#000000">
-            </div>
-
-            <!-- RGB Color Picker -->
-            <div class="rgb-picker">
-                <h4 class="rgb-picker-title">RGB調整</h4>
-                <div class="rgb-slider-group">
-                    <label class="rgb-label">
-                        <span class="rgb-label-text" style="color: #ff6b6b;">R</span>
-                        <input type="range" id="rgb-r" class="rgb-slider" min="0" max="255" value="0">
-                        <span class="rgb-value" id="rgb-r-value">0</span>
-                    </label>
-                </div>
-                <div class="rgb-slider-group">
-                    <label class="rgb-label">
-                        <span class="rgb-label-text" style="color: #51cf66;">G</span>
-                        <input type="range" id="rgb-g" class="rgb-slider" min="0" max="255" value="0">
-                        <span class="rgb-value" id="rgb-g-value">0</span>
-                    </label>
-                </div>
-                <div class="rgb-slider-group">
-                    <label class="rgb-label">
-                        <span class="rgb-label-text" style="color: #4dabf7;">B</span>
-                        <input type="range" id="rgb-b" class="rgb-slider" min="0" max="255" value="0">
-                        <span class="rgb-value" id="rgb-b-value">0</span>
-                    </label>
-                </div>
             </div>
         </div>
 
@@ -204,6 +179,9 @@ $csrf = CsrfProtection::getToken();
         <!-- Layers Panel Section -->
         <div class="panel-section layers-panel">
             <h3 class="panel-title">レイヤー</h3>
+            <div class="layer-actions">
+                <button class="layer-action-btn" id="btn-add-layer" title="新規レイヤー">➕</button>
+            </div>
             <div id="layers-list">
                 <!-- レイヤー一覧 (動的生成) -->
             </div>
@@ -227,6 +205,7 @@ $csrf = CsrfProtection::getToken();
     <div class="context-menu-item" data-action="duplicate">レイヤーを複製</div>
     <div class="context-menu-item" data-action="merge-down">下のレイヤーと結合</div>
     <div class="context-menu-item" data-action="clear">レイヤーをクリア</div>
+    <div class="context-menu-item" data-action="delete">レイヤーを削除</div>
 </div>
 
 <!-- Open Illustration Modal -->
@@ -279,6 +258,20 @@ $csrf = CsrfProtection::getToken();
                     <span id="timelapse-current-time">0:00</span> / <span id="timelapse-total-time">0:00</span>
                 </div>
             </div>
+
+            <div class="timelapse-speed">
+                <label class="timelapse-speed-label">
+                    速度: <span id="timelapse-speed-value">1.0</span>x
+                </label>
+                <input type="range" id="timelapse-speed" class="timelapse-speed-slider" min="0.1" max="5" step="0.1" value="1">
+            </div>
+        </div>
+
+        <div class="timelapse-footer">
+            <button class="modal-btn primary" id="timelapse-export">動画をエクスポート</button>
+        </div>
+    </div>
+</div>
 
             <div class="timelapse-speed-control">
                 <label class="timelapse-speed-label">再生速度:</label>
