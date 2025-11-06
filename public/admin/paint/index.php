@@ -40,8 +40,13 @@ $csrf = CsrfProtection::getToken();
 <header class="header">
     <div class="header-left">
         <h1 class="header-title">お絵描き</h1>
-        <div class="illust-id-display">
-            <strong>ID:</strong> <span id="illust-id">(未保存)</span>
+        <div class="illust-info-display">
+            <div class="illust-id-display">
+                <strong>ID:</strong> <span id="illust-id">(未保存)</span>
+            </div>
+            <div class="illust-title-display">
+                <strong>タイトル:</strong> <span id="illust-title-display">(未保存)</span>
+            </div>
         </div>
     </div>
 
@@ -54,6 +59,7 @@ $csrf = CsrfProtection::getToken();
 
     <div class="header-right">
         <button class="header-btn" id="btn-save">保存</button>
+        <button class="header-btn secondary" id="btn-save-as">名前を付けて保存</button>
         <button class="header-btn secondary" id="btn-timelapse">タイムラプス</button>
     </div>
 </header>
@@ -414,7 +420,7 @@ $csrf = CsrfProtection::getToken();
 <div id="save-modal-overlay" class="modal-overlay">
     <div class="modal">
         <div class="modal-header">
-            <h3>イラストを保存</h3>
+            <h3>メタ情報を編集</h3>
         </div>
         <div class="modal-body">
             <div class="form-group">

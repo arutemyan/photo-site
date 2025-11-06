@@ -74,6 +74,7 @@
         currentIllustTitle: '',
         currentIllustDescription: '',
         currentIllustTags: '',
+        hasUnsavedChanges: false,
 
         // View
         zoomLevel: CONFIG.ZOOM.DEFAULT_LEVEL,
@@ -95,11 +96,13 @@
 
         // Header buttons
         btnSave: document.getElementById('btn-save'),
+        btnSaveAs: document.getElementById('btn-save-as'),
         btnTimelapse: document.getElementById('btn-timelapse'),
         btnNew: document.getElementById('btn-new'),
         btnClear: document.getElementById('btn-clear'),
         btnResize: document.getElementById('btn-resize'),
         illustId: document.getElementById('illust-id'),
+        illustTitleDisplay: document.getElementById('illust-title-display'),
 
         // Tools
         toolBtns: document.querySelectorAll('.tool-btn[data-tool]'),
@@ -218,6 +221,15 @@
         console.log('🚀🚀🚀 init() CALLED! 🚀🚀🚀');
         await initCanvas();
         initUI();
+
+        // Warn on page unload if there are unsaved changes
+        window.addEventListener('beforeunload', (e) => {
+            if (state.hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = ''; // Modern browsers require this
+            }
+        });
+
         // Mark initialization as complete - now auto-save can work
         state.isInitializing = false;
         console.log('Initialization complete, auto-save enabled');
@@ -639,7 +651,8 @@
 
     function initHeaderButtons() {
         // Header buttons
-        elements.btnSave.addEventListener('click', openSaveModal);
+        elements.btnSave.addEventListener('click', handleSaveButton);
+        elements.btnSaveAs.addEventListener('click', openSaveModal);
         elements.btnTimelapse.addEventListener('click', openTimelapseModal);
         elements.btnNew.addEventListener('click', newIllust);
         elements.btnClear.addEventListener('click', clearCurrentLayer);
@@ -773,6 +786,9 @@
 
         // Auto-save canvas state
         savePersistedState();
+
+        // Mark as changed
+        markAsChanged();
     }
 
     function getPointerPos(e, canvas) {
@@ -887,6 +903,7 @@
             color: state.currentColor
         });
 
+        markAsChanged();
         setStatus('塗りつぶし完了');
     }
 
@@ -1811,6 +1828,9 @@
                         // Re-render layers UI
                         renderLayers();
 
+                        // Update illust display
+                        updateIllustDisplay();
+
                         console.log('  ✓ Canvas state restoration completed successfully');
                         resolve();
                     }).catch(err => {
@@ -1864,6 +1884,10 @@
 
                     // Re-render layers UI
                     renderLayers();
+
+                    // Update illust display
+                    updateIllustDisplay();
+
                     resolve();
                 }
             } catch (e) {
@@ -2032,6 +2056,10 @@
                 state.currentIllustTitle = title;
                 state.currentIllustDescription = description;
                 state.currentIllustTags = tags;
+                state.hasUnsavedChanges = false;
+
+                // Update UI
+                updateIllustDisplay();
 
                 // Clear timelapse events
                 state.timelapseEvents = [];
@@ -2047,8 +2075,11 @@
     }
 
     function newIllust() {
-        if (!confirm('新規作成しますか？現在の作業内容は失われます。')) {
-            return;
+        // Confirm if there are unsaved changes
+        if (state.hasUnsavedChanges) {
+            if (!confirm('未保存の変更があります。新規作成しますか？現在の作業内容は失われます。')) {
+                return;
+            }
         }
 
         // Clear all layers
@@ -2068,8 +2099,7 @@
         state.currentIllustTitle = '';
         state.currentIllustDescription = '';
         state.currentIllustTags = '';
-
-        elements.illustId.textContent = '(未保存)';
+        state.hasUnsavedChanges = false;
 
         try {
             localStorage.removeItem('paint_current_illust_id');
@@ -2077,6 +2107,7 @@
             console.error('Failed to clear persisted ID:', e);
         }
 
+        updateIllustDisplay();
         renderLayers();
         setStatus('新規作成しました');
     }
@@ -2093,6 +2124,7 @@
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        markAsChanged();
         setStatus('レイヤーをクリアしました');
     }
 
@@ -2287,6 +2319,13 @@
             return;
         }
 
+        // Confirm if there are unsaved changes
+        if (state.hasUnsavedChanges) {
+            if (!confirm('未保存の変更があります。イラストを開きますか？現在の作業内容は失われます。')) {
+                return;
+            }
+        }
+
         const idToLoad = selectedIllustId;
         setStatus('イラストを読み込んでいます...');
         closeOpenModal();
@@ -2300,7 +2339,10 @@
             state.currentIllustTitle = illustData.title || '';
             state.currentIllustDescription = illustData.description || '';
             state.currentIllustTags = illustData.tags || '';
+            state.hasUnsavedChanges = false;
 
+            // Update UI
+            updateIllustDisplay();
             renderLayers();
             setStatus(`イラスト ID:${idToLoad} を読み込みました`);
             console.log('Illustration loaded successfully');
@@ -2850,6 +2892,44 @@
                 closeSaveModal();
             }
         });
+    }
+
+    async function handleSaveButton() {
+        // If already saved (has ID), do quick save
+        if (state.currentIllustId) {
+            await saveIllust(
+                state.currentIllustTitle,
+                state.currentIllustDescription,
+                state.currentIllustTags
+            );
+        } else {
+            // Otherwise, open modal to get metadata
+            openSaveModal();
+        }
+    }
+
+    function updateIllustDisplay() {
+        // Update ID display
+        if (state.currentIllustId) {
+            elements.illustId.textContent = state.currentIllustId;
+        } else {
+            elements.illustId.textContent = '(未保存)';
+        }
+
+        // Update title display with unsaved marker
+        if (state.currentIllustTitle) {
+            const unsavedMarker = state.hasUnsavedChanges ? ' *' : '';
+            elements.illustTitleDisplay.textContent = state.currentIllustTitle + unsavedMarker;
+        } else {
+            elements.illustTitleDisplay.textContent = '(未保存)';
+        }
+    }
+
+    function markAsChanged() {
+        if (!state.isInitializing && !state.hasUnsavedChanges) {
+            state.hasUnsavedChanges = true;
+            updateIllustDisplay();
+        }
     }
 
     function openSaveModal() {
