@@ -13,15 +13,45 @@ public/uploads/thumbs/.gitkeep export-ignore
 docs/ export-ignore
 init.php export-ignore
 
+# Node.js / ビルド関連
+node_modules/ export-ignore
+package.json export-ignore
+package-lock.json export-ignore
+pnpm-lock.yaml export-ignore
+build.js export-ignore
+
+# ソースファイル（bundle版を使用するため除外）
+public/admin/paint/js/modules/ export-ignore
+public/admin/paint/js/paint.js export-ignore
+public/admin/paint/js/timelapse_worker.js export-ignore
+public/admin/paint/js/*.js export-ignore
+public/admin/js/admin.js export-ignore
+public/admin/js/sns-share.js export-ignore
+public/res/js/main.js export-ignore
+public/res/js/detail.js export-ignore
+public/paint/js/gallery.js export-ignore
+public/paint/js/detail.js export-ignore
+public/paint/js/timelapse_player.js export-ignore
+
+# CSSソース（本番では.bundle.cssを使用するため除外）
+public/res/css/main.css export-ignore
+public/res/css/admin.css export-ignore
+public/res/css/login.css export-ignore
+public/admin/paint/css/style.css export-ignore
+public/paint/css/gallery.css export-ignore
+public/paint/css/detail.css export-ignore
+
 # ビルド/リリーススクリプト
 create-release.sh export-ignore
 secure_directories.php export-ignore
 init.phpe export-ignore
 RELEASE.md export-ignore
+releases/ export-ignore
 
 # Git設定ファイル
 .gitignore export-ignore
 .gitattributes export-ignore
+workspace.code-workspace export-ignore
 
 # ドキュメント（プロジェクトによって調整）
 # CLAUDE.md export-ignore

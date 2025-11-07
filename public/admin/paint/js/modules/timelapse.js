@@ -6,7 +6,7 @@
  */
 
 import { state, elements } from './state.js';
-import { TimelapsePlayer, parseTimelapseCSV } from '/paint/js/timelapse_player.js';
+import { TimelapsePlayer, parseTimelapseCSV } from '../../../../paint/js/timelapse_player.js';
 
 let timelapsePlayer = null;
 

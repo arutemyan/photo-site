@@ -11,6 +11,17 @@ declare(strict_types=1);
 
 return [
     /**
+     * アプリケーション設定
+     */
+    'app' => [
+        // 環境: 'development' または 'production'
+        'environment' => 'development',
+        
+    // 本番環境ではbundle版のアセット（JS/CSS）を使用
+    'use_bundled_assets' => false,
+    ],
+
+    /**
      * 管理画面設定
      */
     'admin' => [

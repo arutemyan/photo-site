@@ -102,7 +102,7 @@ $csrfToken = CsrfProtection::generateToken();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理画面ログイン - イラストポートフォリオ</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/res/css/login.css" rel="stylesheet">
+    <?php echo \App\Utils\AssetHelper::linkTag('/res/css/login.css'); ?>
 </head>
 <body>
     <div class="login-card">

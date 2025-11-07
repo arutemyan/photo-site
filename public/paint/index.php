@@ -41,7 +41,7 @@ try {
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&display=swap" rel="stylesheet">
     
     <!-- スタイルシート -->
-    <link rel="stylesheet" href="/paint/css/gallery.css">
+    <?php echo \App\Utils\AssetHelper::linkTag('/paint/css/gallery.css'); ?>
     
     <!-- テーマカラー -->
     <style>

@@ -46,6 +46,15 @@ composer.lock
 .DS_Store
 Thumbs.db
 
+# Node.js
+/node_modules/
+package-lock.json
+pnpm-lock.yaml
+
+# JavaScript bundles (ビルド生成物)
+*.bundle.js
+*.bundle.js.map
+
 # 環境設定
 .env
 .env.local
