@@ -310,9 +310,10 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
     <?php endif; ?>
     
     <!-- JavaScript -->
-    <script src="/paint/js/detail.js"></script>
+    <script type="module" src="/paint/js/detail.js"></script>
     <?php if (!empty($illust['timelapse_path'])): ?>
-    <script>
+    <script type="module">
+        import { initTimelapse } from '/paint/js/detail.js';
         document.addEventListener('DOMContentLoaded', () => {
             initTimelapse(<?= $id ?>);
         });
