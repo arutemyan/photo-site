@@ -1,0 +1,358 @@
+/**
+ * Paint Gallery CSS
+ * ペイントイラスト専用ギャラリースタイル
+ */
+
+/* テーマカラー変数はstyle.phpから読み込まれるため、ここでは削除 */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Noto Serif JP', serif;
+    background: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* ヘッダー */
+.header {
+    background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+    padding: 30px 20px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+.header h1 {
+    font-size: 2.5em;
+    font-weight: 700;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.header p {
+    color: rgba(255,255,255,0.9);
+    margin-top: 10px;
+    font-size: 1.1em;
+}
+
+.back-link {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.back-link:hover {
+    background: rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateX(-5px);
+}
+
+/* コンテナ */
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+/* フィルターセクション */
+.filter-section {
+    background: var(--card-bg-color);
+    border: 1px solid var(--card-border-color);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.filter-row {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filter-label {
+    font-weight: 600;
+    color: #aaa;
+    margin-right: 10px;
+}
+
+.tag-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--card-border-color);
+    background: transparent;
+    color: var(--text-color);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9em;
+}
+
+.tag-btn:hover {
+    background: rgba(139, 90, 250, 0.2);
+    border-color: var(--primary-color);
+}
+
+.tag-btn.active {
+    background: var(--tag-bg-color);
+    color: var(--tag-text-color);
+    border-color: var(--primary-color);
+}
+
+.search-box {
+    flex: 1;
+    min-width: 200px;
+    max-width: 400px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 15px;
+    background: var(--background-color);
+    border: 1px solid var(--card-border-color);
+    border-radius: 8px;
+    color: var(--text-color);
+    font-size: 1em;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* グリッド */
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.illust-card {
+    background: var(--card-bg-color);
+    border: 1px solid var(--card-border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.illust-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(139, 90, 250, 0.3);
+    border-color: var(--primary-color);
+}
+
+.illust-image-wrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 75%; /* 4:3 aspect ratio */
+    overflow: hidden;
+    background: #000;
+}
+
+.illust-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.illust-card:hover .illust-image {
+    transform: scale(1.05);
+}
+
+.illust-info {
+    padding: 15px;
+}
+
+.illust-title {
+    font-size: 1.1em;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.illust-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85em;
+    color: #999;
+    margin-bottom: 10px;
+}
+
+.illust-date {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.illust-size {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.illust-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.tag {
+    display: inline-block;
+    padding: 4px 10px;
+    background: var(--tag-bg-color);
+    color: var(--tag-text-color);
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 500;
+}
+
+/* 空の状態 */
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: #666;
+}
+
+.empty-state svg {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+.empty-state h2 {
+    font-size: 1.8em;
+    margin-bottom: 10px;
+    color: #888;
+}
+
+.empty-state p {
+    font-size: 1.1em;
+}
+
+/* ローディング */
+.loading {
+    text-align: center;
+    padding: 40px;
+    display: none;
+}
+
+.loading.show {
+    display: block;
+}
+
+.spinner {
+    border: 4px solid rgba(139, 90, 250, 0.1);
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ページネーション */
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 40px;
+}
+
+.pagination-btn {
+    padding: 10px 20px;
+    background: var(--card-bg-color);
+    border: 1px solid var(--card-border-color);
+    color: var(--text-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.pagination-info {
+    padding: 10px 20px;
+    color: #999;
+    display: flex;
+    align-items: center;
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+    .header h1 {
+        font-size: 1.8em;
+    }
+    
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+    }
+    
+    .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-box {
+        max-width: 100%;
+    }
+    
+    .back-link {
+        position: static;
+        display: inline-block;
+        margin-bottom: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .gallery-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .illust-title {
+        font-size: 0.95em;
+    }
+    
+    .illust-meta {
+        font-size: 0.75em;
+    }
+}

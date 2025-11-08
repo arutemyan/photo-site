@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../config/config.php';
+// feature gate (returns 404 if admin disabled)
+require_once(__DIR__ . '/_feature_check.php');
 require_once __DIR__ . '/../../src/Security/SecurityUtil.php';
 
 use App\Security\CsrfProtection;
@@ -43,6 +45,18 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                 <a class="nav-link" href="/" target="_blank">
                     <i class="bi bi-eye me-1"></i>サイトを表示
                 </a>
+                <?php
+                // ペイント機能へのリンク（機能が有効な場合のみ表示）
+                try {
+                    $paintEnabled = \App\Utils\FeatureGate::isEnabled('paint');
+                } catch (Throwable $e) {
+                    $paintEnabled = true;
+                }
+                if (!empty($paintEnabled)): ?>
+                    <a class="nav-link" href="<?= PathHelper::getAdminUrl('paint/index.php') ?>" target="_blank">
+                        <i class="bi bi-brush me-1"></i>ペイント
+                    </a>
+                <?php endif; ?>
                 <span class="nav-link">
                     <i class="bi bi-person-circle me-1"></i><?= escapeHtml($username) ?>
                 </span>

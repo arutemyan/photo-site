@@ -1,0 +1,267 @@
+/**
+ * Paint Gallery JavaScript
+ * ギャラリーページのフロントエンド機能
+ */
+
+let currentOffset = 0;
+let currentTag = null;
+let currentSearch = '';
+let isLoading = false;
+let hasMore = true;
+const LIMIT = 20;
+
+// ページ読み込み時
+document.addEventListener('DOMContentLoaded', () => {
+    loadTags();
+    loadPaints();
+    
+    // 検索ボックス
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentSearch = e.target.value.trim();
+                resetAndLoad();
+            }, 500);
+        });
+    }
+    
+    // 無限スクロール
+    window.addEventListener('scroll', () => {
+        if (isLoading || !hasMore) return;
+        
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollHeight = document.documentElement.scrollHeight;
+        const clientHeight = document.documentElement.clientHeight;
+        
+        if (scrollTop + clientHeight >= scrollHeight - 500) {
+            loadIllusts();
+        }
+    });
+});
+
+/**
+ * タグ一覧を読み込み
+ */
+async function loadTags() {
+    try {
+        const response = await fetch('/paint/api/tags.php');
+        const data = await response.json();
+        
+        if (data.success && data.tags) {
+            renderTags(data.tags);
+        }
+    } catch (error) {
+        console.error('タグ読み込みエラー:', error);
+    }
+}
+
+/**
+ * タグをレンダリング
+ */
+function renderTags(tags) {
+    const tagList = document.getElementById('tagList');
+    if (!tagList) return;
+    
+    tagList.innerHTML = tags.map(tag => `
+        <button class="tag-btn" data-tag="${escapeHtml(tag.name)}" onclick="filterByTag('${escapeHtml(tag.name)}')">
+            ${escapeHtml(tag.name)} (${tag.count})
+        </button>
+    `).join('');
+}
+
+/**
+ * タグフィルター
+ */
+function filterByTag(tagName) {
+    if (currentTag === tagName) {
+        // 同じタグをクリックしたら解除
+        currentTag = null;
+        document.querySelectorAll('.tag-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('.tag-btn[data-tag=""]')?.classList.add('active');
+    } else {
+        currentTag = tagName;
+        document.querySelectorAll('.tag-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tag === tagName);
+        });
+    }
+    resetAndLoad();
+}
+
+/**
+ * すべてのタグを表示
+ */
+function showAllPaints() {
+    currentTag = null;
+    document.querySelectorAll('.tag-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tag === '');
+    });
+    resetAndLoad();
+}
+
+/**
+ * リセットして再読み込み
+ */
+function resetAndLoad() {
+    currentOffset = 0;
+    hasMore = true;
+    document.getElementById('galleryGrid').innerHTML = '';
+    loadPaints();
+}
+
+/**
+ * イラスト一覧を読み込み
+ */
+async function loadPaints() {
+    if (isLoading || !hasMore) return;
+    
+    isLoading = true;
+    showLoading(true);
+    
+    try {
+        const params = new URLSearchParams({
+            limit: LIMIT,
+            offset: currentOffset
+        });
+        
+        if (currentTag) params.append('tag', currentTag);
+        if (currentSearch) params.append('search', currentSearch);
+        
+        const response = await fetch(`/paint/api/paint.php?${params}`);
+        const data = await response.json();
+
+        if (data.success && data.paint) {
+            if (data.paint.length === 0) {
+                hasMore = false;
+                if (currentOffset === 0) {
+                    showEmptyState();
+                }
+            } else {
+                renderPaints(data.paint);
+                currentOffset += data.paint.length;
+                hasMore = data.paint.length === LIMIT;
+            }
+        }
+    } catch (error) {
+        console.error('イラスト読み込みエラー:', error);
+        showError('イラストの読み込みに失敗しました');
+    } finally {
+        isLoading = false;
+        showLoading(false);
+    }
+}
+
+/**
+ * イラストをレンダリング
+ */
+function renderPaints(paint) {
+    const grid = document.getElementById('galleryGrid');
+    if (!grid) return;
+    
+    const fragment = document.createDocumentFragment();
+    
+    paint.forEach(illust => {
+        const card = createIllustCard(illust);
+        fragment.appendChild(card);
+    });
+    
+    grid.appendChild(fragment);
+}
+
+/**
+ * イラストカードを作成
+ */
+function createIllustCard(illust) {
+    const card = document.createElement('div');
+    card.className = 'illust-card';
+    card.onclick = () => window.location.href = `/paint/detail.php?id=${illust.id}`;
+    
+    const thumbPath = illust.thumb_path || illust.image_path;
+    const tags = illust.tags ? illust.tags.split(',') : [];
+    const date = new Date(illust.created_at);
+    const dateStr = date.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    
+    card.innerHTML = `
+        <div class="illust-image-wrapper">
+            <img src="${escapeHtml(thumbPath)}" alt="${escapeHtml(illust.title)}" class="illust-image" loading="lazy">
+        </div>
+        <div class="illust-info">
+            <h3 class="illust-title">${escapeHtml(illust.title)}</h3>
+            <div class="illust-meta">
+                <span class="illust-date">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    ${dateStr}
+                </span>
+                ${illust.width && illust.height ? `
+                <span class="illust-size">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    </svg>
+                    ${illust.width}×${illust.height}
+                </span>
+                ` : ''}
+            </div>
+            ${tags.length > 0 ? `
+            <div class="illust-tags">
+                ${tags.map(tag => `<span class="tag">${escapeHtml(tag.trim())}</span>`).join('')}
+            </div>
+            ` : ''}
+        </div>
+    `;
+    
+    return card;
+}
+
+/**
+ * 空の状態を表示
+ */
+function showEmptyState() {
+    const grid = document.getElementById('galleryGrid');
+    if (!grid) return;
+    
+    grid.innerHTML = `
+        <div class="empty-state" style="grid-column: 1 / -1;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <h2>イラストが見つかりません</h2>
+            <p>検索条件を変更してみてください</p>
+        </div>
+    `;
+}
+
+/**
+ * ローディング表示
+ */
+function showLoading(show) {
+    const loading = document.getElementById('loading');
+    if (loading) {
+        loading.classList.toggle('show', show);
+    }
+}
+
+/**
+ * エラー表示
+ */
+function showError(message) {
+    alert(message);
+}
+
+/**
+ * HTML エスケープ
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}

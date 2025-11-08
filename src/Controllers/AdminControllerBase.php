@@ -23,6 +23,23 @@ abstract class AdminControllerBase
     public function execute(): void
     {
         try {
+            // feature gate: ensure admin feature enabled
+            if (class_exists('\App\\Utils\\FeatureGate')) {
+                \App\Utils\FeatureGate::ensureEnabled('admin');
+            } else {
+                // fallback: check config directly
+                $configPath = __DIR__ . '/../../config/config.php';
+                if (file_exists($configPath)) {
+                    $cfg = require $configPath;
+                    if (isset($cfg['admin']) && array_key_exists('enabled', $cfg['admin']) && !$cfg['admin']['enabled']) {
+                        if (!headers_sent()) {
+                            header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
+                        }
+                        echo '404 Not Found';
+                        exit;
+                    }
+                }
+            }
             // セッション開始
             $this->initSession();
 
@@ -49,12 +66,14 @@ abstract class AdminControllerBase
     }
 
     /**
-     * 固有処理（サブクラスで実装）
+     * 固有処理（継承先で実装）
+     * 
+     * @param string $method HTTPメソッド（GET, POST, PUT, DELETE, PATCH等）
      */
     abstract protected function onProcess(string $method): void;
 
     /**
-     * セッション初期化
+     * セッション開始
      */
     protected function initSession(): void
     {
@@ -71,7 +90,7 @@ abstract class AdminControllerBase
     protected function checkAuthentication(): void
     {
         if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-            $this->sendError('認証が必要です', 401);
+            $this->sendError('Unauthorized', 401);
         }
     }
 
@@ -123,26 +142,26 @@ abstract class AdminControllerBase
     /**
      * 成功レスポンス送信
      */
-    protected function sendSuccess(array $data = []): void
+    protected function sendSuccess(array $data = [], int $statusCode = 200): void
     {
-        http_response_code(200);
-        echo json_encode(
-            array_merge(['success' => true], $data),
-            JSON_UNESCAPED_UNICODE
-        );
+        if ($statusCode !== 200) {
+            http_response_code($statusCode);
+        }
+        
+        $response = array_merge(['success' => true], $data);
+        echo json_encode($response, JSON_UNESCAPED_UNICODE);
         exit;
     }
 
     /**
      * エラーレスポンス送信
      */
-    protected function sendError(string $error, int $statusCode = 400): void
+    protected function sendError(string $error, int $statusCode = 400, array $additionalData = []): void
     {
         http_response_code($statusCode);
-        echo json_encode(
-            ['success' => false, 'error' => $error],
-            JSON_UNESCAPED_UNICODE
-        );
+        
+        $response = array_merge(['success' => false, 'error' => $error], $additionalData);
+        echo json_encode($response, JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -154,41 +173,30 @@ abstract class AdminControllerBase
         http_response_code(500);
         echo json_encode([
             'success' => false,
-            'error' => 'サーバーエラーが発生しました'
+            'error' => 'Internal server error'
         ], JSON_UNESCAPED_UNICODE);
-
-        // 詳細なエラー情報はサーバーログのみに記録
-        Logger::getInstance()->error(
-            'Admin API Error: ' . $e->getMessage() . 
-            ' in ' . $e->getFile() . ':' . $e->getLine()
-        );
+        
+        Logger::getInstance()->error(get_class($this) . ' Error: ' . $e->getMessage());
         exit;
     }
 
     /**
-     * POSTパラメータをパース（FormまたはJSON）
-     */
-    protected function parseFormInput(): array
-    {
-        // JSONリクエストの場合
-        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
-        if (strpos($contentType, 'application/json') !== false) {
-            $raw = file_get_contents('php://input');
-            $data = json_decode($raw, true);
-            return is_array($data) ? $data : [];
-        }
-        
-        // 通常のPOSTフォーム
-        return $_POST;
-    }
-
-    /**
-     * JSONボディをパース
+     * JSONデコード（PUT/PATCHリクエスト用）
      */
     protected function parseJsonInput(): array
     {
-        $raw = file_get_contents('php://input');
-        $data = json_decode($raw, true);
-        return is_array($data) ? $data : [];
+        $input = file_get_contents('php://input');
+        $data = json_decode($input, true);
+        return $data ?? [];
+    }
+
+    /**
+     * parse_strでデコード（PUT/PATCHリクエスト用）
+     */
+    protected function parseFormInput(): array
+    {
+        $input = file_get_contents('php://input');
+        parse_str($input, $data);
+        return $data;
     }
 }

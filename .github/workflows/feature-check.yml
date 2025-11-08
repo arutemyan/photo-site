@@ -1,0 +1,22 @@
+name: Admin Feature Check
+
+on:
+  push:
+    branches: [ main, master, feature_paint ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  phpunit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, xml, zip
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Run Admin feature check test
+        run: ./vendor/bin/phpunit --filter AdminFeatureCheckTest --colors=always
