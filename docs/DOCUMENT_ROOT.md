@@ -278,4 +278,4 @@ DocumentRoot変更ができない環境の場合：
 ## 関連ドキュメント
 
 - [ADMIN_PATH.md](./ADMIN_PATH.md) - 管理画面ディレクトリ名のカスタマイズ
-- [SECURITY_AUDIT_ADMIN.md](../SECURITY_AUDIT_ADMIN.md) - セキュリティ監査
+- [SECURITY_AUDIT_ADMIN.md](../design/SECURITY_AUDIT_ADMIN.md) - セキュリティ監査（設計資料）

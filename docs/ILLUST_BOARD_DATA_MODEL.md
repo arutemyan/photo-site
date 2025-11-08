@@ -11,78 +11,12 @@
 - 作品データの一体性確保
 - バックアップ・バージョン管理が容易
 - ファイルシステムのスケーラビリティ
+````markdown
+データモデルの詳細は設計資料として [設計: データモデル](../design/ILLUST_BOARD_DATA_MODEL.md) に移動しました。
 
-## データベースモデル
+ユーザー向けには [docs/README.md](README.md) や [docs/ILLUST_BOARD_API.md](ILLUST_BOARD_API.md) を参照してください。
 
-### Paint (イラスト) テーブル
-```sql
-CREATE TABLE paint (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    title TEXT NOT NULL DEFAULT '',
-    canvas_width INTEGER NOT NULL DEFAULT 800,
-    canvas_height INTEGER NOT NULL DEFAULT 600,
-    background_color TEXT DEFAULT '#FFFFFF',
-    data_path TEXT,  -- .illustファイルのパス
-    image_path TEXT, -- エクスポート画像のパス
-    thumbnail_path TEXT, -- サムネイル画像のパス
-    timelapse_path TEXT, -- タイムラプスファイルのパス
-    timelapse_size INTEGER DEFAULT 0,  -- 圧縮後サイズ（バイト）
-    file_size INTEGER DEFAULT 0,  -- .illustファイルサイズ
-    status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'published')),
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-CREATE INDEX idx_illusts_user_id ON paint(user_id);
-CREATE INDEX idx_illusts_status ON paint(status);
-CREATE INDEX idx_illusts_created_at ON paint(created_at);
-```
-
-### 削除: IllustLayerテーブル
-レイヤー情報は.illustファイル内に含めるため、DBテーブルは不要
-
-### 削除: IllustTimelapseChunkテーブル
-タイムラプスは単一ファイルまたはチャンク管理をファイル内で処理
-
-## 独自ファイル形式 (.illust)
-
-### ファイル構造
-拡張子: `.illust`
-形式: JSON + Base64エンコード画像データ
-圧縮: オプション (gzip圧縮可能)
-
-### JSONスキーマ
-```json
-{
-  "version": "1.0",
-  "metadata": {
-    "canvas_width": 800,
-    "canvas_height": 600,
-    "background_color": "#FFFFFF",
-    "created_at": "2024-01-01T12:00:00Z",
-    "updated_at": "2024-01-01T12:30:00Z"
-  },
-  "layers": [
-    {
-      "id": "layer_0",
-      "name": "背景",
-      "order": 0,
-      "visible": true,
-      "opacity": 1.0,
-      "type": "raster",
-      "data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
-      "width": 800,
-      "height": 600
-    },
-    {
-      "id": "layer_1", 
-      "name": "下書き",
-      "order": 1,
-      "visible": true,
-      "opacity": 1.0,
-      "type": "raster",
+````
       "data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
       "width": 800,
       "height": 600
@@ -91,78 +25,12 @@ CREATE INDEX idx_illusts_created_at ON paint(created_at);
   "timelapse": {
     "enabled": true,
     "max_size": 52428800,
-    "current_size": 1048576,
-    "data": "data:application/octet-stream;base64,..."
-  }
-}
-```
+    ````markdown
+        データモデルの詳細は設計資料として [design/ILLUST_BOARD_DATA_MODEL.md](../design/ILLUST_BOARD_DATA_MODEL.md) に移動しました。
 
-### レイヤータイプ
-- **raster**: ビットマップ画像データ
-- **vector**: 将来的なベクター拡張用
+        ユーザー向けには [docs/README.md](../docs/README.md) や [docs/ILLUST_BOARD_API.md](../docs/ILLUST_BOARD_API.md) を参照してください。
 
-### ファイルストレージ構造
-```
-uploads/paintfiles/
-├── images/
-│   ├── 001/
-│   │   ├── illust_1.png
-│   │   └── illust_1_thumb.webp
-│   └── 002/
-data/paintfiles/
-├── data/
-│   ├── 001/
-│   │   ├── illust_1.illust
-│   │   └── illust_1.illust.gz (圧縮版)
-│   └── 002/
-└── timelapse/
-    ├── 001/
-    │   └── timelapse_1.csv.gz
-    └── 002/
-data/tmp/
-    ├── sessions/
-    │   └── sess_abc123/
-    │       ├── temp_canvas.png
-    │       └── temp_timelapse.csv
-    └── uploads/
-```
-
-## タイムラプスデータ形式
-
-### 全体構造
-- **形式**: ヘッダ付き CSV テキスト を gzip 圧縮
-- **拡張子**: `.csv.gz`
-- **構造**: 各行が1イベントを表すヘッダ付き CSV（各列は event オブジェクトのキー）
-- **履歴考慮**: Undo/Redo操作も記録（完全再現のため）
-
-### Action Types と Data 構造
-
-#### 1: ペン描画 (PEN_DRAW)
-```javascript
-{
-    "action_type": 1,
-    "timestamp": 1640995200,  // Unix timestamp
-    "data": {
-        "layer_id": 2,        // 対象レイヤーID
-        "start_x": 100,       // 始点X座標
-        "start_y": 200,       // 始点Y座標
-        "end_x": 150,         // 終点X座標
-        "end_y": 250,         // 終点Y座標
-        "color": "#000000",   // 色 (HEX)
-        "width": 5,           // 太さ
-        "antialias": true     // アンチエイリアス
-    }
-}
-```
-
-#### 2: 消しゴム (ERASER)
-```javascript
-{
-    "action_type": 2,
-    "timestamp": 1640995201,
-    "data": {
-        "layer_id": 2,
-        "start_x": 100,
+        ````
         "start_y": 200,
         "end_x": 150,
         "end_y": 250,

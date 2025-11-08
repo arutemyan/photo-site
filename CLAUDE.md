@@ -1,60 +1,7 @@
-# Photo Site - 開発メモ
+````markdown
+この開発メモは `design/CLAUDE.md` に移動しました。設計・実装の詳細は `design/` を参照してください。
 
-## プロジェクト概要
-イラストポートフォリオサイト（PHP + SQLite）
-
-## 技術スタック
-- **バックエンド**: PHP 8.x (PSR-4 autoloading)
-- **データベース**: SQLite
-- **フロントエンド**: Vanilla JS, CSS
-- **画像処理**: GD Library (WebP形式)
-
-## ディレクトリ構成
-```
-/home/claudecode/photo-site/
-├── config/                 # 設定ファイル
-│   ├── nsfw.php           # NSFW/年齢確認/フィルター設定
-│   └── image.php          # 画像アップロード設定
-├── src/
-│   ├── Models/            # データモデル (Post, Theme, Setting)
-│   ├── Utils/             # ユーティリティクラス
-│   │   └── ImageUploader.php  # 画像処理の共通ロジック
-│   ├── Database/          # DB接続
-│   ├── Cache/             # キャッシュ管理
-│   └── Security/          # CSRF保護等
-├── public/
-│   ├── index.php          # フロントページ
-│   ├── detail.php         # 詳細ページ
-│   ├── admin/             # 管理画面
-│   │   ├── index.html
-│   │   ├── js/admin.js
-│   │   └── api/           # API エンドポイント
-│   │       ├── upload.php
-│   │       ├── bulk_upload.php
-│   │       ├── posts.php  # RESTful (GET/PUT/DELETE)
-│   │       ├── theme.php
-│   │       └── theme-image.php
-│   ├── uploads/
-│   │   ├── images/        # オリジナル画像
-│   │   └── thumbs/        # サムネイル (_blur, _frosted)
-│   └── res/               # CSS/JS
-├── migration_*.php        # マイグレーションスクリプト
-└── generate_blur_thumbnails.php  # NSFWフィルター画像生成
-
-```
-
-## 主要機能
-
-### 1. 投稿管理
-- 画像アップロード（単一・一括）
-- タイトル、タグ、詳細、NSFW設定
-- 表示/非表示切り替え
-- 閲覧数カウント
-
-### 2. テーマカスタマイズ (config/nsfw.php)
-- サイトタイトル、サブタイトル、説明文
-- カラー設定 (primary, secondary, accent, background)
-- ヘッダー画像、ロゴ画像
+````
 - カスタムHTML (header/footer)
 
 ### 3. NSFWフィルター機能
