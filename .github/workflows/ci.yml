@@ -47,7 +47,7 @@ jobs:
         # creates a test admin user and executes the HTTP flow.
         run: |
           php tests/integration/test_api_save_http.php
-          php tests/integration/test_timelapse_merge.php
+          php tests/integration/test_save_illust.php
 
       - name: Run full PHPUnit (integration)
         run: vendor/bin/phpunit --configuration phpunit.xml --testsuite Integration || true
