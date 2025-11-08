@@ -174,8 +174,19 @@ function renderIllustGrid(paint) {
         info.appendChild(idEl);
         info.appendChild(dateEl);
 
+        // Add delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'illust-delete-btn';
+        deleteBtn.textContent = '🗑️';
+        deleteBtn.title = '削除';
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteIllustration(illust.id, illust.title || '無題');
+        });
+
         item.appendChild(thumbnailWrap);
         item.appendChild(info);
+        item.appendChild(deleteBtn);
 
         // Single click to select
         item.addEventListener('click', () => {
@@ -536,4 +547,40 @@ function initEditColorModal(setColor) {
  */
 function closeEditColorModal() {
     elements.editColorModalOverlay.classList.remove('active');
+}
+
+/**
+ * Delete illustration
+ */
+async function deleteIllustration(id, title) {
+    if (!confirm(`「${title}」を削除してもよろしいですか？\nこの操作は取り消せません。`)) {
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('id', id);
+
+        const resp = await fetch('/admin/paint/api/delete.php', {
+            method: 'DELETE',
+            credentials: 'same-origin',
+            headers: {
+                'X-CSRF-Token': window.CSRF_TOKEN
+            },
+            body: formData
+        });
+
+        const json = await resp.json();
+
+        if (json.success) {
+            // Refresh the illustration list
+            await openOpenModal();
+            alert('削除しました');
+        } else {
+            alert('削除に失敗しました: ' + (json.error || 'Unknown error'));
+        }
+    } catch (e) {
+        console.error('Failed to delete illustration:', e);
+        alert('削除中にエラーが発生しました');
+    }
 }

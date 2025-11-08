@@ -74,4 +74,33 @@ class Paint
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public function update(int $id, array $data): bool
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE paint SET title = :title, description = :description, tags = :tags, canvas_width = :canvas_width, canvas_height = :canvas_height, background_color = :background_color, data_path = :data_path, image_path = :image_path, thumbnail_path = :thumbnail_path, timelapse_path = :timelapse_path, timelapse_size = :timelapse_size, file_size = :file_size, status = :status WHERE id = :id'
+        );
+        return $stmt->execute([
+            ':id' => $id,
+            ':title' => $data['title'] ?? '',
+            ':description' => $data['description'] ?? '',
+            ':tags' => $data['tags'] ?? '',
+            ':canvas_width' => $data['canvas_width'] ?? 800,
+            ':canvas_height' => $data['canvas_height'] ?? 600,
+            ':background_color' => $data['background_color'] ?? '#FFFFFF',
+            ':data_path' => $data['data_path'] ?? null,
+            ':image_path' => $data['image_path'] ?? null,
+            ':thumbnail_path' => $data['thumbnail_path'] ?? null,
+            ':timelapse_path' => $data['timelapse_path'] ?? null,
+            ':timelapse_size' => $data['timelapse_size'] ?? 0,
+            ':file_size' => $data['file_size'] ?? 0,
+            ':status' => $data['status'] ?? 'draft',
+        ]);
+    }
+
+    public function delete(int $id): bool
+    {
+        $stmt = $this->db->prepare('DELETE FROM paint WHERE id = ?');
+        return $stmt->execute([$id]);
+    }
 }
