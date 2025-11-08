@@ -268,10 +268,6 @@ $csrf = CsrfProtection::getToken();
                 <input type="range" id="timelapse-speed" class="timelapse-speed-slider" min="0.1" max="5" step="0.1" value="1">
             </div>
         </div>
-
-        <div class="timelapse-footer">
-            <button class="modal-btn primary" id="timelapse-export">動画をエクスポート</button>
-        </div>
     </div>
 </div>
 
@@ -285,6 +281,10 @@ $csrf = CsrfProtection::getToken();
                 <div class="timelapse-option">
                     <input type="checkbox" id="timelapse-ignore-time">
                     <label for="timelapse-ignore-time">時間を無視（等間隔再生）</label>
+                </div>
+                <div class="timelapse-option">
+                    <input type="checkbox" id="timelapse-real-time">
+                    <label for="timelapse-real-time">リアル時間再生（中断時間を除外）</label>
                 </div>
             </div>
         </div>

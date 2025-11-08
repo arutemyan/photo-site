@@ -262,6 +262,7 @@ export function initializeElements() {
     elements.timelapseSpeed = document.getElementById('timelapse-speed');
     elements.timelapseSpeedValue = document.getElementById('timelapse-speed-value');
     elements.timelapseIgnoreTime = document.getElementById('timelapse-ignore-time');
+        elements.timelapseRealTime = document.getElementById('timelapse-real-time');
 
     // Edit Color modal
     elements.editColorModalOverlay = document.getElementById('edit-color-modal-overlay');
