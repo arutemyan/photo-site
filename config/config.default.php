@@ -20,6 +20,9 @@ return [
         // 変更後は public/ 内のディレクトリ名も同じ名前に変更してください
         'path' => 'admin',
 
+        // 管理画面の有効/無効フラグ (true = 表示する、false = 404を返す)
+        'enabled' => true,
+
         // 管理画面の完全なURL（使用されていない場合は自動生成）
         // 'url' => '/admin',
     ],
@@ -197,6 +200,8 @@ return [
      * お絵描き機能設定
      */
     'paint' => [
+        // 機能有効フラグ: false にすると /paint 以下の全てのアクセスは 404 を返します
+        'enabled' => true,
         // キャンバス設定
         'canvas' => [
             'max_width' => 4096,
@@ -292,6 +297,8 @@ return [
      * お絵描き機能設定
      */
     'paint' => [
+        // 機能有効フラグ: false にすると /paint 以下の全てのアクセスは 404 を返します
+        'enabled' => true,
         // キャンバス設定
         'canvas' => [
             'max_width' => 4096,

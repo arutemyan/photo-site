@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../config/config.php';
+// feature gate (returns 404 if admin disabled)
+require_once(__DIR__ . '/_feature_check.php');
 require_once __DIR__ . '/../../src/Security/SecurityUtil.php';
 
 use App\Security\CsrfProtection;

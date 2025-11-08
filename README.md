@@ -1,3 +1,27 @@
+## 機能フラグの管理と確認
+
+このアプリケーションは `config/config.default.php` の設定で `paint.enabled` と `admin.enabled` により機能の ON/OFF を制御します。運用では `config/config.local.php` で上書きすることを推奨します。
+ - Paint を無効にする例 (`config/config.local.php` を作成):
+
+```php
+<?php
+ - 確認:
+
+```bash
+curl -I http://localhost:8000/paint/   # -> 404 when disabled
+自動挿入ツール:
+
+管理 API の中に存在する「手続き的（class を宣言していない）PHPファイル」に `_feature_check.php` を挿入する自動化スクリプトを `scripts/insert_admin_feature_check.php` に追加しました。
+使い方:
+
+```bash
+# プレビュー（差し込むファイルとスニペットを表示するだけ）
+# 実際に適用（各ファイルのバックアップを .bak.TIMESTAMP で作成）
+php scripts/insert_admin_feature_check.php --apply
+
+このスクリプトはファイル先頭付近の `require/include` ブロックの直後に
+`require_once(__DIR__ . '/_feature_check.php');` を挿入します。まずはプレビューを確認してから `--apply` を実行してください。
+
 ![test workflow](https://github.com/arutemyan/photo-site/actions/workflows/tests.yml/badge.svg)
 
 # Photo Site - イラストポートフォリオサイト
@@ -72,14 +96,32 @@ photo-site/
 詳細な設定方法は [docs/CONFIG.md](docs/CONFIG.md) を参照してください。
 
 ### 基本的な設定
-
-開発環境用の設定ファイルを作成：
-
-```bash
 cp config/config.local.php.example config/config.local.php
 ```
 
 `config/config.local.php` を編集して環境に合わせて設定を変更できます：
+
+## FeatureGate の使用例
+
+共通化した `FeatureGate` ユーティリティは、機能フラグの確認と無効化時の 404 応答を簡単に行えます。
+
+使用例（テンプレートやコントローラ内で）:
+
+```php
+use App\Utils\FeatureGate;
+
+// ペイント機能が有効でなければ 404 を返して終了
+FeatureGate::ensureEnabled('paint');
+
+// フラグだけ確認して振る舞いを切り替えたい場合
+if (FeatureGate::isEnabled('paint')) {
+    // ペイント機能用のリンクや UI を表示
+}
+```
+
+内部的には `src/Utils/FeatureGate.php` が `config/config.php` を読み込み、
+`$config['paint']['enabled']` や `$config['admin']['enabled']` を参照します。
+
 
 ```php
 <?php

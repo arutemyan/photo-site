@@ -6,6 +6,8 @@
 
 require_once(__DIR__ . '/../../vendor/autoload.php');
 require_once(__DIR__ . '/../../config/config.php');
+// feature gate (returns 404 if paint disabled)
+require_once(__DIR__ . '/_feature_check.php');
 
 use App\Models\Theme;
 use App\Models\Setting;

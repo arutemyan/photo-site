@@ -23,6 +23,23 @@ abstract class AdminControllerBase
     public function execute(): void
     {
         try {
+            // feature gate: ensure admin feature enabled
+            if (class_exists('\App\\Utils\\FeatureGate')) {
+                \App\Utils\FeatureGate::ensureEnabled('admin');
+            } else {
+                // fallback: check config directly
+                $configPath = __DIR__ . '/../../config/config.php';
+                if (file_exists($configPath)) {
+                    $cfg = require $configPath;
+                    if (isset($cfg['admin']) && array_key_exists('enabled', $cfg['admin']) && !$cfg['admin']['enabled']) {
+                        if (!headers_sent()) {
+                            header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
+                        }
+                        echo '404 Not Found';
+                        exit;
+                    }
+                }
+            }
             // セッション開始
             $this->initSession();
 

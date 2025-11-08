@@ -167,11 +167,13 @@ try {
     <!-- メインコンテンツ -->
     <div class="container">
         <!-- ペイントギャラリーへのリンク -->
+        <?php if (!empty($config['paint']) ? ($config['paint']['enabled'] ?? true) : true): ?>
         <div style="margin-bottom: 20px; text-align: center;">
             <a href="/paint/" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #8B5AFA 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: transform 0.3s ease, box-shadow 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 20px rgba(139, 90, 250, 0.4)';" onmouseout="this.style.transform=''; this.style.boxShadow='';">
                 🎨 ペイントギャラリーを見る
             </a>
         </div>
+        <?php endif; ?>
         
         <!-- フィルタエリア -->
         <div class="filter-section">
