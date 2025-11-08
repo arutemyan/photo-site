@@ -18,6 +18,23 @@ class PaletteController extends AdminControllerBase
 {
     private bool $isAdmin = false;
 
+    /**
+     * Palette API should return 401 for unauthenticated clients (test expectation).
+     */
+    protected function checkAuthentication(): void
+    {
+        $sess = \App\Services\Session::getInstance();
+        $loggedIn = $sess->get('admin_logged_in', null);
+        if ($loggedIn !== true) {
+            $this->sendError('Unauthorized', 401);
+        }
+        // ensure user id is present
+        $uid = $sess->get('admin_user_id', null);
+        if ($uid === null) {
+            $this->sendError('Unauthorized', 401);
+        }
+    }
+
     protected function onProcess(string $method): void
     {
         switch ($method) {
@@ -35,25 +52,34 @@ class PaletteController extends AdminControllerBase
     private function handleGet(): void
     {
         $db = Connection::getInstance();
-        
-        $stmt = $db->prepare("
-            SELECT slot_index, color 
-            FROM color_palettes 
-            WHERE user_id IS NULL 
-            ORDER BY slot_index ASC
-        ");
+        // Fetch default palette (user_id IS NULL)
+        $stmt = $db->prepare("SELECT slot_index, color FROM color_palettes WHERE user_id IS NULL ORDER BY slot_index ASC");
         $stmt->execute();
-        $palette = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Convert to simple array
+        $default = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Start with defaults
         $colors = array_fill(0, 16, '#000000');
-        foreach ($palette as $row) {
+        foreach ($default as $row) {
             $index = (int)$row['slot_index'];
             if ($index >= 0 && $index < 16) {
                 $colors[$index] = $row['color'];
             }
         }
-        
+
+        // Overlay user-specific palette entries (if any)
+        $userId = $this->getUserId();
+        if ($userId !== null) {
+            $ustmt = $db->prepare("SELECT slot_index, color FROM color_palettes WHERE user_id = ? ORDER BY slot_index ASC");
+            $ustmt->execute([$userId]);
+            $userPalette = $ustmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($userPalette as $row) {
+                $index = (int)$row['slot_index'];
+                if ($index >= 0 && $index < 16) {
+                    $colors[$index] = $row['color'];
+                }
+            }
+        }
+
         $this->sendSuccess(['colors' => $colors]);
     }
 
