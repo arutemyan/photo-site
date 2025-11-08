@@ -60,7 +60,7 @@ export async function openOpenModal(setStatus) {
     }
 
     try {
-        const resp = await fetch('../api/list.php', {
+        const resp = await fetch('api/list.php', {
             credentials: 'same-origin'
         });
 
@@ -561,7 +561,7 @@ async function deleteIllustration(id, title) {
         const formData = new FormData();
         formData.append('id', id);
 
-        const resp = await fetch('../api/delete.php', {
+        const resp = await fetch('api/delete.php', {
             method: 'DELETE',
             credentials: 'same-origin',
             headers: {

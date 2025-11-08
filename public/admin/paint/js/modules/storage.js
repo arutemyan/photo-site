@@ -280,7 +280,7 @@ async function sendSaveRequest(title, description, tags, compositeImage, illustD
             id: state.currentIllustId
         };
 
-        const res = await fetch('../api/save.php', {
+        const res = await fetch('api/save.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -531,7 +531,7 @@ export function restoreCanvasState(canvasState, renderLayers, setActiveLayer, up
  * Fetch illustration data from server
  */
 export async function fetchIllustData(id) {
-    const resp = await fetch(`../api/load.php?id=${id}`, {
+    const resp = await fetch(`api/load.php?id=${id}`, {
         credentials: 'same-origin'
     });
 

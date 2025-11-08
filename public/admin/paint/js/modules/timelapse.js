@@ -102,7 +102,7 @@ async function loadAndPlayTimelapse(id, setStatus) {
     }
 
     try {
-        const resp = await fetch(`../api/timelapse.php?id=${encodeURIComponent(id)}`, {
+        const resp = await fetch(`api/timelapse.php?id=${encodeURIComponent(id)}`, {
             credentials: 'same-origin'
         });
 

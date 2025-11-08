@@ -367,7 +367,7 @@ async function loadSelectedIllust() {
 
 async function loadColorPalette() {
     try {
-        const response = await fetch('../api/palette.php');
+        const response = await fetch('api/palette.php');
         const data = await response.json();
 
         if (data.success && data.colors) {

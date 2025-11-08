@@ -100,7 +100,7 @@ export function editPaletteColor(slotIndex, swatchElement) {
                 return;
             }
 
-            const response = await fetch('../api/palette.php', {
+            const response = await fetch('api/palette.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
