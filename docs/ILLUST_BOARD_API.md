@@ -227,12 +227,6 @@
             "max_illust_size": 20971520,
             "max_temp_size": 5242880
         },
-        "palette": {
-            "presets": {
-                "default": ["#000000", "#FFFFFF", ...],
-                "warm": ["#FF6B35", "#F7931E", ...]
-            }
-        },
         "layers": {
             "max_count": 4,
             "default_layers": [
