@@ -104,7 +104,7 @@ function initSecureSession(?array $config = null): void
     if (session_status() === PHP_SESSION_NONE) {
         // 設定がない場合は読み込む
         if ($config === null) {
-            $config = require __DIR__ . '/../../config/config.php';
+            $config = \App\Config\ConfigManager::getInstance()->getConfig();
         }
 
         // HTTPS強制
@@ -384,7 +384,7 @@ function logSecurityEvent(string $message, array $context = []): void
     // 設定を読み込み
     static $config = null;
     if ($config === null) {
-        $config = require __DIR__ . '/../../config/config.php';
+        $config = \App\Config\ConfigManager::getInstance()->getConfig();
     }
 
     // ログが無効の場合は何もしない

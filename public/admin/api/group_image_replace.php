@@ -133,7 +133,7 @@ class GroupImageReplaceController extends AdminControllerBase
         }
 
         // NSFW設定を読み込み
-        $config = require __DIR__ . '/../../../config/config.php';
+        $config = \App\Config\ConfigManager::getInstance()->getConfig();
         $nsfwConfig = $config['nsfw'];
         $filterSettings = $nsfwConfig['filter_settings'];
 

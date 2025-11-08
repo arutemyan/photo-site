@@ -157,7 +157,7 @@ class PostsController extends AdminControllerBase
         }
 
         // NSFWフィルター設定を読み込み
-        $config = require __DIR__ . '/../../../config/config.php';
+        $config = \App\Config\ConfigManager::getInstance()->getConfig();
         $filterSettings = $config['nsfw']['filter_settings'];
 
         // 画像が差し替えられた場合の処理

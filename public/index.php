@@ -51,7 +51,7 @@ try {
     }
 
     // 設定を読み込み
-    $config = require __DIR__ . '/../config/config.php';
+    $config = \App\Config\ConfigManager::getInstance()->getConfig();
     $nsfwConfig = $config['nsfw'];
     $ageVerificationMinutes = $nsfwConfig['age_verification_minutes'];
     $nsfwConfigVersion = $nsfwConfig['config_version'];

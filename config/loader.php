@@ -19,6 +19,13 @@ declare(strict_types=1);
  */
 function loadConfig(string $configName, ?string $configDir = null): array
 {
+    // キャッシュ: 同一プロセス内で複数回呼ばれたときにファイル読み込みを避ける
+    static $cache = [];
+    $cacheKey = $configName . '|' . ($configDir ?? __DIR__);
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
+    }
+
     // 設定ディレクトリのパスを決定
     if ($configDir === null) {
         $configDir = __DIR__;
@@ -64,5 +71,7 @@ function loadConfig(string $configName, ?string $configDir = null): array
     }
 
     // ローカル設定でデフォルト設定を上書き（再帰的にマージ）
-    return array_replace_recursive($defaultConfig, $localConfig);
+    $merged = array_replace_recursive($defaultConfig, $localConfig);
+    $cache[$cacheKey] = $merged;
+    return $merged;
 }

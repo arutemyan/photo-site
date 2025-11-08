@@ -22,8 +22,8 @@ class AssetHelper
      */
     public static function js(string $path): string
     {
-    $config = require __DIR__ . '/../../config/config.php';
-    $useBundled = $config['app']['use_bundled_assets'] ?? false;
+        $config = \App\Config\ConfigManager::getInstance()->getConfig();
+        $useBundled = $config['app']['use_bundled_assets'] ?? false;
         
         if (!$useBundled) {
             return $path;
@@ -42,8 +42,8 @@ class AssetHelper
      */
     public static function scriptType(): string
     {
-    $config = require __DIR__ . '/../../config/config.php';
-    $useBundled = $config['app']['use_bundled_assets'] ?? false;
+        $config = \App\Config\ConfigManager::getInstance()->getConfig();
+        $useBundled = $config['app']['use_bundled_assets'] ?? false;
         
         return $useBundled ? '' : 'module';
     }
@@ -89,8 +89,8 @@ class AssetHelper
      */
     public static function css(string $path): string
     {
-    $config = require __DIR__ . '/../../config/config.php';
-    $useBundled = $config['app']['use_bundled_assets'] ?? false;
+        $config = \App\Config\ConfigManager::getInstance()->getConfig();
+        $useBundled = $config['app']['use_bundled_assets'] ?? false;
 
         if (!$useBundled) {
             return $path;
