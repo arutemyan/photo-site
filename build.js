@@ -73,6 +73,16 @@ const builds = [
     entryPoints: ['public/paint/css/detail.css'],
     outfile: 'public/paint/css/detail.bundle.css',
   },
+  {
+    name: 'Login CSS',
+    entryPoints: ['public/res/css/login.css'],
+    outfile: 'public/res/css/login.bundle.css',
+  },
+  {
+    name: 'SNS Share',
+    entryPoints: ['public/admin/js/sns-share.js'],
+    outfile: 'public/admin/js/sns-share.bundle.js',
+  },
 ];
 
 // 共通のビルド設定

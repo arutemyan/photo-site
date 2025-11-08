@@ -100,8 +100,8 @@ try {
             <p>読み込み中...</p>
         </div>
     </div>
-    
+
     <!-- JavaScript -->
-    <script src="/paint/js/gallery.js"></script>
+    <?php echo \App\Utils\AssetHelper::scriptTag('/paint/js/gallery.js'); ?>
 </body>
 </html>

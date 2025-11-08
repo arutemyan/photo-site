@@ -1011,7 +1011,7 @@ try {
         // 管理画面パスをJavaScriptで使用可能にする
         const ADMIN_PATH = '<?= PathHelper::getAdminPath() ?>';
     </script>
-    <script src="<?= PathHelper::getAdminUrl('js/admin.js') ?>"></script>
-    <script src="<?= PathHelper::getAdminUrl('js/sns-share.js') ?>"></script>
+    <?php echo \App\Utils\AssetHelper::scriptTag(PathHelper::getAdminUrl('js/admin.js')); ?>
+    <?php echo \App\Utils\AssetHelper::scriptTag(PathHelper::getAdminUrl('js/sns-share.js')); ?>
 </body>
 </html>

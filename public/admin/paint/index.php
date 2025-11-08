@@ -35,7 +35,7 @@ try {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>お絵描き - 管理</title>
-    <link rel="stylesheet" href="/admin/paint/css/style.css">
+    <?php echo \App\Utils\AssetHelper::linkTag('/admin/paint/css/style.css'); ?>
 </head>
 <body>
 

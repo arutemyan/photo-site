@@ -56,6 +56,9 @@ pnpm-lock.yaml
 *.bundle.js
 *.bundle.js.map
 
+# CSS bundles (ビルド生成物)
+*.bundle.css
+
 # 環境設定
 .env
 .env.local

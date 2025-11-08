@@ -193,6 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Make functions available globally for onclick handlers in HTML
 if (typeof window !== 'undefined') {
+    window.initTimelapse = initTimelapse;
     window.togglePlayback = togglePlayback;
     window.changeSpeed = changeSpeed;
     window.toggleIgnoreTimestamps = toggleIgnoreTimestamps;

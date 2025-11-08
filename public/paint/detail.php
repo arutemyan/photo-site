@@ -300,12 +300,13 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
     <?php endif; ?>
     
     <!-- JavaScript -->
-    <script type="module" src="/paint/js/detail.js"></script>
+    <?php echo \App\Utils\AssetHelper::scriptTag('/paint/js/detail.js'); ?>
     <?php if (!empty($illust['timelapse_path'])): ?>
-    <script type="module">
-        import { initTimelapse } from '/paint/js/detail.js';
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
-            initTimelapse(<?= $id ?>);
+            if (typeof initTimelapse === 'function') {
+                initTimelapse(<?= $id ?>);
+            }
         });
     </script>
     <?php endif; ?>

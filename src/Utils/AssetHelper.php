@@ -53,18 +53,34 @@ class AssetHelper
      *
      * @param string $path JavaScriptファイルのパス
      * @param array $attributes 追加の属性
+     * @param array $queryParams 追加のクエリパラメータ（例: ['v' => $version]）
      * @return string scriptタグ
      */
-    public static function scriptTag(string $path, array $attributes = []): string
+    public static function scriptTag(string $path, array $attributes = [], array $queryParams = []): string
     {
         $src = self::js($path);
         $type = self::scriptType();
 
-        // キャッシュバスティング: ファイルの更新時刻を取得
-        $fullPath = __DIR__ . '/../../public' . $src;
-        if (file_exists($fullPath)) {
-            $mtime = filemtime($fullPath);
-            $src .= '?v=' . $mtime;
+        // クエリパラメータの構築
+        $query = [];
+
+        // 追加のクエリパラメータを優先
+        if (!empty($queryParams)) {
+            $query = $queryParams;
+        }
+
+        /*
+        // 'v' パラメータが指定されていない場合のみ、ファイル更新時刻を使用
+        if (!isset($query['v'])) {
+            $fullPath = __DIR__ . '/../../public' . $src;
+            if (file_exists($fullPath)) {
+                $query['v'] = filemtime($fullPath);
+            }
+        }*/
+
+        // クエリパラメータをURLに追加
+        if (!empty($query)) {
+            $src .= '?' . http_build_query($query);
         }
 
         $attrs = [];
@@ -112,17 +128,33 @@ class AssetHelper
      *
      * @param string $path CSSファイルのパス
      * @param array $attributes 追加の属性
+     * @param array $queryParams 追加のクエリパラメータ（例: ['v' => $version]）
      * @return string linkタグ
      */
-    public static function linkTag(string $path, array $attributes = []): string
+    public static function linkTag(string $path, array $attributes = [], array $queryParams = []): string
     {
         $href = self::css($path);
 
-        // キャッシュバスティング: ファイルの更新時刻を取得
-        $fullPath = __DIR__ . '/../../public' . $href;
-        if (file_exists($fullPath)) {
-            $mtime = filemtime($fullPath);
-            $href .= '?v=' . $mtime;
+        // クエリパラメータの構築
+        $query = [];
+
+        // 追加のクエリパラメータを優先
+        if (!empty($queryParams)) {
+            $query = $queryParams;
+        }
+
+        /*
+        // 'v' パラメータが指定されていない場合のみ、ファイル更新時刻を使用
+        if (!isset($query['v'])) {
+            $fullPath = __DIR__ . '/../../public' . $href;
+            if (file_exists($fullPath)) {
+                $query['v'] = filemtime($fullPath);
+            }
+        }*/
+
+        // クエリパラメータをURLに追加
+        if (!empty($query)) {
+            $href .= '?' . http_build_query($query);
         }
 
         $attrs = [];

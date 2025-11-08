@@ -311,6 +311,6 @@ try {
     </div>
     <?php require_once(__dir__."/block/footer.php") ?>
     <!-- JavaScript -->
-    <script src="/res/js/main.js?v=<?= $nsfwConfigVersion ?>"></script>
+    <?php echo \App\Utils\AssetHelper::scriptTag('/res/js/main.js', [], ['v' => $nsfwConfigVersion]); ?>
 </body>
 </html>

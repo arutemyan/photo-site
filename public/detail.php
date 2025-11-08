@@ -400,7 +400,7 @@ $imageUrl = !empty($shareImagePath) ? $protocol . ($_SERVER['HTTP_HOST'] ?? 'loc
     <?php require_once(__DIR__."/block/footer.php") ?>
 
     <!-- JavaScript -->
-    <script src="/res/js/detail.js?v=<?= $nsfwConfigVersion ?>"></script>
+    <?php echo \App\Utils\AssetHelper::scriptTag('/res/js/detail.js', [], ['v' => $nsfwConfigVersion]); ?>
     <script>
         // DOMロード後に初期化
         document.addEventListener('DOMContentLoaded', function() {
