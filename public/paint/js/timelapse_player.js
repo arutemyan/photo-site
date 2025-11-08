@@ -30,8 +30,10 @@ export class TimelapsePlayer {
         this.lastFrameTime = 0;
         this.frameInterval = 50; // 基本フレーム間隔(ms)
         this.ignoreTimestamps = true; // デフォルトで等間隔再生（安定性重視）
+        this.realTime = false; // リアル時間再生（ただし中断時間は除外できる）
+        this.pauseThreshold = 2000; // 中断とみなす閾値(ms)（これより大きいギャップは除外される）
 
-        console.log('TimelapsePlayer initialized with', timelapseData.length, 'frames');
+    // TimelapsePlayer initialized
 
         this.setupCanvas();
     }
@@ -52,6 +54,28 @@ export class TimelapsePlayer {
         this.ignoreTimestamps = ignore;
     }
 
+    // Enable/disable real-time playback (uses recorded intervals but can exclude long pauses)
+    setRealTime(enabled) {
+        this.realTime = !!enabled;
+        // Re-normalize frame durations if frames contain timing info
+        if (this.frames && this.frames.length > 0) {
+            // Use exported normalizer to recompute durations taking pauseThreshold into account
+            try {
+                // normalizeFrameDurations is exported below
+                const normalized = normalizeFrameDurations(this.frames, { realTime: this.realTime, pauseThresholdMs: this.pauseThreshold });
+                this.frames = normalized;
+            } catch (e) {
+                // If normalization fails, keep existing durations
+                console.warn('Failed to normalize frame durations:', e);
+            }
+        }
+    }
+
+    setPauseThreshold(ms) {
+        this.pauseThreshold = Number(ms) || this.pauseThreshold;
+        if (this.realTime) this.setRealTime(true);
+    }
+
     // Reset player to initial state
     reset() {
         this.pause();
@@ -70,7 +94,7 @@ export class TimelapsePlayer {
         this.canvas.width = firstFrame.width || 800;
         this.canvas.height = firstFrame.height || 600;
 
-        console.log('Canvas size:', this.canvas.width, 'x', this.canvas.height);
+    // Canvas size set
 
         // 白背景で初期化（何も描画しない）
         this.ctx.fillStyle = '#ffffff';
@@ -382,7 +406,7 @@ export function parseTimelapseCSV(csv) {
         events.push(event);
     }
 
-    console.log('Parsed', events.length, 'drawing events');
+    // Parsed drawing events
 
     // イベントをストロークに変換
     return convertEventsToStrokes(events);
@@ -428,7 +452,7 @@ export function convertEventsToStrokes(events) {
             // Extract canvas metadata
             if (event.canvas_width) canvasWidth = parseInt(event.canvas_width);
             if (event.canvas_height) canvasHeight = parseInt(event.canvas_height);
-            console.log('Canvas metadata found:', canvasWidth, 'x', canvasHeight);
+            // Canvas metadata found
             continue; // Skip meta events in stroke generation
         } else if (event.type === 'start') {
             // 新しいストロークを開始
@@ -481,7 +505,7 @@ export function convertEventsToStrokes(events) {
     if (strokes.length > 0) {
         strokes[0].width = canvasWidth;
         strokes[0].height = canvasHeight;
-        console.log('Canvas size added to first stroke:', canvasWidth, 'x', canvasHeight);
+    // Canvas size added to first stroke
     }
 
     // フレーム間のdurationを計算
@@ -494,29 +518,51 @@ export function convertEventsToStrokes(events) {
 export function calculateFrameDurations(strokes) {
     if (strokes.length === 0) return [];
 
+    // Default behavior: compute durations based on timestamps but do not assume "real-time excluding pauses".
+    return normalizeFrameDurations(strokes, { realTime: false });
+}
+
+/**
+ * Recompute frame durations from startTime/endTime.
+ * Options:
+ *  - realTime: if true, use recorded intervals but exclude long pauses (set them to 0)
+ *  - pauseThresholdMs: gap (ms) above which an interval is considered a pause and excluded
+ *  - minInterval / maxInterval: clamps for durations when not excluded
+ */
+export function normalizeFrameDurations(strokes, options = {}) {
+    const realTime = !!options.realTime;
+    const pauseThresholdMs = options.pauseThresholdMs || 2000;
+    const minInterval = options.minInterval || 10;
+    const maxInterval = options.maxInterval || 10000;
+
+    if (!strokes || strokes.length === 0) return strokes;
+
     for (let i = 0; i < strokes.length; i++) {
-        let durationMs;
+        let durationMs = 0;
 
         if (i === 0) {
-            // 最初のフレーム：即座に描画
             durationMs = 0;
         } else {
-            // ストローク間の時間間隔（ミリ秒単位）
             const prevStroke = strokes[i - 1];
             const currentStroke = strokes[i];
 
             let intervalMs = 0;
-            if (prevStroke.endTime !== null && currentStroke.startTime !== null) {
+            if (prevStroke && prevStroke.endTime !== null && currentStroke && currentStroke.startTime !== null) {
                 const dt = currentStroke.startTime - prevStroke.endTime;
-                if (dt > 0) {
-                    intervalMs = dt;
-                }
+                if (dt > 0) intervalMs = dt;
             }
 
-            // 間隔を適切な範囲に制限
-            const minInterval = 10; // 最小10ms
-            const maxInterval = 10000; // 最大10秒
-            durationMs = Math.max(minInterval, Math.min(intervalMs, maxInterval));
+            if (realTime) {
+                // If the gap is larger than the pause threshold, treat it as pause and exclude it
+                if (intervalMs > pauseThresholdMs) {
+                    intervalMs = 0;
+                }
+                // Allow zero-interval (immediate) or small real intervals
+                durationMs = Math.max(0, Math.min(intervalMs, maxInterval));
+            } else {
+                // Legacy: clamp into reasonable range
+                durationMs = Math.max(minInterval, Math.min(intervalMs, maxInterval));
+            }
         }
 
         strokes[i].durationMs = durationMs;

@@ -43,6 +43,18 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                 <a class="nav-link" href="/" target="_blank">
                     <i class="bi bi-eye me-1"></i>サイトを表示
                 </a>
+                <?php
+                // ペイント機能へのリンク（機能が有効な場合のみ表示）
+                try {
+                    $paintEnabled = \App\Utils\FeatureGate::isEnabled('paint');
+                } catch (Throwable $e) {
+                    $paintEnabled = true;
+                }
+                if (!empty($paintEnabled)): ?>
+                    <a class="nav-link" href="<?= PathHelper::getAdminUrl('paint/index.php') ?>" target="_blank">
+                        <i class="bi bi-brush me-1"></i>ペイント
+                    </a>
+                <?php endif; ?>
                 <span class="nav-link">
                     <i class="bi bi-person-circle me-1"></i><?= escapeHtml($username) ?>
                 </span>

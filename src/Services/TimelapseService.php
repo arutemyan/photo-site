@@ -55,7 +55,7 @@ class TimelapseService
             $db = \App\Database\Connection::getInstance();
             
             // イラスト情報を取得
-            $stmt = $db->prepare("SELECT timelapse_path FROM illusts WHERE id = ?");
+            $stmt = $db->prepare("SELECT timelapse_path FROM paint WHERE id = ?");
             $stmt->execute([$illustId]);
             $illust = $stmt->fetch(\PDO::FETCH_ASSOC);
             

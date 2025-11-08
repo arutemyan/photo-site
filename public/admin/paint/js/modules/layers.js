@@ -520,7 +520,6 @@ export function mergeLayerDown(layerIndex, pushUndo, updateStatusBar, setStatus)
     pushUndo(layerIndex - 1);
 
     const sourceCanvas = state.layers[layerIndex];
-    const targetCanvas = state.layers[layerIndex - 1];
     const targetCtx = state.contexts[layerIndex - 1];
 
     // Merge down

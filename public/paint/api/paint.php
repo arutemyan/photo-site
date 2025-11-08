@@ -1,11 +1,13 @@
 <?php
 /**
- * イラスト一覧取得API
+ * Paint一覧取得API
  * public/paint/ 専用
  */
 
 require_once(__DIR__ . '/../../../vendor/autoload.php');
-$config = \App\Config\ConfigManager::getInstance()->getConfig();
+require_once(__DIR__ . '/../../../config/config.php');
+// feature gate
+require_once(__DIR__ . '/../_feature_check.php');
 
 header('Content-Type: application/json');
 

@@ -38,7 +38,7 @@ class IllustDataController extends AdminControllerBase
         }
 
         $db = Connection::getInstance();
-        $stmt = $db->prepare('SELECT * FROM illusts WHERE id = :id');
+    $stmt = $db->prepare('SELECT * FROM paint WHERE id = :id');
         $stmt->execute([':id' => $id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) {
@@ -55,7 +55,7 @@ class IllustDataController extends AdminControllerBase
         $abs = $publicRoot . $dataPath;
 
         if (!file_exists($abs)) {
-            Logger::getInstance()->error("Illust data file not found: $abs (from data_path: $dataPath)");
+            Logger::getInstance()->error("Paint data file not found: $abs (from data_path: $dataPath)");
             $this->sendError('Data file not found', 404);
         }
 

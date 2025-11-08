@@ -40,9 +40,9 @@ return [
             ")"
         );
 
-        // インデックス作成
-        $db->exec("CREATE INDEX IF NOT EXISTS idx_paint_user_id ON paint(user_id)");
-        $db->exec("CREATE INDEX IF NOT EXISTS idx_paint_status ON paint(status)");
-        $db->exec("CREATE INDEX IF NOT EXISTS idx_paint_created_at ON paint(created_at)");
+    // インデックス作成
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_paint_user_id ON paint(user_id)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_paint_status ON paint(status)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_paint_created_at ON paint(created_at)");
     }
 ];

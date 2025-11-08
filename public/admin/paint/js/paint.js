@@ -15,15 +15,11 @@
 'use strict';
 
 // ===== Module Imports =====
-import { CONFIG } from './modules/config.js';
 import { state, elements, initializeElements } from './modules/state.js';
 import { initColorPalette, setColor, initCurrentColorEdit } from './modules/colors.js';
 import {
     renderLayers,
     setActiveLayer,
-    toggleLayerVisibility,
-    setLayerOpacity,
-    moveLayer,
     addLayer,
     removeLayer,
     duplicateLayer,
@@ -33,16 +29,11 @@ import {
 } from './modules/layers.js';
 import { pushUndo, undo, redo } from './modules/history.js';
 import {
-    zoom,
-    zoomFit,
     initCanvasPan,
     initTransformTools,
-    rotateCanvas,
-    flipCanvas,
     resizeCanvas
 } from './modules/canvas_transform.js';
 import {
-    ColorUtils,
     setTool,
     initToolListeners,
     initCanvasListeners
@@ -51,7 +42,6 @@ import {
     loadPersistedState,
     savePersistedState,
     setCurrentId,
-    captureCanvasState,
     restoreCanvasState,
     saveIllust,
     newIllust,
@@ -76,7 +66,6 @@ import {
 
 // ===== Initialization =====
 async function init() {
-    console.log('🚀 Paint Application Initializing...');
 
     // Initialize DOM elements
     initializeElements();
@@ -97,12 +86,10 @@ async function init() {
 
     // Mark initialization as complete
     state.isInitializing = false;
-    console.log('✅ Initialization complete');
     setStatus('準備完了');
 }
 
 async function initCanvas() {
-    console.log('Initializing canvas...');
 
     // Initialize contexts
     state.layers = elements.layers;
@@ -117,8 +104,6 @@ async function initCanvas() {
 
     // Load persisted state
     await loadPersistedState(restoreCanvasStateWrapper, setStatus);
-
-    console.log('Canvas initialized');
 }
 
 function initUI() {

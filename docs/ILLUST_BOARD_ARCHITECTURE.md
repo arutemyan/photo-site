@@ -34,7 +34,7 @@ public/
 
 src/
 ├── Models/
-│   ├── Illust.php             # イラストモデル (メタデータのみ)
+│   ├── Paint.php             # イラストモデル (メタデータのみ)
 │   └── IllustFile.php         # .illustファイル操作クラス
 ├── Services/
 │   ├── IllustService.php      # イラストサービス
@@ -70,7 +70,7 @@ src/
 ## バックエンドアーキテクチャ
 
 ### MVCパターン
-- **Model**: Illust (メタデータ), IllustFile (.illustファイル操作)
+- **Model**: Paint (メタデータ), IllustFile (.illustファイル操作)
 - **View**: PHPテンプレート (Blade相当なし、素PHP)
 - **Controller**: APIエンドポイント (save.php, load.php等)
 
@@ -83,7 +83,7 @@ src/
 ### データベース設計
 ```sql
 -- イラストテーブル (メタデータのみ)
-CREATE TABLE illusts (
+CREATE TABLE paint (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     title TEXT NOT NULL DEFAULT '',
@@ -102,9 +102,9 @@ CREATE TABLE illusts (
     
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-CREATE INDEX idx_illusts_user_id ON illusts(user_id);
-CREATE INDEX idx_illusts_status ON illusts(status);
-CREATE INDEX idx_illusts_created_at ON illusts(created_at);
+CREATE INDEX idx_paint_user_id ON paint(user_id);
+CREATE INDEX idx_paint_status ON paint(status);
+CREATE INDEX idx_paint_created_at ON paint(created_at);
 ```
 
 -- レイヤーテーブルは不要 (.illustファイル内で管理)

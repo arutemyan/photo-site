@@ -38,6 +38,19 @@ export function initTimelapseModal(closeModal) {
         }
     });
 
+    // Real-time playback option: use recorded intervals but exclude long pauses
+    if (elements.timelapseRealTime) {
+        elements.timelapseRealTime.addEventListener('change', (e) => {
+            if (timelapsePlayer) {
+                const enabled = e.target.checked;
+                // Real-time mode should not be combined with "ignore timestamps"; prefer real-time
+                if (enabled && elements.timelapseIgnoreTime) elements.timelapseIgnoreTime.checked = false;
+                timelapsePlayer.setIgnoreTimestamps(false);
+                timelapsePlayer.setRealTime(enabled);
+            }
+        });
+    }
+
     // Seek range handlers
     const seekBar = elements.timelapseSeek;
     if (seekBar) {
@@ -111,7 +124,7 @@ async function loadAndPlayTimelapse(id, setStatus) {
                 // Try JSON first
                 frames = JSON.parse(out);
             } catch (jsonError) {
-                console.log('Parsing timelapse as CSV format');
+                // Fallback: parse as CSV timelapse format
                 frames = parseTimelapseCSV(out);
             }
 
@@ -156,6 +169,11 @@ function playTimelapse(events) {
     // Apply initial settings
     timelapsePlayer.setSpeed(parseFloat(elements.timelapseSpeed.value) || 1);
     timelapsePlayer.setIgnoreTimestamps(elements.timelapseIgnoreTime.checked);
+    if (elements.timelapseRealTime && elements.timelapseRealTime.checked) {
+        // Real-time overrides ignore timestamps setting
+        timelapsePlayer.setIgnoreTimestamps(false);
+        timelapsePlayer.setRealTime(true);
+    }
 
     // Override updateProgress to work with admin UI
     timelapsePlayer.updateProgress = function() {
@@ -165,8 +183,20 @@ function playTimelapse(events) {
         }
 
         if (elements.timelapseCurrentTime) {
-            const currentSeconds = Math.floor((this.currentFrame + 1) * this.frameInterval / 1000);
-            const totalSeconds = Math.ceil(this.frames.length * this.frameInterval / 1000);
+            // Prefer actual frame durations when available (real-time mode), otherwise fall back to equal-interval display
+            let currentMs = 0;
+            let totalMs = 0;
+            if (this.frames && this.frames.length > 0) {
+                for (let i = 0; i <= Math.min(this.currentFrame, this.frames.length - 1); i++) {
+                    currentMs += (this.frames[i].durationMs || this.frameInterval);
+                }
+                for (let i = 0; i < this.frames.length; i++) {
+                    totalMs += (this.frames[i].durationMs || this.frameInterval);
+                }
+            }
+
+            const currentSeconds = Math.floor(currentMs / 1000);
+            const totalSeconds = Math.ceil(totalMs / 1000);
             elements.timelapseCurrentTime.textContent = formatTime(currentSeconds);
             if (elements.timelapseTotalTime) {
                 elements.timelapseTotalTime.textContent = formatTime(totalSeconds);

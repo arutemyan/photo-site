@@ -11,47 +11,22 @@ import { state, elements } from './state.js';
  * @param {Function} setStatus - Callback to update status bar
  */
 export async function loadPersistedState(restoreCanvasState, setStatus) {
-    console.log('🔥🔥🔥 loadPersistedState() CALLED! 🔥🔥🔥');
     try {
-        console.log('=== Starting persisted state restoration ===');
-
-        // Debug: Check localStorage availability
-        console.log('localStorage available:', typeof localStorage !== 'undefined');
-        console.log('localStorage length:', localStorage.length);
-
-        // List all localStorage keys for debugging
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('paint_')) {
-                console.log(`Found localStorage key: ${key}`);
-            }
-        }
-
-        // Load current illust ID
+        // Load current illustration ID from localStorage (if any)
         const savedId = localStorage.getItem('paint_current_illust_id');
         if (savedId) {
             state.currentIllustId = savedId;
             elements.illustId.textContent = savedId;
-            console.log('✓ Loaded persisted ID:', savedId);
-        } else {
-            console.log('- No saved illust ID found');
         }
 
-        // Load canvas state from localStorage
+        // Load canvas state from localStorage and restore
         const savedState = localStorage.getItem('paint_canvas_state');
         if (savedState) {
-            const sizeKB = (savedState.length / 1024).toFixed(2);
-            console.log(`✓ Found saved canvas state (${sizeKB} KB), parsing...`);
             const canvasState = JSON.parse(savedState);
-            console.log('✓ Canvas state parsed, layers:', canvasState.layers?.length || 0);
             await restoreCanvasState(canvasState);
             if (setStatus) {
                 setStatus('以前の作業を復元しました');
             }
-            console.log('=== Persisted state restoration complete ===');
-        } else {
-            console.log('- No saved canvas state found');
-            console.log('=== Persisted state restoration skipped ===');
         }
     } catch (e) {
         console.error('✗ Failed to load persisted state:', e);
@@ -65,17 +40,13 @@ export async function loadPersistedState(restoreCanvasState, setStatus) {
 export function savePersistedState() {
     // Don't save during initialization
     if (state.isInitializing) {
-        console.log('Skipping save during initialization');
         return;
     }
 
     try {
         const canvasState = captureCanvasState();
         const stateJson = JSON.stringify(canvasState);
-        const sizeKB = (stateJson.length / 1024).toFixed(2);
-        console.log(`Saving canvas state (${sizeKB} KB)...`);
         localStorage.setItem('paint_canvas_state', stateJson);
-        console.log('Canvas state saved to localStorage successfully');
     } catch (e) {
         console.error('Failed to save persisted state:', e);
         if (e.name === 'QuotaExceededError') {
@@ -413,15 +384,14 @@ export function markAsChanged() {
 export function restoreCanvasState(canvasState, renderLayers, setActiveLayer, updateIllustDisplay, applyZoom) {
     return new Promise((resolve) => {
         try {
-            console.log('  → Starting canvas state restoration');
-            console.log('  → Canvas size:', canvasState.canvasWidth, 'x', canvasState.canvasHeight);
+            // Canvas state restoration started (debug logs removed)
 
             const targetWidth = canvasState.canvasWidth || state.layers[0].width;
             const targetHeight = canvasState.canvasHeight || state.layers[0].height;
 
             // Resize canvas if needed
             if (targetWidth !== state.layers[0].width || targetHeight !== state.layers[0].height) {
-                console.log('  → Resizing canvas to', targetWidth, 'x', targetHeight);
+                // Resizing canvas to target dimensions (debug log removed)
 
                 state.layers.forEach((canvas, idx) => {
                     canvas.width = targetWidth;
@@ -448,7 +418,7 @@ export function restoreCanvasState(canvasState, renderLayers, setActiveLayer, up
 
             // Restore layer data
             if (canvasState.layers && canvasState.layers.length > 0) {
-                console.log('  → Restoring', canvasState.layers.length, 'layers...');
+                // Restoring layer images (debug log removed)
                 const loadPromises = canvasState.layers.map(layerInfo => {
                     return new Promise((resolveLayer) => {
                         if (layerInfo.index < state.layers.length) {

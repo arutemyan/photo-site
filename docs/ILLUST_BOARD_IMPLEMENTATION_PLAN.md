@@ -20,13 +20,13 @@ HTML/CSS/JSの基本レイアウトとキャンバス操作。
 ## フェーズ1: バックエンド基盤構築
 
 ### 1.1 データベース設計とマイグレーション
-- [ ] `illusts` テーブル作成
+- [ ] `paint` テーブル作成 (was paint)
 - [ ] マイグレーションファイル作成 (`src/Database/MigrationHelper.php` 使用)
 
 > 注: レイヤー情報は `.illust` ファイル内に格納するため、`illust_layers` の別テーブルは作成しません。タイムラプスもファイルシステムで管理するため、`illust_timelapse_chunks` の DB テーブルは不要とします。
 
 ### 1.2 モデルクラス実装
-- [ ] `src/Models/Illust.php` 作成
+- [ ] `src/Models/Paint.php` 作成
   - メタデータのみのCRUD操作
   - バリデーション
 - [ ] `src/Models/IllustFile.php` 作成

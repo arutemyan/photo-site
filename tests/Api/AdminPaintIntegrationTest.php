@@ -14,7 +14,7 @@ class AdminPaintIntegrationTest extends IntegrationTestCase
     {
         $csrf = $this->loginAndGetCsrf();
 
-        // Test 1: List illusts (should be empty initially)
+        // Test 1: List paint (should be empty initially)
         $listResp = $this->curl('/admin/paint/api/list.php');
         $this->assertEquals(200, $listResp['http_code']);
         $listData = json_decode($listResp['output'], true);
@@ -59,7 +59,7 @@ class AdminPaintIntegrationTest extends IntegrationTestCase
         $illustId = $saveResult['data']['id'] ?? null;
         $this->assertNotNull($illustId, 'Save should return illust id');
 
-        // Test 3: List illusts again (should have 1 item)
+        // Test 3: List paint again (should have 1 item)
         $listResp2 = $this->curl('/admin/paint/api/list.php');
         $this->assertEquals(200, $listResp2['http_code']);
         $listData2 = json_decode($listResp2['output'], true);

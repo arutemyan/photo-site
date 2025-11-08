@@ -62,7 +62,7 @@ if (!CsrfProtection::validateToken($_POST['csrf_token'])) {
 ### ファイル名セキュリティ
 - **サニタイズ**: 危険な文字を除去 (`< > : " | ? * \ /`)
 - **ランダム化**: アップロードファイル名をランダム生成
-- **パス制御**: アップロード先ディレクトリを固定 (`data/illusts/`)
+- **パス制御**: アップロード先ディレクトリを固定 (`data/paint/`)
 
 ### ファイルアクセス制御
 - **公開ファイル**: サムネイル・画像は `uploads/` 以下に配置、直接アクセス許可
@@ -115,7 +115,7 @@ var title = <?= json_encode($title) ?>;
 
 ### 実装例
 ```php
-$stmt = $pdo->prepare("SELECT * FROM illusts WHERE id = ? AND user_id = ?");
+$stmt = $pdo->prepare("SELECT * FROM paint WHERE id = ? AND user_id = ?");
 $stmt->execute([$illustId, $userId]);
 ```
 
@@ -129,7 +129,7 @@ $stmt->execute([$illustId, $userId]);
 
 ### 実装例
 ```php
-$baseDir = '/home/claudecode/photo-site/uploads/illusts/';
+$baseDir = '/home/claudecode/photo-site/uploads/paint/';
 $requestedPath = $_GET['path'];
 
 $realPath = realpath($baseDir . $requestedPath);

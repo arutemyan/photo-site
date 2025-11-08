@@ -6,17 +6,17 @@ require_once __DIR__ . '/../../../../src/Security/SecurityUtil.php';
 
 use App\Controllers\AdminControllerBase;
 use App\Database\Connection;
-use App\Models\Illust;
+use App\Models\Paint;
 
-class IllustListController extends AdminControllerBase
+class PaintListController extends AdminControllerBase
 {
-    private Illust $illustModel;
+    private Paint $paintModel;
     private ?int $userId = null;
 
     public function __construct()
     {
         $db = Connection::getInstance();
-        $this->illustModel = new Illust($db);
+        $this->paintModel = new Paint($db);
     }
 
     protected function checkAuthentication(): void
@@ -42,7 +42,7 @@ class IllustListController extends AdminControllerBase
         $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
         $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
 
-        $rows = $this->illustModel->listByUser((int)$this->userId, $limit, $offset);
+    $rows = $this->paintModel->listByUser((int)$this->userId, $limit, $offset);
 
         // Format response with proper image paths
         $formatted = array_map(function($row) {
@@ -63,5 +63,5 @@ class IllustListController extends AdminControllerBase
 }
 
 // コントローラーを実行
-$controller = new IllustListController();
+$controller = new PaintListController();
 $controller->execute();

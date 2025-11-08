@@ -31,6 +31,9 @@ return [
         // 変更後は public/ 内のディレクトリ名も同じ名前に変更してください
         'path' => 'admin',
 
+        // 管理画面の有効/無効フラグ (true = 表示する、false = 404を返す)
+        'enabled' => true,
+
         // 管理画面の完全なURL（使用されていない場合は自動生成）
         // 'url' => '/admin',
     ],
@@ -130,7 +133,7 @@ return [
         // 年齢確認が必要な最低年齢
         'minimum_age' => 18,
 
-	// NSFWフィルター画像設定（すりガラス効果）
+        // NSFWフィルター画像設定（すりガラス効果）
         // ガウシアンブラー + 明るい半透明オーバーレイで透明感のあるすりガラスを表現
         'filter_settings' => [
             'blur_strength' => 150,      // ぼかし強度
@@ -199,15 +202,17 @@ return [
     ],
     // サムネイル設定
     'thumbnail' => [
-	'width' => 600,
-	'height' => 600,
-	'quality' => 70,
+        'width' => 600,
+        'height' => 600,
+        'quality' => 70,
     ],
 
     /**
      * お絵描き機能設定
      */
     'paint' => [
+        // 機能有効フラグ: false にすると /paint 以下の全てのアクセスは 404 を返します
+        'enabled' => true,
         // キャンバス設定
         'canvas' => [
             'max_width' => 4096,
@@ -234,34 +239,6 @@ return [
             'max_image_size' => 10485760,    // 10MB (画像)
             'max_illust_size' => 20971520,   // 20MB (.illustファイル)
             'max_temp_size' => 5242880,      // 5MB (一時ファイル)
-        ],
-
-        // カラーパレット設定
-        'palette' => [
-            'presets' => [
-                'default' => [
-                    '#000000', '#FFFFFF', '#FF0000', '#00FF00',
-                    '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF',
-                    '#FFA500', '#800080', '#FFC0CB', '#A52A2A',
-                    '#808080', '#000080', '#008000', '#FF4500'
-                ],
-                'warm' => [
-                    '#FF6B35', '#F7931E', '#FFD23F', '#FF6B35',
-                    '#F7931E', '#FFD23F', '#FF8C42', '#FF6B35'
-                ],
-                'cool' => [
-                    '#4A90E2', '#7ED321', '#BD10E0', '#4A90E2',
-                    '#7ED321', '#BD10E0', '#50E3C2', '#4A90E2'
-                ],
-                'pastel' => [
-                    '#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFBA',
-                    '#BAE1FF', '#E8BAFF', '#FFB3F7', '#FFB3BA'
-                ],
-                'vivid' => [
-                    '#FF0000', '#00FF00', '#0000FF', '#FFFF00',
-                    '#FF00FF', '#00FFFF', '#FF8000', '#8000FF'
-                ]
-            ]
         ],
 
         // レイヤー設定
@@ -297,86 +274,5 @@ return [
         'level' => 'error',
         // ログフォーマット
         'format' => '%timestamp [%level] %file:%line %message',
-    ],
-
-    /**
-     * お絵描き機能設定
-     */
-    'paint' => [
-        // キャンバス設定
-        'canvas' => [
-            'max_width' => 4096,
-            'max_height' => 4096,
-            'default_width' => 800,
-            'default_height' => 600,
-            'background_color' => '#FFFFFF',
-        ],
-
-        // 履歴設定
-        'history' => [
-            'max_steps' => 50,  // Undo/Redo最大履歴数
-        ],
-
-        // タイムラプス設定
-        'timelapse' => [
-            'max_size' => 52428800,  // 50MB
-            'chunk_size' => 1048576, // 1MB (分割保存用)
-            'enabled' => true,
-        ],
-
-        // ファイルサイズ制限
-        'files' => [
-            'max_image_size' => 10485760,    // 10MB (画像)
-            'max_illust_size' => 20971520,   // 20MB (.illustファイル)
-            'max_temp_size' => 5242880,      // 5MB (一時ファイル)
-        ],
-
-        // カラーパレット設定
-        'palette' => [
-            'presets' => [
-                'default' => [
-                    '#000000', '#FFFFFF', '#FF0000', '#00FF00',
-                    '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF',
-                    '#FFA500', '#800080', '#FFC0CB', '#A52A2A',
-                    '#808080', '#000080', '#008000', '#FF4500'
-                ],
-                'warm' => [
-                    '#FF6B35', '#F7931E', '#FFD23F', '#FF6B35',
-                    '#F7931E', '#FFD23F', '#FF8C42', '#FF6B35'
-                ],
-                'cool' => [
-                    '#4A90E2', '#7ED321', '#BD10E0', '#4A90E2',
-                    '#7ED321', '#BD10E0', '#50E3C2', '#4A90E2'
-                ],
-                'pastel' => [
-                    '#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFBA',
-                    '#BAE1FF', '#E8BAFF', '#FFB3F7', '#FFB3BA'
-                ],
-                'vivid' => [
-                    '#FF0000', '#00FF00', '#0000FF', '#FFFF00',
-                    '#FF00FF', '#00FFFF', '#FF8000', '#8000FF'
-                ]
-            ]
-        ],
-
-        // レイヤー設定
-        'layers' => [
-            'max_count' => 4,
-            'default_layers' => [
-                ['name' => '背景', 'visible' => true, 'opacity' => 1.0],
-                ['name' => '下書き', 'visible' => true, 'opacity' => 1.0],
-                ['name' => '清書', 'visible' => true, 'opacity' => 1.0],
-                ['name' => '着色', 'visible' => true, 'opacity' => 1.0]
-            ]
-        ],
-
-        // UI設定
-        'ui' => [
-            'grid_enabled' => true,
-            'grid_size' => 20,
-            'zoom_min' => 0.1,
-            'zoom_max' => 5.0,
-            'pan_sensitivity' => 1.0
-        ]
     ],
 ];

@@ -48,7 +48,7 @@ try {
                 i.created_at,
                 i.updated_at,
                 '' as tags
-            FROM illusts i
+            FROM paint i
             WHERE i.id = :id";
     
     $stmt = $db->prepare($sql);
@@ -75,8 +75,8 @@ try {
                         i.title,
                         i.thumb_path,
                         i.image_path
-                    FROM illusts i
-                    INNER JOIN illust_tags it ON i.id = it.illust_id
+                    FROM paint i
+                    INNER JOIN illust_tags it ON i.id = it.paint_id
                     INNER JOIN tags t ON it.tag_id = t.id
                     WHERE t.name IN ($placeholders)
                       AND i.id != ?
@@ -99,7 +99,7 @@ try {
                     i.title,
                     i.thumbnail_path as thumb_path,
                     i.image_path
-                FROM illusts i
+                FROM paint i
                 WHERE i.id != ?
                 ORDER BY i.created_at DESC
                 LIMIT 6";
@@ -110,7 +110,7 @@ try {
     $relatedIllusts = $relatedStmt->fetchAll(PDO::FETCH_ASSOC);
     
 } catch (Exception $e) {
-    Logger::getInstance()->error('Illust Detail Error: ' . $e->getMessage());
+    Logger::getInstance()->error('Paint Detail Error: ' . $e->getMessage());
     header('Location: /paint/');
     exit;
 }

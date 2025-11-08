@@ -13,11 +13,11 @@ let timelapsePlayer = null;
  */
 export async function initTimelapse(illustId) {
     try {
-        console.log('Fetching timelapse for illust ID:', illustId);
+    // Fetching timelapse for given ID
         const response = await fetch(`/paint/api/timelapse.php?id=${illustId}`);
         const data = await response.json();
         
-        console.log('Timelapse API response:', data);
+    // Timelapse API response received
         
         if (!data.success) {
             console.error('Timelapse load error:', data.error);
@@ -29,14 +29,14 @@ export async function initTimelapse(illustId) {
         
         // CSVまたはJSONのパース
         if (data.format === 'csv' && data.csv) {
-            console.log('Parsing CSV timelapse data...');
+            // Parsing CSV timelapse data
             frames = parseTimelapseCSV(data.csv);
         } else if (data.timelapse) {
-            console.log('Using JSON timelapse data...');
+            // Using JSON timelapse data
             frames = data.timelapse;
         }
         
-        console.log('Parsed', frames.length, 'frames');
+    // Parsed frames count
         
         if (frames.length === 0) {
             console.warn('No frames found');
@@ -138,10 +138,6 @@ function resizeCanvas() {
     const container = canvas.parentElement;
     
     if (!container) return;
-    
-    // コンテナの幅に合わせてキャンバスを表示
-    const containerWidth = container.clientWidth;
-    const canvasAspect = canvas.width / canvas.height;
     
     // CSSで表示サイズを設定（実際のキャンバスサイズは変更しない）
     canvas.style.width = '100%';

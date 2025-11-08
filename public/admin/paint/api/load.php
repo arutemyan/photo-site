@@ -6,17 +6,17 @@ require_once __DIR__ . '/../../../../src/Security/SecurityUtil.php';
 
 use App\Controllers\AdminControllerBase;
 use App\Database\Connection;
-use App\Models\Illust;
+use App\Models\Paint;
 
-class IllustLoadController extends AdminControllerBase
+class PaintLoadController extends AdminControllerBase
 {
-    private Illust $illustModel;
+    private Paint $paintModel;
     private ?int $userId = null;
 
     public function __construct()
     {
         $db = Connection::getInstance();
-        $this->illustModel = new Illust($db);
+        $this->paintModel = new Paint($db);
     }
 
     protected function checkAuthentication(): void
@@ -44,7 +44,7 @@ class IllustLoadController extends AdminControllerBase
             $this->sendError('Invalid id', 400);
         }
 
-        $row = $this->illustModel->findById($id);
+    $row = $this->paintModel->findById($id);
         if (!$row) {
             $this->sendError('Not found', 404);
         }
@@ -66,5 +66,5 @@ class IllustLoadController extends AdminControllerBase
 }
 
 // コントローラーを実行
-$controller = new IllustLoadController();
+$controller = new PaintLoadController();
 $controller->execute();
