@@ -35,7 +35,7 @@ try {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>お絵描き - 管理</title>
-    <?php echo \App\Utils\AssetHelper::linkTag('/admin/paint/css/style.css'); ?>
+    <?php echo \App\Utils\AssetHelper::scriptTag(PathHelper::getAdminUrl('/paint/css/style.css')); ?>
 </head>
 <body>
 
@@ -481,6 +481,6 @@ try {
 <script>window.CSRF_TOKEN = '<?php echo htmlspecialchars($csrf, ENT_QUOTES, "UTF-8"); ?>';</script>
 <!-- pako (gzip) for timelapse compression -->
 <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
-<?php echo \App\Utils\AssetHelper::scriptTag('/admin/paint/js/paint.js'); ?>
+<?php echo \App\Utils\AssetHelper::scriptTag(PathHelper::getAdminUrl('/paint/js/paint.js')); ?>
 </body>
 </html>
