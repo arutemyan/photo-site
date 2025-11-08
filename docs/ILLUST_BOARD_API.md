@@ -39,7 +39,7 @@
 {
     "success": true,
     "data": {
-        "illust_id": 123,
+        "paint_id": 123,
         "data_path": "/uploads/paintfiles/data/001/illust_123.illust",
         "image_path": "/uploads/paintfiles/images/001/illust_123.png",
         "thumbnail_path": "/uploads/paintfiles/images/001/illust_123_thumb.webp",
@@ -114,7 +114,7 @@
 {
     "success": true,
     "data": {
-        "illusts": [
+    "paint": [
             {
                 "id": 123,
                 "title": "作品タイトル",
@@ -152,7 +152,7 @@
 ```
 
 ### 6. 作品更新 API
-**POST** `/admin/paint/api/update/{illust_id}`
+**POST** `/admin/paint/api/update/{paint_id}`
 
 #### 説明
 作品データの更新（レイヤー変更、設定変更等）は.illustファイルの更新として扱います。
@@ -238,10 +238,10 @@
 ```
 
 ### 9. 画像取得 API (管理機能用)
-**GET** `/admin/paint/api/image/{illust_id}`
+**GET** `/admin/paint/api/image/{paint_id}`
 
 #### パラメータ
-- `illust_id`: イラストID (必須)
+- `paint_id`: イラストID (必須)
 - `type`: 画像タイプ (thumbnail/export, デフォルト: export)
 
 #### 説明
@@ -253,10 +253,10 @@
 - キャッシュヘッダー付与
 
 ### 10. タイムラプス取得 API
-**GET** `/admin/paint/api/timelapse/{illust_id}`
+**GET** `/admin/paint/api/timelapse/{paint_id}`
 
 #### パラメータ
-- `illust_id`: イラストID (必須)
+- `paint_id`: イラストID (必須)
 - `chunk`: チャンクインデックス (オプション、デフォルト: 0)
 
 #### レスポンス
@@ -265,10 +265,10 @@
 - Accept-Ranges: bytes (レンジリクエスト対応)
 
 ### 11. 作品データ取得 API
-**GET** `/admin/paint/api/data/{illust_id}`
+**GET** `/admin/paint/api/data/{paint_id}`
 
 #### パラメータ
-- `illust_id`: イラストID (必須)
+- `paint_id`: イラストID (必須)
 
 #### レスポンス
 - .illustファイルの内容をJSONで返却
@@ -286,7 +286,7 @@
 {
     "success": true,
     "data": {
-        "illusts": [
+        "paint": [
             {
                 "id": 123,
                 "title": "作品タイトル",

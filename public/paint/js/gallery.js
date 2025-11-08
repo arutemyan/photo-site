@@ -13,7 +13,7 @@ const LIMIT = 20;
 // ページ読み込み時
 document.addEventListener('DOMContentLoaded', () => {
     loadTags();
-    loadIllusts();
+    loadPaints();
     
     // 検索ボックス
     const searchInput = document.getElementById('searchInput');
@@ -93,7 +93,7 @@ function filterByTag(tagName) {
 /**
  * すべてのタグを表示
  */
-function showAllIllusts() {
+function showAllPaints() {
     currentTag = null;
     document.querySelectorAll('.tag-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tag === '');
@@ -108,13 +108,13 @@ function resetAndLoad() {
     currentOffset = 0;
     hasMore = true;
     document.getElementById('galleryGrid').innerHTML = '';
-    loadIllusts();
+    loadPaints();
 }
 
 /**
  * イラスト一覧を読み込み
  */
-async function loadIllusts() {
+async function loadPaints() {
     if (isLoading || !hasMore) return;
     
     isLoading = true;
@@ -129,19 +129,19 @@ async function loadIllusts() {
         if (currentTag) params.append('tag', currentTag);
         if (currentSearch) params.append('search', currentSearch);
         
-        const response = await fetch(`/paint/api/illusts.php?${params}`);
+        const response = await fetch(`/paint/api/paint.php?${params}`);
         const data = await response.json();
-        
-        if (data.success && data.illusts) {
-            if (data.illusts.length === 0) {
+
+        if (data.success && data.paint) {
+            if (data.paint.length === 0) {
                 hasMore = false;
                 if (currentOffset === 0) {
                     showEmptyState();
                 }
             } else {
-                renderIllusts(data.illusts);
-                currentOffset += data.illusts.length;
-                hasMore = data.illusts.length === LIMIT;
+                renderPaints(data.paint);
+                currentOffset += data.paint.length;
+                hasMore = data.paint.length === LIMIT;
             }
         }
     } catch (error) {
@@ -156,13 +156,13 @@ async function loadIllusts() {
 /**
  * イラストをレンダリング
  */
-function renderIllusts(illusts) {
+function renderPaints(paint) {
     const grid = document.getElementById('galleryGrid');
     if (!grid) return;
     
     const fragment = document.createDocumentFragment();
     
-    illusts.forEach(illust => {
+    paint.forEach(illust => {
         const card = createIllustCard(illust);
         fragment.appendChild(card);
     });

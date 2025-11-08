@@ -42,18 +42,18 @@ class IllustService
         try {
             if ($isUpdate) {
                 // fetch existing record
-                $stmt = $this->db->prepare('SELECT * FROM illusts WHERE id = :id');
+                $stmt = $this->db->prepare('SELECT * FROM paint WHERE id = :id');
                 $stmt->execute([':id' => $id]);
                 $row = $stmt->fetch(PDO::FETCH_ASSOC);
                 if (!$row) {
-                    throw new \RuntimeException('Illust not found for update');
+                    throw new \RuntimeException('Paint not found for update');
                 }
                 if ((int)$row['user_id'] !== $userId) {
                     throw new \RuntimeException('Permission denied');
                 }
             } else {
                 // generate id by inserting DB record placeholder
-                $stmt = $this->db->prepare('INSERT INTO illusts (user_id, title) VALUES (:user_id, :title)');
+                $stmt = $this->db->prepare('INSERT INTO paint (user_id, title) VALUES (:user_id, :title)');
                 $stmt->execute([':user_id' => $userId, ':title' => $payload['title'] ?? '']);
                 $id = (int)$this->db->lastInsertId();
             }
@@ -195,7 +195,7 @@ class IllustService
                     throw new \RuntimeException('Failed to create master image from uploaded data');
                 }
                 if (!$thumbGenerated) {
-                    Logger::getInstance()->error(sprintf('IllustService: thumbnail not generated for illust id=%d src=%s dst=%s', $id, $imagePath, $thumbPath));
+                    Logger::getInstance()->error(sprintf('IllustService: thumbnail not generated for paint id=%d src=%s dst=%s', $id, $imagePath, $thumbPath));
                 }
             } elseif (!$isUpdate) {
                 // no image provided for new record -> leave image/timelapse empty
@@ -336,7 +336,7 @@ class IllustService
             }
 
             // update DB row with paths and sizes
-            $update = $this->db->prepare('UPDATE illusts SET title = :title, description = :description, tags = :tags, data_path = :data_path, image_path = :image_path, thumbnail_path = :thumbnail_path, timelapse_path = :timelapse_path, file_size = :file_size WHERE id = :id');
+            $update = $this->db->prepare('UPDATE paint SET title = :title, description = :description, tags = :tags, data_path = :data_path, image_path = :image_path, thumbnail_path = :thumbnail_path, timelapse_path = :timelapse_path, file_size = :file_size WHERE id = :id');
             $update->execute([
                 ':title' => $payload['title'] ?? '',
                 ':description' => $payload['description'] ?? '',

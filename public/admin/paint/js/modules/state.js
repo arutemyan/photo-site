@@ -29,7 +29,7 @@ export const state = {
     timelapseSnapshots: [], // { idx, t, data }
     lastSnapshotTime: 0,
 
-    // Illust
+    // Paint
     currentIllustId: null,
     currentIllustTitle: '',
     currentIllustDescription: '',

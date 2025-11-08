@@ -14,9 +14,9 @@
 
 ## データベースモデル
 
-### Illust (イラスト) テーブル
+### Paint (イラスト) テーブル
 ```sql
-CREATE TABLE illusts (
+CREATE TABLE paint (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     title TEXT NOT NULL DEFAULT '',
@@ -35,9 +35,9 @@ CREATE TABLE illusts (
     
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-CREATE INDEX idx_illusts_user_id ON illusts(user_id);
-CREATE INDEX idx_illusts_status ON illusts(status);
-CREATE INDEX idx_illusts_created_at ON illusts(created_at);
+CREATE INDEX idx_illusts_user_id ON paint(user_id);
+CREATE INDEX idx_illusts_status ON paint(status);
+CREATE INDEX idx_illusts_created_at ON paint(created_at);
 ```
 
 ### 削除: IllustLayerテーブル
@@ -302,7 +302,7 @@ data/tmp/
 ### ディレクトリ構造
 ```
 uploads/
-├── illusts/
+├── paint/
 │   ├── images/
 │   │   ├── 001/
 │   │   │   ├── illust_1.png
@@ -332,7 +332,7 @@ uploads/
 ## データ整合性
 
 ### 制約
-- レイヤーはillust_idごとに4つ固定
+- レイヤーはpaint_idごとに4つ固定
 - タイムラプスサイズは設定上限以内
 - 座標値はキャンバスサイズ以内
 
@@ -344,9 +344,9 @@ uploads/
 ## パフォーマンス考慮
 
 ### インデックス
-- illusts: user_id, status, created_at
-- illust_layers: illust_id, layer_order
-- illust_timelapse_chunks: illust_id, chunk_index
+- paint: user_id, status, created_at
+- illust_layers: paint_id, layer_order
+- illust_timelapse_chunks: paint_id, chunk_index
 
 ### 圧縮・分割
 - タイムラプスは10MBごとにチャンク分割

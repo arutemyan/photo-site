@@ -91,10 +91,10 @@ export async function openOpenModal(setStatus) {
 /**
  * Render illustration grid
  */
-function renderIllustGrid(illusts) {
+function renderIllustGrid(paint) {
     elements.illustGrid.innerHTML = '';
 
-    illusts.forEach(illust => {
+    paint.forEach(illust => {
         const item = document.createElement('div');
         item.className = 'illust-item';
         item.dataset.id = illust.id;

@@ -22,7 +22,7 @@ try {
     $sql = "SELECT 
                 t.id,
                 t.name,
-                COUNT(it.illust_id) as count
+                COUNT(it.paint_id) as count
             FROM tags t
             INNER JOIN illust_tags it ON t.id = it.tag_id
             GROUP BY t.id, t.name

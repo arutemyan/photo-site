@@ -1,6 +1,6 @@
 <?php
 /**
- * イラスト一覧取得API
+ * Paint一覧取得API
  * public/paint/ 専用
  */
 
