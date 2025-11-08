@@ -96,6 +96,11 @@ export function captureCanvasState() {
         timelapseEvents: state.timelapseEvents,
         timelapseSnapshots: state.timelapseSnapshots,
         lastSnapshotTime: state.lastSnapshotTime,
+        // persist lightweight metadata so UI can restore title/description/tags
+        currentIllustTitle: state.currentIllustTitle || '',
+        currentIllustDescription: state.currentIllustDescription || '',
+        currentIllustTags: state.currentIllustTags || '',
+        hasUnsavedChanges: !!state.hasUnsavedChanges,
         timestamp: Date.now()
     };
 }
@@ -487,6 +492,20 @@ export function restoreCanvasState(canvasState, renderLayers, setActiveLayer, up
                     }
                     if (canvasState.lastSnapshotTime !== undefined) {
                         state.lastSnapshotTime = canvasState.lastSnapshotTime;
+                    }
+
+                    // Restore metadata (title/description/tags) if present
+                    if (canvasState.currentIllustTitle !== undefined) {
+                        state.currentIllustTitle = canvasState.currentIllustTitle || '';
+                    }
+                    if (canvasState.currentIllustDescription !== undefined) {
+                        state.currentIllustDescription = canvasState.currentIllustDescription || '';
+                    }
+                    if (canvasState.currentIllustTags !== undefined) {
+                        state.currentIllustTags = canvasState.currentIllustTags || '';
+                    }
+                    if (canvasState.hasUnsavedChanges !== undefined) {
+                        state.hasUnsavedChanges = !!canvasState.hasUnsavedChanges;
                     }
 
                     if (renderLayers) {
