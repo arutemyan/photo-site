@@ -225,6 +225,39 @@ class Session
         return $_SESSION[$this->sessionNamespace][$key] ?? $default;
     }
 
+    // --- Static compatibility proxies ---
+    /**
+     * Static proxy for get()
+     */
+    public static function getValue(string $key, $default = null)
+    {
+        return self::getInstance()->get($key, $default);
+    }
+
+    /**
+     * Static proxy for set()
+     */
+    public static function setValue(string $key, $value): void
+    {
+        self::getInstance()->set($key, $value);
+    }
+
+    /**
+     * Static proxy for has()
+     */
+    public static function hasValue(string $key): bool
+    {
+        return self::getInstance()->has($key);
+    }
+
+    /**
+     * Static proxy for delete()
+     */
+    public static function deleteValue(string $key): void
+    {
+        self::getInstance()->delete($key);
+    }
+
     public function set(string $key, $value): void
     {
         if (!isset($_SESSION[$this->sessionNamespace])) {
