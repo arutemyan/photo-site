@@ -24,7 +24,6 @@ build.js export-ignore
 public/admin/paint/js/modules/ export-ignore
 public/admin/paint/js/paint.js export-ignore
 public/admin/paint/js/timelapse_worker.js export-ignore
-public/admin/paint/js/*.js export-ignore
 public/admin/js/admin.js export-ignore
 public/admin/js/sns-share.js export-ignore
 public/res/js/main.js export-ignore
@@ -36,7 +35,6 @@ public/paint/js/timelapse_player.js export-ignore
 # CSSソース（本番では.bundle.cssを使用するため除外）
 public/res/css/main.css export-ignore
 public/res/css/admin.css export-ignore
-public/res/css/login.css export-ignore
 public/admin/paint/css/style.css export-ignore
 public/paint/css/gallery.css export-ignore
 public/paint/css/detail.css export-ignore
