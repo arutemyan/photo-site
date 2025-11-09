@@ -294,8 +294,19 @@ class IllustService
                 }
 
                 // Convert merged events to CSV text (header is union of keys in order seen)
+                // Defensive: ensure mergedEvents is an array and each event is an array
+                if (!is_array($mergedEvents)) {
+                    Logger::getInstance()->error('IllustService: mergedEvents is not an array when saving timelapse; forcing empty list');
+                    $mergedEvents = [];
+                }
+
                 $headers = [];
                 foreach ($mergedEvents as $ev) {
+                    if (!is_array($ev)) {
+                        // skip malformed entries but log for diagnostics
+                        Logger::getInstance()->warning('IllustService: skipping non-array timelapse event during CSV generation: ' . gettype($ev));
+                        continue;
+                    }
                     foreach ($ev as $k => $_) {
                         if (!in_array($k, $headers, true)) $headers[] = $k;
                     }
