@@ -226,8 +226,16 @@ function playTimelapse(events) {
     // Convert events to strokes if needed
     let frames = events;
     if (events[0] && events[0].type !== 'stroke' && events[0].type !== 'fill') {
-        // These are drawing events, need to convert to frames
-        frames = parseTimelapseCSV(eventsToCSV(events));
+        // These are drawing events. If we have raw in-memory event objects use
+        // convertEventsToStrokes directly to avoid a CSV serialization roundtrip
+        // which can coerce types (pressure etc.). Fall back to CSV path if
+        // direct conversion fails for any reason.
+        try {
+            frames = convertEventsToStrokes(events);
+        } catch (err) {
+            console.warn('Direct convertEventsToStrokes failed, falling back to CSV path', err);
+            frames = parseTimelapseCSV(eventsToCSV(events));
+        }
     }
 
     // Create TimelapsePlayer

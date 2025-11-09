@@ -213,27 +213,126 @@ export class TimelapsePlayer {
         if (!frame.path || frame.path.length === 0) return;
 
         this.ctx.save();
-        this.ctx.strokeStyle = frame.color || '#000000';
-        this.ctx.lineWidth = frame.size || 5;
-        this.ctx.lineCap = 'round';
-        this.ctx.lineJoin = 'round';
-        this.ctx.globalAlpha = frame.opacity !== undefined ? frame.opacity : 1;
 
-        if (frame.tool === 'eraser') {
-            this.ctx.globalCompositeOperation = 'destination-out';
+        if (frame.tool === 'watercolor') {
+            // Watercolor brush: draw each point as a circle with gradient
+            const maxRadius = (frame.size || 40) / 2;
+            const hardness = (frame.watercolorHardness !== undefined ? frame.watercolorHardness : 50) / 100;
+            const baseOpacity = frame.watercolorOpacity || 0.3;
+
+            // Parse color
+            const colorRgb = this.hexToRgb(frame.color || '#000000');
+            if (!colorRgb) {
+                this.ctx.restore();
+                return;
+            }
+
+            // Draw each point in the path using per-sample pressure when available
+            let totalRadius = 0;
+            for (let i = 0; i < frame.path.length; i++) {
+                const pt = frame.path[i];
+                const pressure = (pt.pressure !== undefined ? pt.pressure : 1);
+                const pressuredRadius = maxRadius * (0.5 + 0.5 * pressure);
+                totalRadius += pressuredRadius;
+
+                const gradient = this.ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, pressuredRadius);
+
+                // Hardness controls where opacity starts to decay
+                const solidStop = hardness * 0.8;
+
+                gradient.addColorStop(0, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${baseOpacity})`);
+                if (solidStop > 0) {
+                    gradient.addColorStop(solidStop, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${baseOpacity})`);
+                }
+
+                // Mid-point for smooth transition
+                const midStop = solidStop + (1 - solidStop) * 0.5;
+                const midOpacity = baseOpacity * 0.3;
+                gradient.addColorStop(midStop, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${midOpacity})`);
+
+                gradient.addColorStop(1, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, 0)`);
+
+                this.ctx.fillStyle = gradient;
+                this.ctx.globalCompositeOperation = 'source-over';
+                this.ctx.beginPath();
+                this.ctx.arc(pt.x, pt.y, pressuredRadius, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+
+            // If points are spaced apart (recorded sparsely), draw a soft connecting stroke
+            // using an average pressured radius to choose a good connector width.
+            if (frame.path.length > 1) {
+                try {
+                    this.ctx.save();
+                    this.ctx.globalCompositeOperation = 'source-over';
+                    const connectorAlpha = Math.max(0.12, Math.min(0.9, baseOpacity * 0.55));
+                    this.ctx.strokeStyle = `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${connectorAlpha})`;
+                    const avgRadius = (frame.path.length > 0) ? (totalRadius / frame.path.length) : maxRadius;
+                    // Make the connector a bit thinner than the average diameter so it blends
+                    this.ctx.lineWidth = Math.max(1, avgRadius * 1.6);
+                    this.ctx.lineCap = 'round';
+                    this.ctx.lineJoin = 'round';
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(frame.path[0].x, frame.path[0].y);
+                    for (let i = 1; i < frame.path.length; i++) {
+                        this.ctx.lineTo(frame.path[i].x, frame.path[i].y);
+                    }
+                    this.ctx.stroke();
+                } catch (e) {
+                    console.warn('Connector stroke render failed:', e);
+                } finally {
+                    this.ctx.restore();
+                }
+            }
         } else {
-            this.ctx.globalCompositeOperation = 'source-over';
+            // Regular pen/eraser stroke
+            this.ctx.strokeStyle = frame.color || '#000000';
+            this.ctx.lineWidth = frame.size || 5;
+            this.ctx.lineCap = 'round';
+            this.ctx.lineJoin = 'round';
+            this.ctx.globalAlpha = frame.opacity !== undefined ? frame.opacity : 1;
+
+            if (frame.tool === 'eraser') {
+                this.ctx.globalCompositeOperation = 'destination-out';
+            } else {
+                this.ctx.globalCompositeOperation = 'source-over';
+            }
+
+            if (frame.path.length === 1) {
+                // Single-point stroke: draw a dot (stroke with round cap may not render a single point)
+                const p = frame.path[0];
+                const r = (frame.size || 5) / 2;
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, Math.max(1, r), 0, Math.PI * 2);
+                if (frame.tool === 'eraser') {
+                    // Eraser: clear a circle
+                    this.ctx.globalCompositeOperation = 'destination-out';
+                    this.ctx.fill();
+                } else {
+                    this.ctx.fillStyle = frame.color || this.ctx.strokeStyle;
+                    this.ctx.fill();
+                }
+            } else {
+                // Multi-point stroke: draw polyline (simple interpolation)
+                this.ctx.beginPath();
+                this.ctx.moveTo(frame.path[0].x, frame.path[0].y);
+                for (let i = 1; i < frame.path.length; i++) {
+                    this.ctx.lineTo(frame.path[i].x, frame.path[i].y);
+                }
+                this.ctx.stroke();
+            }
         }
 
-        this.ctx.beginPath();
-        this.ctx.moveTo(frame.path[0].x, frame.path[0].y);
-
-        for (let i = 1; i < frame.path.length; i++) {
-            this.ctx.lineTo(frame.path[i].x, frame.path[i].y);
-        }
-
-        this.ctx.stroke();
         this.ctx.restore();
+    }
+
+    hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : null;
     }
 
     drawFill(frame) {
@@ -416,6 +515,11 @@ export function parseTimelapseCSV(csv) {
         if (event.y) event.y = parseFloat(event.y);
         if (event.size) event.size = parseFloat(event.size);
         if (event.layer) event.layer = parseInt(event.layer);
+        // pressure はCSV/JSON経由で文字列になっている場合があるため明示的に数値化
+        if (event.pressure !== undefined && event.pressure !== '') {
+            const p = parseFloat(event.pressure);
+            if (!Number.isNaN(p)) event.pressure = p;
+        }
 
         events.push(event);
     }
@@ -476,20 +580,61 @@ export function convertEventsToStrokes(events) {
                 size: event.size || 5,
                 tool: event.tool || 'pen',
                 layer: event.layer || 0,
-                path: [{ x: event.x, y: event.y }],
+                path: [{ x: event.x, y: event.y, pressure: (event.pressure !== undefined ? parseFloat(event.pressure) : 1) }],
                 // 開始時刻と終了時刻を保持
                 startTime: event.t !== undefined ? event.t : null,
                 endTime: null
             };
+            // Watercolor brush settings
+            if (event.tool === 'watercolor') {
+                if (event.watercolorHardness !== undefined) {
+                    currentStroke.watercolorHardness = event.watercolorHardness;
+                }
+                if (event.watercolorOpacity !== undefined) {
+                    currentStroke.watercolorOpacity = event.watercolorOpacity;
+                }
+            }
             lastEventTime = event.t !== undefined ? event.t : lastEventTime;
         } else if (event.type === 'move' && currentStroke) {
             // ストロークにポイントを追加
-            currentStroke.path.push({ x: event.x, y: event.y });
+            // Interpolate between last recorded point and this point so timelapse
+            // rendering matches live drawing (which draws every ~2px).
+            const lastPt = currentStroke.path.length > 0 ? currentStroke.path[currentStroke.path.length - 1] : { x: event.x, y: event.y, pressure: (event.pressure !== undefined ? event.pressure : 1) };
+            const dx = event.x - lastPt.x;
+            const dy = event.y - lastPt.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const stepSize = 2; // pixels between interpolated samples (matches live code)
+            const steps = Math.max(1, Math.ceil(dist / stepSize));
+            for (let i = 1; i <= steps; i++) {
+                const t = i / steps;
+                const ix = lastPt.x + dx * t;
+                const iy = lastPt.y + dy * t;
+                // interpolate pressure if available, otherwise default to 1
+                const lastPressure = (lastPt.pressure !== undefined ? parseFloat(lastPt.pressure) : 1);
+                const eventPressure = (event.pressure !== undefined ? parseFloat(event.pressure) : lastPressure);
+                const p = lastPressure + (eventPressure - lastPressure) * t;
+                currentStroke.path.push({ x: ix, y: iy, pressure: p });
+            }
             if (event.t !== undefined) lastEventTime = event.t;
         } else if (event.type === 'end' && currentStroke) {
             // ストロークを完成
             if (event.x !== undefined && event.y !== undefined) {
-                currentStroke.path.push({ x: event.x, y: event.y });
+                // Interpolate to final end point as well, preserving/interpolating pressure
+                const lastPt = currentStroke.path.length > 0 ? currentStroke.path[currentStroke.path.length - 1] : { x: event.x, y: event.y, pressure: (event.pressure !== undefined ? event.pressure : 1) };
+                const dx = event.x - lastPt.x;
+                const dy = event.y - lastPt.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const stepSize = 2;
+                const steps = Math.max(1, Math.ceil(dist / stepSize));
+                for (let i = 1; i <= steps; i++) {
+                    const t = i / steps;
+                    const ix = lastPt.x + dx * t;
+                    const iy = lastPt.y + dy * t;
+                    const lastPressure = (lastPt.pressure !== undefined ? parseFloat(lastPt.pressure) : 1);
+                    const eventPressure = (event.pressure !== undefined ? parseFloat(event.pressure) : lastPressure);
+                    const p = lastPressure + (eventPressure - lastPressure) * t;
+                    currentStroke.path.push({ x: ix, y: iy, pressure: p });
+                }
             }
             currentStroke.endTime = event.t !== undefined ? event.t : lastEventTime;
 
