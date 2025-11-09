@@ -115,7 +115,7 @@ function initDetailPage(isSensitive, $viewType) {
  * @param {number} postId 投稿ID
  */
 function incrementViewCount(postId) {
-    fetch('/api/increment_view', {
+    fetch('/api/increment_view.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
