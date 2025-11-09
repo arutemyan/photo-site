@@ -111,3 +111,22 @@ function copyShareUrl() {
         btn.classList.add('btn-outline-secondary');
     }, 2000);
 }
+
+// Expose to global scope for inline onclick handlers when loaded as a module
+(function exposeSnsGlobals() {
+    if (typeof window === 'undefined') return;
+    try {
+        if (typeof window.shareToSNS === 'undefined' && typeof shareToSNS === 'function') {
+            window.shareToSNS = shareToSNS;
+        }
+    } catch (e) {
+        // ignore
+    }
+    try {
+        if (typeof window.copyShareUrl === 'undefined' && typeof copyShareUrl === 'function') {
+            window.copyShareUrl = copyShareUrl;
+        }
+    } catch (e) {
+        // ignore
+    }
+})();
