@@ -30,75 +30,57 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\Models\Tag;
 use App\Utils\Logger;
+use App\Controllers\PublicControllerBase;
 
-header('Content-Type: application/json; charset=utf-8');
+class TagsPublicController extends PublicControllerBase
+{
+    // Controller-level defaults
+    protected bool $allowCors = true;
+    protected bool $startSession = false;
+
+    protected function onProcess(string $method): void
+    {
+        try {
+            $tagModel = new Tag();
+
+            // 人気タグを取得
+            if (isset($_GET['popular'])) {
+                $limit = (int)$_GET['popular'];
+
+                // limitの範囲チェック
+                if ($limit < 1 || $limit > 50) {
+                    $this->sendError('Popular limit must be between 1 and 50', 400);
+                }
+
+                $tags = $tagModel->getPopular($limit);
+                $this->sendSuccess(['count' => count($tags), 'tags' => $tags]);
+            }
+
+            // タグ名で検索
+            if (isset($_GET['search'])) {
+                $searchQuery = trim($_GET['search']);
+
+                if (empty($searchQuery)) {
+                    $this->sendError('Search query cannot be empty', 400);
+                }
+
+                $tags = $tagModel->searchByName($searchQuery);
+                $this->sendSuccess(['query' => $searchQuery, 'count' => count($tags), 'tags' => $tags]);
+            }
+
+            // すべてのタグを取得（デフォルト）
+            $tags = $tagModel->getAll();
+            $this->sendSuccess(['count' => count($tags), 'tags' => $tags]);
+
+        } catch (Exception $e) {
+            $this->handleError($e);
+        }
+    }
+}
 
 try {
-    $tagModel = new Tag();
-
-    // 人気タグを取得
-    if (isset($_GET['popular'])) {
-        $limit = (int)$_GET['popular'];
-
-        // limitの範囲チェック
-        if ($limit < 1 || $limit > 50) {
-            http_response_code(400);
-            echo json_encode([
-                'success' => false,
-                'error' => 'Popular limit must be between 1 and 50'
-            ], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        $tags = $tagModel->getPopular($limit);
-
-        echo json_encode([
-            'success' => true,
-            'count' => count($tags),
-            'tags' => $tags
-        ], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    // タグ名で検索
-    if (isset($_GET['search'])) {
-        $searchQuery = trim($_GET['search']);
-
-        if (empty($searchQuery)) {
-            http_response_code(400);
-            echo json_encode([
-                'success' => false,
-                'error' => 'Search query cannot be empty'
-            ], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        $tags = $tagModel->searchByName($searchQuery);
-
-        echo json_encode([
-            'success' => true,
-            'query' => $searchQuery,
-            'count' => count($tags),
-            'tags' => $tags
-        ], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    // すべてのタグを取得（デフォルト）
-    $tags = $tagModel->getAll();
-
-    echo json_encode([
-        'success' => true,
-        'count' => count($tags),
-        'tags' => $tags
-    ], JSON_UNESCAPED_UNICODE);
-
+    $controller = new TagsPublicController();
+    $controller->execute();
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Internal server error'
-    ], JSON_UNESCAPED_UNICODE);
-    Logger::getInstance()->error('Tags API Error: ' . $e->getMessage());
-    Logger::getInstance()->error($e->getTraceAsString());
+    PublicControllerBase::handleException($e);
 }
