@@ -7,23 +7,39 @@
 require_once(__DIR__ . '/../../../vendor/autoload.php');
 $config = \App\Config\ConfigManager::getInstance()->getConfig();
 
+use App\Controllers\PublicControllerBase;
 use App\Services\TimelapseService;
 
-header('Content-Type: application/json');
+class TimelapsePublicController extends PublicControllerBase
+{
+    protected bool $startSession = false;
+    protected bool $allowCors = false;
 
-$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-$publicRoot = realpath(__DIR__ . '/../..');  // public ディレクトリ
+    protected function onProcess(string $method): void
+    {
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        $publicRoot = realpath(__DIR__ . '/../..');  // public ディレクトリ
 
-$result = TimelapseService::getTimelapseData($id, $publicRoot);
+        $result = TimelapseService::getTimelapseData($id, $publicRoot);
 
-if (!$result['success']) {
-    $statusCode = 400;
-    if (strpos($result['error'], 'not found') !== false) {
-        $statusCode = 404;
-    } else if (strpos($result['error'], 'Server error') !== false) {
-        $statusCode = 500;
+        if (!$result['success']) {
+            $statusCode = 400;
+            if (strpos($result['error'], 'not found') !== false) {
+                $statusCode = 404;
+            } elseif (strpos($result['error'], 'Server error') !== false) {
+                $statusCode = 500;
+            }
+            $this->sendError($result['error'], $statusCode, ['details' => $result]);
+            return;
+        }
+
+        $this->sendSuccess($result);
     }
-    http_response_code($statusCode);
 }
 
-echo json_encode($result, JSON_UNESCAPED_UNICODE);
+try {
+    $controller = new TimelapsePublicController();
+    $controller->execute();
+} catch (Exception $e) {
+    PublicControllerBase::handleException($e);
+}
