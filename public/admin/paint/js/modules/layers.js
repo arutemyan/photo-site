@@ -327,6 +327,17 @@ export function toggleLayerVisibility(index, updateStatusBar, setStatus) {
  */
 export function setLayerOpacity(index, opacity) {
     state.layers[index].style.opacity = opacity.toString();
+    // Record opacity change so timelapse playback can reflect it
+    try {
+        if (typeof recordTimelapse === 'function') {
+            recordTimelapse({ t: Date.now(), type: 'opacity', layer: index, opacity: opacity });
+            if (typeof createTimelapseSnapshotPublic === 'function') {
+                createTimelapseSnapshotPublic();
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to record opacity change for timelapse:', e);
+    }
 }
 
 /**

@@ -21,11 +21,14 @@ export class TimelapsePlayer {
         // アルファチャンネルなしのコンテキストを取得（常に不透明な白背景）
         this.ctx = this.canvas.getContext('2d', { alpha: false });
         this.frames = timelapseData;
-    // Track simple per-layer state so control events can be applied during playback.
-    // This is a minimal implementation: it tracks visibility and opacity and
-    // ensures subsequent stroke/fill frames respect those settings when possible.
+    // Track per-layer state and create offscreen canvases for full compositing.
+    // We'll infer layer count from timelapseData when possible.
     this.layerStates = {}; // { [layerIndex]: { visible: true/false, opacity: number } }
-    this.layerOrder = null; // optional ordering if reorder events are provided
+    this.layerOrder = null; // array of layer indexes in compositing order
+    this.layerCanvases = []; // offscreen canvases per layer
+    this.layerContexts = []; // their 2D contexts
+    this.baseCanvas = null; // flattened snapshot canvas
+    this.baseCtx = null;
         // -1 を初期値として、まだ何も描画していない状態を表す
         // これにより再生開始前はプログレスが0%のままになる
         this.currentFrame = -1;
@@ -101,12 +104,83 @@ export class TimelapsePlayer {
 
     // Canvas size set
 
-        // 白背景で初期化（何も描画しない）
+        // Prepare base canvas (for snapshots) and per-layer offscreen canvases.
+        this.baseCanvas = document.createElement('canvas');
+        this.baseCanvas.width = this.canvas.width;
+        this.baseCanvas.height = this.canvas.height;
+        this.baseCtx = this.baseCanvas.getContext('2d', { alpha: false });
+        // initialize base white
+        this.baseCtx.fillStyle = '#ffffff';
+        this.baseCtx.fillRect(0, 0, this.baseCanvas.width, this.baseCanvas.height);
+
+        // Infer layer count from frames (find max layer index)
+        let maxLayer = -1;
+        for (const f of this.frames) {
+            if (f && typeof f.layer === 'number') maxLayer = Math.max(maxLayer, f.layer);
+        }
+        const layerCount = Math.max(1, maxLayer + 1);
+
+        // create offscreen canvases for each layer
+        this.layerCanvases = [];
+        this.layerContexts = [];
+        for (let i = 0; i < layerCount; i++) {
+            const c = document.createElement('canvas');
+            c.width = this.canvas.width;
+            c.height = this.canvas.height;
+            const ctx = c.getContext('2d', { willReadFrequently: true });
+            // start with transparent content
+            ctx.clearRect(0, 0, c.width, c.height);
+            this.layerCanvases.push(c);
+            this.layerContexts.push(ctx);
+            // default state
+            this.layerStates[i] = { visible: true, opacity: 1 };
+        }
+
+        // default layerOrder: bottom-to-top 0..n-1
+        this.layerOrder = Array.from({ length: layerCount }, (_, i) => i);
+
+        // Initialize main canvas to white background
         this.ctx.fillStyle = '#ffffff';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         // 初期状態の進捗を更新
         this.updateProgress();
+    }
+
+    // Composite base + layers onto main canvas according to current layerOrder and states
+    compositeToMain() {
+        // clear main
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // draw base (snapshot)
+        if (this.baseCanvas) {
+            this.ctx.drawImage(this.baseCanvas, 0, 0, this.canvas.width, this.canvas.height);
+        }
+
+        // draw layers in order
+        if (this.layerOrder && this.layerOrder.length > 0) {
+            for (const li of this.layerOrder) {
+                const layerCanvas = this.layerCanvases[li];
+                const st = this.layerStates[li] || { visible: true, opacity: 1 };
+                if (!layerCanvas) continue;
+                if (st.visible === false) continue;
+                this.ctx.globalAlpha = typeof st.opacity === 'number' ? st.opacity : 1;
+                this.ctx.drawImage(layerCanvas, 0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.globalAlpha = 1;
+            }
+        } else {
+            // fallback: natural order
+            for (let li = 0; li < this.layerCanvases.length; li++) {
+                const layerCanvas = this.layerCanvases[li];
+                const st = this.layerStates[li] || { visible: true, opacity: 1 };
+                if (!layerCanvas) continue;
+                if (st.visible === false) continue;
+                this.ctx.globalAlpha = typeof st.opacity === 'number' ? st.opacity : 1;
+                this.ctx.drawImage(layerCanvas, 0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.globalAlpha = 1;
+            }
+        }
     }
 
     play() {
@@ -189,18 +263,35 @@ export class TimelapsePlayer {
         if (frameIndex < 0 || frameIndex >= this.frames.length) return;
 
         const frame = this.frames[frameIndex];
-
         // ストロークを描画
         if (frame.type === 'stroke') {
-            this.drawStroke(frame);
+            const li = typeof frame.layer === 'number' ? frame.layer : 0;
+            const targetCtx = (this.layerContexts[li] || this.ctx);
+            this.drawStroke(frame, targetCtx);
+            this.compositeToMain();
         } else if (frame.type === 'fill') {
-            this.drawFill(frame);
+            const li = typeof frame.layer === 'number' ? frame.layer : 0;
+            const targetCtx = (this.layerContexts[li] || this.ctx);
+            this.drawFill(frame, targetCtx);
+            this.compositeToMain();
         } else if (frame.type === 'snapshot') {
-            // snapshot: flattened image data URL
+            // snapshot: flattened image data URL - draw into baseCanvas and clear layer canvases
             try {
                 const img = new Image();
                 img.onload = () => {
-                    this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
+                    if (!this.baseCanvas) {
+                        this.baseCanvas = document.createElement('canvas');
+                        this.baseCanvas.width = this.canvas.width;
+                        this.baseCanvas.height = this.canvas.height;
+                        this.baseCtx = this.baseCanvas.getContext('2d', { alpha: false });
+                    }
+                    this.baseCtx.clearRect(0, 0, this.baseCanvas.width, this.baseCanvas.height);
+                    this.baseCtx.drawImage(img, 0, 0, this.baseCanvas.width, this.baseCanvas.height);
+                    // clear per-layer canvases to avoid double-draw
+                    for (const ctx of this.layerContexts) {
+                        try { ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); } catch (e) {}
+                    }
+                    this.compositeToMain();
                 };
                 img.onerror = (e) => {
                     console.warn('Failed to load snapshot image for timelapse frame', e);
@@ -210,17 +301,11 @@ export class TimelapsePlayer {
                 console.warn('Error rendering snapshot frame:', e);
             }
         } else if (frame.type === 'reorder') {
-            // Minimal handling: record new layer order. We expect snapshots to be
-            // recorded around reorder events so the visual state will be restored
-            // by snapshot frames. Still keep track of ordering for potential
-            // future use.
             try {
                 if (Array.isArray(frame.order)) {
                     this.layerOrder = frame.order.slice();
                 } else if (typeof frame.from === 'number' && typeof frame.to === 'number') {
-                    // simple swap: maintain layerOrder as [0..n-1] if uninitialized
                     if (!this.layerOrder) {
-                        // try to infer maximum layer index from frames
                         let maxLayer = -1;
                         for (const f of this.frames) {
                             if (typeof f.layer === 'number') maxLayer = Math.max(maxLayer, f.layer);
@@ -230,7 +315,6 @@ export class TimelapsePlayer {
                     const from = frame.from;
                     const to = frame.to;
                     if (from >= 0 && to >= 0 && from < this.layerOrder.length && to < this.layerOrder.length) {
-                        // move element at index "from" to index "to"
                         const item = this.layerOrder.splice(from, 1)[0];
                         this.layerOrder.splice(to, 0, item);
                     }
@@ -238,8 +322,8 @@ export class TimelapsePlayer {
             } catch (e) {
                 console.warn('Failed to apply reorder frame:', e);
             }
+            this.compositeToMain();
         } else if (frame.type === 'visibility') {
-            // Update layer visibility for subsequent frames.
             try {
                 const li = Number(frame.layer);
                 if (!Number.isNaN(li)) {
@@ -249,6 +333,7 @@ export class TimelapsePlayer {
             } catch (e) {
                 console.warn('Failed to apply visibility frame:', e);
             }
+            this.compositeToMain();
         } else if (frame.type === 'opacity') {
             try {
                 const li = Number(frame.layer);
@@ -260,14 +345,14 @@ export class TimelapsePlayer {
             } catch (e) {
                 console.warn('Failed to apply opacity frame:', e);
             }
+            this.compositeToMain();
         } else {
             console.warn('Unexpected frame type:', frame.type);
         }
     }
 
-    drawStroke(frame) {
+    drawStroke(frame, targetCtx = null) {
         if (!frame.path || frame.path.length === 0) return;
-
         // Respect per-layer visibility/opacity if available (minimal support).
         if (typeof frame.layer !== 'undefined') {
             const li = Number(frame.layer);
@@ -280,7 +365,8 @@ export class TimelapsePlayer {
             }
         }
 
-        this.ctx.save();
+        const ctx = targetCtx || this.ctx;
+        ctx.save();
 
         if (frame.tool === 'watercolor') {
             // Watercolor brush: draw each point as a circle with gradient
@@ -291,7 +377,7 @@ export class TimelapsePlayer {
             // Parse color
             const colorRgb = this.hexToRgb(frame.color || '#000000');
             if (!colorRgb) {
-                this.ctx.restore();
+                ctx.restore();
                 return;
             }
 
@@ -303,7 +389,7 @@ export class TimelapsePlayer {
                 const pressuredRadius = maxRadius * (0.5 + 0.5 * pressure);
                 totalRadius += pressuredRadius;
 
-                const gradient = this.ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, pressuredRadius);
+                const gradient = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, pressuredRadius);
 
                 // Hardness controls where opacity starts to decay
                 const solidStop = hardness * 0.8;
@@ -320,78 +406,78 @@ export class TimelapsePlayer {
 
                 gradient.addColorStop(1, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, 0)`);
 
-                this.ctx.fillStyle = gradient;
-                this.ctx.globalCompositeOperation = 'source-over';
-                this.ctx.beginPath();
-                this.ctx.arc(pt.x, pt.y, pressuredRadius, 0, Math.PI * 2);
-                this.ctx.fill();
+                ctx.fillStyle = gradient;
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pressuredRadius, 0, Math.PI * 2);
+                ctx.fill();
             }
 
             // If points are spaced apart (recorded sparsely), draw a soft connecting stroke
             // using an average pressured radius to choose a good connector width.
             if (frame.path.length > 1) {
                 try {
-                    this.ctx.save();
-                    this.ctx.globalCompositeOperation = 'source-over';
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'source-over';
                     const connectorAlpha = Math.max(0.12, Math.min(0.9, baseOpacity * 0.55));
-                    this.ctx.strokeStyle = `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${connectorAlpha})`;
+                    ctx.strokeStyle = `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${connectorAlpha})`;
                     const avgRadius = (frame.path.length > 0) ? (totalRadius / frame.path.length) : maxRadius;
                     // Make the connector a bit thinner than the average diameter so it blends
-                    this.ctx.lineWidth = Math.max(1, avgRadius * 1.6);
-                    this.ctx.lineCap = 'round';
-                    this.ctx.lineJoin = 'round';
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(frame.path[0].x, frame.path[0].y);
+                    ctx.lineWidth = Math.max(1, avgRadius * 1.6);
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(frame.path[0].x, frame.path[0].y);
                     for (let i = 1; i < frame.path.length; i++) {
-                        this.ctx.lineTo(frame.path[i].x, frame.path[i].y);
+                        ctx.lineTo(frame.path[i].x, frame.path[i].y);
                     }
-                    this.ctx.stroke();
+                    ctx.stroke();
                 } catch (e) {
                     console.warn('Connector stroke render failed:', e);
                 } finally {
-                    this.ctx.restore();
+                    ctx.restore();
                 }
             }
         } else {
             // Regular pen/eraser stroke
-            this.ctx.strokeStyle = frame.color || '#000000';
-            this.ctx.lineWidth = frame.size || 5;
-            this.ctx.lineCap = 'round';
-            this.ctx.lineJoin = 'round';
-            this.ctx.globalAlpha = frame.opacity !== undefined ? frame.opacity : 1;
+            ctx.strokeStyle = frame.color || '#000000';
+            ctx.lineWidth = frame.size || 5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.globalAlpha = frame.opacity !== undefined ? frame.opacity : 1;
 
             if (frame.tool === 'eraser') {
-                this.ctx.globalCompositeOperation = 'destination-out';
+                ctx.globalCompositeOperation = 'destination-out';
             } else {
-                this.ctx.globalCompositeOperation = 'source-over';
+                ctx.globalCompositeOperation = 'source-over';
             }
 
             if (frame.path.length === 1) {
                 // Single-point stroke: draw a dot (stroke with round cap may not render a single point)
                 const p = frame.path[0];
                 const r = (frame.size || 5) / 2;
-                this.ctx.beginPath();
-                this.ctx.arc(p.x, p.y, Math.max(1, r), 0, Math.PI * 2);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, Math.max(1, r), 0, Math.PI * 2);
                 if (frame.tool === 'eraser') {
                     // Eraser: clear a circle
-                    this.ctx.globalCompositeOperation = 'destination-out';
-                    this.ctx.fill();
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.fill();
                 } else {
-                    this.ctx.fillStyle = frame.color || this.ctx.strokeStyle;
-                    this.ctx.fill();
+                    ctx.fillStyle = frame.color || ctx.strokeStyle;
+                    ctx.fill();
                 }
             } else {
                 // Multi-point stroke: draw polyline (simple interpolation)
-                this.ctx.beginPath();
-                this.ctx.moveTo(frame.path[0].x, frame.path[0].y);
+                ctx.beginPath();
+                ctx.moveTo(frame.path[0].x, frame.path[0].y);
                 for (let i = 1; i < frame.path.length; i++) {
-                    this.ctx.lineTo(frame.path[i].x, frame.path[i].y);
+                    ctx.lineTo(frame.path[i].x, frame.path[i].y);
                 }
-                this.ctx.stroke();
+                ctx.stroke();
             }
         }
 
-        this.ctx.restore();
+        ctx.restore();
     }
 
     hexToRgb(hex) {
@@ -403,10 +489,8 @@ export class TimelapsePlayer {
         } : null;
     }
 
-    drawFill(frame) {
+    drawFill(frame, targetCtx = null) {
         if (frame.x === undefined || frame.y === undefined) return;
-
-        // Respect per-layer visibility/opacity for fills as well
         if (typeof frame.layer !== 'undefined') {
             const li = Number(frame.layer);
             const st = this.layerStates[li];
@@ -417,8 +501,10 @@ export class TimelapsePlayer {
             }
         }
 
+        const ctx = targetCtx || this.ctx;
+
         // Get image data for flood fill
-        const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        const imageData = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         const data = imageData.data;
 
         const startX = Math.floor(frame.x);
@@ -493,7 +579,7 @@ export class TimelapsePlayer {
         }
 
         // Put the modified image data back
-        this.ctx.putImageData(imageData, 0, 0);
+        ctx.putImageData(imageData, 0, 0);
     }
 
     seek(frameIndex) {
@@ -503,6 +589,20 @@ export class TimelapsePlayer {
         // 白背景で初期化
         this.ctx.fillStyle = '#ffffff';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Reset base and per-layer canvases to rebuild state up to target frame
+        if (this.baseCtx) {
+            try { this.baseCtx.clearRect(0, 0, this.baseCanvas.width, this.baseCanvas.height); } catch (e) {}
+            // ensure base white background
+            try { this.baseCtx.fillStyle = '#ffffff'; this.baseCtx.fillRect(0, 0, this.baseCanvas.width, this.baseCanvas.height); } catch (e) {}
+        }
+        for (const ctx of this.layerContexts) {
+            try { ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); } catch (e) {}
+        }
+        // reset layerStates defaults
+        for (let i = 0; i < this.layerCanvases.length; i++) {
+            if (!this.layerStates[i]) this.layerStates[i] = { visible: true, opacity: 1 };
+        }
 
         // フレーム0の場合も含め、指定フレームまで（inclusive）描画する
         if (frameIndex >= 0) {
