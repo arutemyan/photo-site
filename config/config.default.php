@@ -44,6 +44,9 @@ return [
     'database' => [
         // データベースタイプ: 'sqlite', 'mysql', 'postgresql'
         'driver' => 'sqlite',
+        // 環境変数による設定上書きを許可するか（CIでTEST_DB_*を使うなど）。
+        // デフォルトは false。CIや開発環境で上書きを許可する場合は local 設定で true にしてください。
+        'allow_env_override' => false,
 
         // SQLite設定（driver='sqlite'の場合）
         'sqlite' => [

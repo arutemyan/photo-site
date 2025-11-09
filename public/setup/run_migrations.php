@@ -25,37 +25,9 @@ try {
     $configPath = __DIR__ . '/../../config/config.php';
     $config = file_exists($configPath) ? require $configPath : [];
 
-    // Allow CI to override DB settings via environment variables (TEST_DB_*)
-    $envDriver = getenv('TEST_DB_DRIVER');
-    if ($envDriver !== false && $envDriver !== null && $envDriver !== '') {
-        $config['database']['driver'] = $envDriver;
-        // For sqlite, TEST_DB_DSN may be like 'sqlite::memory:' or 'sqlite:/path/to.db'
-        $envDsn = getenv('TEST_DB_DSN');
-        if ($envDriver === 'sqlite' && $envDsn) {
-            if (preg_match('#^sqlite:(.*)$#', $envDsn, $m)) {
-                $config['database']['sqlite']['gallery']['path'] = $m[1];
-            } else {
-                $config['database']['sqlite']['gallery']['path'] = $envDsn;
-            }
-        }
-        if ($envDriver === 'mysql' || $envDriver === 'postgresql') {
-            $svc = $envDriver === 'mysql' ? 'mysql' : 'postgresql';
-            $envHost = getenv('TEST_DB_HOST');
-            $envPort = getenv('TEST_DB_PORT');
-            $envName = getenv('TEST_DB_NAME');
-            $envUser = getenv('TEST_DB_USER');
-            $envPass = getenv('TEST_DB_PASS');
-            if ($envHost) $config['database'][$svc]['host'] = $envHost;
-            if ($envPort) $config['database'][$svc]['port'] = (int)$envPort;
-            if ($envName) $config['database'][$svc]['database'] = $envName;
-            if ($envUser) $config['database'][$svc]['username'] = $envUser;
-            if ($envPass) $config['database'][$svc]['password'] = $envPass;
-        }
-    }
-
-    $driver = $config['database']['driver'] ?? 'sqlite';
+    $driver = $config['database']['driver'];
     if ($driver === 'sqlite') {
-        $dbPath = $config['database']['sqlite']['gallery']['path'] ?? __DIR__ . '/../../data/gallery.db';
+        $dbPath = $config['database']['sqlite']['gallery']['path'];
 
         // Ensure directory exists
         $dbDir = dirname($dbPath);

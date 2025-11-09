@@ -72,6 +72,67 @@ function loadConfig(string $configName, ?string $configDir = null): array
 
     // ローカル設定でデフォルト設定を上書き（再帰的にマージ）
     $merged = array_replace_recursive($defaultConfig, $localConfig);
+
+    // 環境変数による上書きを許可している場合はここで処理する
+    // 許可フラグは config.default.php または config.local.php の
+    // ['database']['allow_env_override'] で制御します（デフォルト false）
+    $allowEnv = false;
+    if (isset($merged['database']) && is_array($merged['database'])) {
+        $allowEnv = !empty($merged['database']['allow_env_override']);
+    }
+
+    if ($allowEnv) {
+        // ヘルパ: 候補 env 名のうち最初に見つかった値を返す
+        $firstEnv = function (array $names) {
+            foreach ($names as $n) {
+                $v = getenv($n);
+                if ($v !== false && $v !== null && $v !== '') {
+                    return $v;
+                }
+            }
+            return null;
+        };
+
+        // Driver (TEST_DB_DRIVER, DB_DRIVER)
+        $drv = $firstEnv(['TEST_DB_DRIVER', 'DB_DRIVER']);
+        if ($drv !== null) {
+            $merged['database']['driver'] = $drv;
+        }
+
+        // Handle sqlite DSN/path
+        $driver = $merged['database']['driver'] ?? null;
+        if ($driver === 'sqlite') {
+            $dsn = $firstEnv(['TEST_DB_DSN', 'DB_DSN', 'TEST_DB_PATH', 'DB_PATH']);
+            if ($dsn !== null) {
+                // DSN 形式 (sqlite::memory: or sqlite:/path) の path 部分を取り出す
+                if (preg_match('#^sqlite:(.*)$#', $dsn, $m)) {
+                    $path = $m[1];
+                    $merged['database']['sqlite']['gallery']['path'] = $path;
+                } else {
+                    // 直接パス指定とみなす
+                    $merged['database']['sqlite']['gallery']['path'] = $dsn;
+                }
+            }
+        }
+
+        // For mysql/postgresql, map common env names
+        if ($driver === 'mysql' || $driver === 'postgresql') {
+            $svc = $driver === 'mysql' ? 'mysql' : 'postgresql';
+
+            $host = $firstEnv(['TEST_DB_HOST', 'DB_HOST']);
+            $port = $firstEnv(['TEST_DB_PORT', 'DB_PORT']);
+            $name = $firstEnv(['TEST_DB_NAME', 'TEST_DB_DATABASE', 'DB_NAME', 'DB_DATABASE']);
+            $user = $firstEnv(['TEST_DB_USER', 'DB_USER', 'TEST_DB_USERNAME', 'DB_USERNAME']);
+            $pass = $firstEnv(['TEST_DB_PASS', 'DB_PASS', 'TEST_DB_PASSWORD', 'DB_PASSWORD']);
+
+            if ($host !== null) $merged['database'][$svc]['host'] = $host;
+            if ($port !== null) $merged['database'][$svc]['port'] = is_numeric($port) ? (int)$port : $port;
+            if ($name !== null) $merged['database'][$svc]['database'] = $name;
+            if ($user !== null) $merged['database'][$svc]['username'] = $user;
+            if ($pass !== null) $merged['database'][$svc]['password'] = $pass;
+        }
+    }
+
     $cache[$cacheKey] = $merged;
     return $merged;
 }

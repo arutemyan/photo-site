@@ -88,7 +88,8 @@ jobs:
             echo "TEST_DB_PASS=root" >> $GITHUB_ENV
             echo "TEST_DB_DSN=mysql:host=127.0.0.1;port=3306;dbname=testdb;charset=utf8mb4" >> $GITHUB_ENV
           else
-            echo "TEST_DB_DRIVER=pgsql" >> $GITHUB_ENV
+            # Use the same driver name as our config ('postgresql')
+            echo "TEST_DB_DRIVER=postgresql" >> $GITHUB_ENV
             # connect via localhost: mapped port to avoid service DNS issues
             echo "TEST_DB_HOST=127.0.0.1" >> $GITHUB_ENV
             echo "TEST_DB_PORT=5432" >> $GITHUB_ENV
@@ -125,8 +126,28 @@ jobs:
             mysql -h "$host" -P "$port" -u "$user" -p"$pass" -e "CREATE DATABASE IF NOT EXISTS testdb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
           else
             export PGPASSWORD="$pass"
-            psql -h "$host" -p "$port" -U "$user" -c "CREATE DATABASE IF NOT EXISTS testdb;" || psql -h "$host" -p "$port" -U "$user" -c "CREATE DATABASE testdb;"
+            # PostgreSQL does not support CREATE DATABASE IF NOT EXISTS.
+            # Check for existence and create only when missing to avoid syntax errors
+            exists=$(psql -h "$host" -p "$port" -U "$user" -tAc "SELECT 1 FROM pg_database WHERE datname='${TEST_DB_NAME}';")
+            if [ "$exists" = "1" ]; then
+              echo "Database ${TEST_DB_NAME} already exists";
+            else
+              psql -h "$host" -p "$port" -U "$user" -c "CREATE DATABASE \"${TEST_DB_NAME}\";";
+            fi
           fi
+
+      - name: Enable config env override (CI)
+        run: |
+          # Create a lightweight local config to enable env-based overrides
+          mkdir -p config
+          cat > config/config.local.php <<'PHP'
+          <?php
+          return [
+              'database' => [
+                  'allow_env_override' => true,
+              ],
+          ];
+          PHP
 
       - name: Run migrations
         env:
