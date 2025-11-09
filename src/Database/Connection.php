@@ -195,6 +195,8 @@ class Connection
         $autoInc = $helper::getAutoIncrement($db);
         $intType = $helper::getIntegerType($db);
         $textType = $helper::getTextType($db);
+        // 短めのインデックス可能な文字型（MySQLのインデックスに長さ制限があるため）
+        $shortText = $helper::getTextType($db, 191);
         $datetimeType = $helper::getDateTimeType($db);
         $timestampType = $helper::getTimestampType($db);
         $currentTimestamp = $helper::getCurrentTimestamp($db);
@@ -203,7 +205,7 @@ class Connection
         $db->exec("
             CREATE TABLE IF NOT EXISTS users (
                 id {$autoInc},
-                username {$textType} NOT NULL UNIQUE,
+                username {$shortText} NOT NULL UNIQUE,
                 password_hash {$textType} NOT NULL,
                 created_at {$datetimeType} DEFAULT {$currentTimestamp}
             )
@@ -232,7 +234,7 @@ class Connection
         $db->exec("
             CREATE TABLE IF NOT EXISTS tags (
                 id {$autoInc},
-                name {$textType} NOT NULL UNIQUE,
+                name {$shortText} NOT NULL UNIQUE,
                 created_at {$timestampType} DEFAULT {$currentTimestamp}
             )
         ");
@@ -253,7 +255,7 @@ class Connection
         $db->exec("
             CREATE TABLE IF NOT EXISTS settings (
                 id {$autoInc},
-                key {$textType} NOT NULL UNIQUE,
+                key {$shortText} NOT NULL UNIQUE,
                 value {$textType} NOT NULL,
                 updated_at {$timestampType} DEFAULT {$currentTimestamp}
             )

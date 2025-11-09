@@ -21,6 +21,7 @@ return [
         $autoInc = $helper::getAutoIncrement($db);
         $intType = $helper::getIntegerType($db);
         $textType = $helper::getTextType($db);
+        $titleTextType = $helper::getTextType($db, 128);
         $datetimeType = $helper::getDateTimeType($db);
         $currentTimestamp = $helper::getCurrentTimestamp($db);
 
@@ -28,7 +29,7 @@ return [
         $db->exec("
             CREATE TABLE IF NOT EXISTS group_posts (
                 id {$autoInc},
-                title {$textType} NOT NULL,
+                title {$titleTextType} NOT NULL,
                 detail {$textType},
                 is_sensitive {$intType} DEFAULT 0,
                 is_visible {$intType} DEFAULT 1,
