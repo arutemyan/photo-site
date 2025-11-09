@@ -69,9 +69,10 @@ export async function initTimelapse(illustId) {
  * タイムラプスセクションを表示
  */
 function showTimelapseSection() {
-    const section = document.getElementById('timelapseSection');
-    if (section) {
-        section.style.display = 'block';
+    // The detail page uses an overlay with id 'timelapseOverlay'. Show that.
+    const overlay = document.getElementById('timelapseOverlay');
+    if (overlay) {
+        overlay.style.display = 'block';
     }
 }
 
@@ -79,9 +80,10 @@ function showTimelapseSection() {
  * タイムラプスセクションを非表示
  */
 function hideTimelapseSection() {
-    const section = document.getElementById('timelapseSection');
-    if (section) {
-        section.style.display = 'none';
+    // Hide the overlay used on the detail page
+    const overlay = document.getElementById('timelapseOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
     }
 }
 
