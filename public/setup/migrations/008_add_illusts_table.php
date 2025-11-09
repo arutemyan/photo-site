@@ -16,11 +16,12 @@ return [
         $driver = $helper::getDriver($db);
         $intType = $helper::getIntegerType($db);
         $textType = $helper::getTextType($db);
+        $auto = $helper::getAutoIncrement($db);
 
         // paintテーブル作成 (旧: paint)
         $db->exec(
             "CREATE TABLE IF NOT EXISTS paint (\n" .
-            "                id {$intType} PRIMARY KEY " . ($driver === 'sqlite' ? 'AUTOINCREMENT' : 'AUTO_INCREMENT') . ",\n" .
+            "                id {$auto},\n" .
             "                user_id {$intType} NOT NULL,\n" .
             "                title {$textType} NOT NULL DEFAULT '',\n" .
             "                canvas_width {$intType} NOT NULL DEFAULT 800,\n" .

@@ -324,7 +324,8 @@ class Connection
             $runner->run();
         } catch (\Exception $e) {
             \App\Utils\Logger::getInstance()->error("Migration execution failed: " . $e->getMessage());
-            // マイグレーションエラーは継続（既存の動作を維持）
+            // マイグレーションに失敗した場合は例外を再スローして接続初期化を中断する
+            throw $e;
         }
     }
 

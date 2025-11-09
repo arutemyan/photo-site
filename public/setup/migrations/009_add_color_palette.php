@@ -12,11 +12,12 @@ return [
         $driver = $helper::getDriver($db);
         $intType = $helper::getIntegerType($db);
         $textType = $helper::getTextType($db);
+        $auto = $helper::getAutoIncrement($db);
 
         // color_palettesテーブル作成
         $db->exec("
             CREATE TABLE IF NOT EXISTS color_palettes (
-                id {$intType} PRIMARY KEY " . ($driver === 'sqlite' ? 'AUTOINCREMENT' : 'AUTO_INCREMENT') . ",
+                id {$auto},
                 user_id {$intType} DEFAULT NULL,
                 slot_index {$intType} NOT NULL,
                 color {$textType} NOT NULL,
@@ -35,12 +36,21 @@ return [
             '#800080', '#008080', '#C0C0C0', '#808080'
         ];
         
-        $stmt = $db->prepare("
-            INSERT " . ($driver === 'sqlite' ? 'OR IGNORE' : 'IGNORE') . " 
-            INTO color_palettes (user_id, slot_index, color)
-            VALUES (NULL, ?, ?)
-        ");
-        
+        // DBごとに重複挿入を無視する構文が異なるため分岐
+        if ($driver === 'sqlite') {
+            $sql = "INSERT OR IGNORE INTO color_palettes (user_id, slot_index, color) VALUES (NULL, ?, ?)";
+        } elseif ($driver === 'mysql') {
+            $sql = "INSERT IGNORE INTO color_palettes (user_id, slot_index, color) VALUES (NULL, ?, ?)";
+        } elseif ($driver === 'postgresql') {
+            // PostgreSQL は ON CONFLICT を使う
+            $sql = "INSERT INTO color_palettes (user_id, slot_index, color) VALUES (NULL, ?, ?) ON CONFLICT (user_id, slot_index) DO NOTHING";
+        } else {
+            // デフォルトは普通の INSERT（失敗した場合は例外化される）
+            $sql = "INSERT INTO color_palettes (user_id, slot_index, color) VALUES (NULL, ?, ?)";
+        }
+
+        $stmt = $db->prepare($sql);
+
         foreach ($defaultColors as $index => $color) {
             $stmt->execute([$index, $color]);
         }
