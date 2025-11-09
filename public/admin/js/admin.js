@@ -540,6 +540,37 @@ function loadPosts(append = false) {
     });
 }
 
+// Expose commonly-used functions to the global window so inline onclick
+// attributes and other non-module consumers can call them when this file
+// is loaded with type="module" (modules don't automatically export to window).
+(function exposeAdminGlobals() {
+    if (typeof window === 'undefined') return;
+    const toExpose = [
+        'loadPosts', 'loadMorePosts', 'editPost', 'deletePost', 'savePost',
+        'loadGroupPosts', 'renderGroupPosts', 'editGroupPost', 'addImagesToGroup',
+        'shareGroupPostToSNS', 'deleteGroupPost', 'replaceGroupImage', 'deleteGroupImage',
+        'copyShareGroupUrl', 'shareToSNS', 'copyShareUrl',
+        'editPost', 'editGroupPost',
+        'deletePost', 'deleteGroupPost',
+        'shareToSNS', 'shareGroupPostToSNS',
+        'loadMorePosts', 'loadPosts',
+        'updateBulkActionButtons', 'bulkUpdateVisibility',
+        'savePost', 'updateSinglePost'
+    ];
+
+    toExpose.forEach(name => {
+        try {
+            if (typeof window[name] === 'undefined') {
+                // eslint-disable-next-line no-eval
+                const fn = (typeof eval(name) === 'function') ? eval(name) : null;
+                if (fn) window[name] = fn;
+            }
+        } catch (e) {
+            // ignore
+        }
+    });
+})();
+
 /**
  * さらに投稿を読み込み
  */
@@ -1880,11 +1911,13 @@ function deleteGroupPost(id, title) {
 
     $.ajax({
         url: '/' + ADMIN_PATH + '/api/group_posts.php',
-        type: 'DELETE',
+        type: 'POST',
         data: {
+            _method: 'DELETE',
             csrf_token: $('input[name="csrf_token"]').val(),
             id: id
         },
+        dataType: 'json',
         success: function(response) {
             if (response.success) {
                 alert('グループ投稿を削除しました');
@@ -1893,8 +1926,10 @@ function deleteGroupPost(id, title) {
                 alert('削除に失敗しました: ' + response.error);
             }
         },
-        error: function() {
-            alert('サーバーエラーが発生しました');
+        error: function(xhr) {
+            let msg = 'サーバーエラーが発生しました';
+            if (xhr && xhr.responseJSON && xhr.responseJSON.error) msg = xhr.responseJSON.error;
+            alert(msg);
         }
     });
 }
