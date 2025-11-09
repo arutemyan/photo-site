@@ -12,22 +12,36 @@ import { state, elements } from './state.js';
  */
 export async function loadPersistedState(restoreCanvasState, setStatus) {
     try {
-        // Load current illustration ID from localStorage (if any)
-        const savedId = localStorage.getItem('paint_current_illust_id');
-        if (savedId) {
-            state.currentIllustId = savedId;
-            elements.illustId.textContent = savedId;
+        // Completely remove persisted local-session keys to keep the editor clean
+        // on reload. This removes the apparent "ID stays after reload" behavior.
+        try {
+            localStorage.removeItem('paint_current_illust_id');
+        } catch (e) {
+            console.warn('Failed to remove paint_current_illust_id from localStorage:', e);
+        }
+        try {
+            localStorage.removeItem('paint_canvas_state');
+        } catch (e) {
+            console.warn('Failed to remove paint_canvas_state from localStorage:', e);
+        }
+        // Remove any backup keys created previously (paint_canvas_state_backup_<ts>)
+        try {
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.indexOf('paint_canvas_state_backup_') === 0) {
+                    keysToRemove.push(k);
+                }
+            }
+            keysToRemove.forEach(k => {
+                try { localStorage.removeItem(k); } catch (e) { /* ignore */ }
+            });
+        } catch (e) {
+            console.warn('Failed to sweep backup localStorage keys:', e);
         }
 
-        // Load canvas state from localStorage and restore
-        const savedState = localStorage.getItem('paint_canvas_state');
-        if (savedState) {
-            const canvasState = JSON.parse(savedState);
-            await restoreCanvasState(canvasState);
-            if (setStatus) {
-                setStatus('以前の作業を復元しました');
-            }
-        }
+        // After cleaning, indicate there is no persisted state
+        return false;
     } catch (e) {
         console.error('✗ Failed to load persisted state:', e);
         console.error('Error details:', e.message, e.stack);
@@ -172,6 +186,18 @@ export function setCurrentId(id) {
     if (elements.illustId) {
         elements.illustId.textContent = id;
     }
+    // Show or hide quick-save button depending on whether the record has an ID
+    try {
+        if (elements.btnSave) {
+            if (id) {
+                elements.btnSave.style.display = 'inline-block';
+            } else {
+                elements.btnSave.style.display = 'none';
+            }
+        }
+    } catch (e) {
+        // ignore DOM errors
+    }
 }
 
 /**
@@ -211,7 +237,7 @@ export function captureCanvasState() {
 /**
  * Save illustration to server
  */
-export async function saveIllust(title, description = '', tags = '', setStatus, setCurrentId, updateIllustDisplay) {
+export async function saveIllust(title, description = '', tags = '', setStatus, setCurrentId, updateIllustDisplay, options = {}) {
     if (setStatus) {
         setStatus('保存中...');
     }
@@ -221,7 +247,7 @@ export async function saveIllust(title, description = '', tags = '', setStatus, 
         const illustData = buildIllustData();
         const timelapseData = await compressTimelapseData();
 
-        await sendSaveRequest(title, description, tags, compositeImage, illustData, timelapseData, setStatus, setCurrentId, updateIllustDisplay);
+            await sendSaveRequest(title, description, tags, compositeImage, illustData, timelapseData, setStatus, setCurrentId, updateIllustDisplay, options);
     } catch (error) {
         if (setStatus) {
             setStatus('保存エラー: ' + error.message);
@@ -404,7 +430,7 @@ async function compressTimelapseData() {
 /**
  * Send save request to server
  */
-async function sendSaveRequest(title, description, tags, compositeImage, illustData, timelapseData, setStatus, setCurrentId, updateIllustDisplay) {
+async function sendSaveRequest(title, description, tags, compositeImage, illustData, timelapseData, setStatus, setCurrentId, updateIllustDisplay, options = {}) {
     try {
         const payload = {
             title: title,
@@ -418,6 +444,13 @@ async function sendSaveRequest(title, description, tags, compositeImage, illustD
             timelapse_data: timelapseData,
             id: state.currentIllustId
         };
+        // include optional flags
+            if (options) {
+            if (typeof options.nsfw !== 'undefined') payload.nsfw = options.nsfw ? 1 : 0;
+            if (typeof options.is_visible !== 'undefined') payload.is_visible = options.is_visible ? 1 : 0;
+            // forceNew: if true, ensure we clear id so server creates new record
+            if (options.forceNew) payload.id = null;
+        }
 
         const res = await fetch('api/save.php', {
             method: 'POST',
@@ -503,6 +536,10 @@ export function newIllust(renderLayers, updateIllustDisplay, setStatus) {
     } catch (e) {
         console.error('Failed to clear persisted data:', e);
     }
+    // Hide quick-save button when creating a new blank canvas
+    try {
+        if (elements.btnSave) elements.btnSave.style.display = 'none';
+    } catch (e) {}
 
     if (updateIllustDisplay) {
         updateIllustDisplay();

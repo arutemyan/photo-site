@@ -494,34 +494,69 @@ export function parseTimelapseCSV(csv) {
     const headerLine = lines[0].trim();
     headers = parseCSVLine(headerLine);
 
-    // データ行をパース
-    for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
+    // 2種類の CSV 形式に対応する:
+    // A) ヘッダーがフィールド名の通常の行ベース形式
+    // B) ヘッダーが "0,1,2,..." のような数値インデックスで、各セルに JSON イベント文字列が格納されている形式
+    const numericHeader = headers.length > 0 && headers.every(h => /^\d+$/.test(h));
 
-        const values = parseCSVLine(line);
-        const event = {};
+    if (numericHeader) {
+        // 各行の各セルが JSON 文字列になっているケース
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
 
-        headers.forEach((header, index) => {
-            const value = values[index];
-            if (value !== undefined && value !== '') {
-                event[header] = value;
+            const values = parseCSVLine(line);
+            for (let v of values) {
+                if (!v) continue;
+                // 値は JSON 文字列になっているはずなのでパースを試みる
+                try {
+                    const obj = JSON.parse(v);
+                    events.push(obj);
+                } catch (e) {
+                    // JSON パース失敗なら生文字列を格納（後で検査できるように）
+                    // 例えばダブルクォートのエスケープが甘い等の可能性をここで捕捉
+                    try {
+                        // 引用符が二重になっている場合の救済処理: 内部の "" を " に置換して再試行
+                        const repaired = v.replace(/""/g, '"');
+                        const obj2 = JSON.parse(repaired);
+                        events.push(obj2);
+                    } catch (e2) {
+                        // 最終手段で文字列イベントとして push
+                        events.push({ raw: v });
+                    }
+                }
             }
-        });
-
-        // 数値型に変換
-        if (event.t) event.t = parseFloat(event.t);
-        if (event.x) event.x = parseFloat(event.x);
-        if (event.y) event.y = parseFloat(event.y);
-        if (event.size) event.size = parseFloat(event.size);
-        if (event.layer) event.layer = parseInt(event.layer);
-        // pressure はCSV/JSON経由で文字列になっている場合があるため明示的に数値化
-        if (event.pressure !== undefined && event.pressure !== '') {
-            const p = parseFloat(event.pressure);
-            if (!Number.isNaN(p)) event.pressure = p;
         }
+    } else {
+        // データ行をパース（従来のヘッダー/値マッピング形式）
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
 
-        events.push(event);
+            const values = parseCSVLine(line);
+            const event = {};
+
+            headers.forEach((header, index) => {
+                const value = values[index];
+                if (value !== undefined && value !== '') {
+                    event[header] = value;
+                }
+            });
+
+            // 数値型に変換
+            if (event.t) event.t = parseFloat(event.t);
+            if (event.x) event.x = parseFloat(event.x);
+            if (event.y) event.y = parseFloat(event.y);
+            if (event.size) event.size = parseFloat(event.size);
+            if (event.layer) event.layer = parseInt(event.layer);
+            // pressure はCSV/JSON経由で文字列になっている場合があるため明示的に数値化
+            if (event.pressure !== undefined && event.pressure !== '') {
+                const p = parseFloat(event.pressure);
+                if (!Number.isNaN(p)) event.pressure = p;
+            }
+
+            events.push(event);
+        }
     }
 
     // Parsed drawing events
@@ -542,7 +577,15 @@ export function parseCSVLine(line) {
         const char = line[i];
 
         if (char === '"') {
-            inQuotes = !inQuotes;
+            // Handle escaped double quotes inside quoted fields: "" -> literal "
+            if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+                // append a single quote and skip the escape
+                current += '"';
+                i++; // skip next quote
+            } else {
+                // toggle quote state
+                inQuotes = !inQuotes;
+            }
         } else if (char === ',' && !inQuotes) {
             values.push(current);
             current = '';

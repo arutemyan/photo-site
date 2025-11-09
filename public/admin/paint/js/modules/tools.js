@@ -92,7 +92,7 @@ export const ColorUtils = {
 
 /**
  * Set current drawing tool
- * @param {string} tool - Tool name ('pen', 'eraser', 'bucket', 'eyedropper')
+ * @param {string} tool - Tool name ('pen', 'eraser', 'bucket', 'eyedropper', 'watercolor')
  * @param {Function} updateStatusBar - Callback to update status bar
  */
 export function setTool(tool, updateStatusBar) {
@@ -113,10 +113,13 @@ export function setTool(tool, updateStatusBar) {
     if (elements.bucketSettings) {
         elements.bucketSettings.classList.toggle('hidden', tool !== 'bucket');
     }
+    if (elements.watercolorSettings) {
+        elements.watercolorSettings.classList.toggle('hidden', tool !== 'watercolor');
+    }
 
     // Update cursor
     state.layers.forEach(canvas => {
-        if (tool === 'pen' || tool === 'eraser') {
+        if (tool === 'pen' || tool === 'eraser' || tool === 'watercolor') {
             canvas.style.cursor = 'crosshair';
         } else if (tool === 'bucket') {
             canvas.style.cursor = 'pointer';
@@ -226,6 +229,32 @@ function initToolSettings() {
             }
         });
     }
+
+    // Watercolor settings
+    if (elements.watercolorMaxSize) {
+        elements.watercolorMaxSize.addEventListener('input', (e) => {
+            state.watercolorMaxSize = parseInt(e.target.value);
+            if (elements.watercolorMaxSizeValue) {
+                elements.watercolorMaxSizeValue.textContent = state.watercolorMaxSize;
+            }
+        });
+    }
+    if (elements.watercolorHardness) {
+        elements.watercolorHardness.addEventListener('input', (e) => {
+            state.watercolorHardness = parseInt(e.target.value);
+            if (elements.watercolorHardnessValue) {
+                elements.watercolorHardnessValue.textContent = state.watercolorHardness;
+            }
+        });
+    }
+    if (elements.watercolorOpacity) {
+        elements.watercolorOpacity.addEventListener('input', (e) => {
+            state.watercolorOpacity = parseInt(e.target.value) / 100;
+            if (elements.watercolorOpacityValue) {
+                elements.watercolorOpacityValue.textContent = parseInt(e.target.value);
+            }
+        });
+    }
 }
 
 /**
@@ -309,25 +338,31 @@ function handleDrawStart(e, layerIndex, recordTimelapse, pushUndo, setColor) {
     state.isDrawing = true;
 
     // Start drawing
-    ctx.beginPath();
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    if (state.currentTool === 'watercolor') {
+        // Watercolor brush uses different drawing method
+        drawWatercolorBrush(ctx, pos.x, pos.y, getPressure(e));
+        state.lastWatercolorPos = pos;
+    } else {
+        ctx.beginPath();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
 
-    if (state.currentTool === 'pen') {
-        // apply pressure to line width if available
-        const pressure = getPressure(e);
-        state.lastPressure = pressure;
-        ctx.lineWidth = Math.max(1, state.penSize * (0.2 + 0.8 * pressure));
-        ctx.strokeStyle = state.currentColor;
-        ctx.globalCompositeOperation = 'source-over';
-    } else if (state.currentTool === 'eraser') {
-        const pressure = getPressure(e);
-        state.lastPressure = pressure;
-        ctx.lineWidth = Math.max(1, state.eraserSize * (0.2 + 0.8 * pressure));
-        ctx.globalCompositeOperation = 'destination-out';
+        if (state.currentTool === 'pen') {
+            // apply pressure to line width if available
+            const pressure = getPressure(e);
+            state.lastPressure = pressure;
+            ctx.lineWidth = Math.max(1, state.penSize * (0.2 + 0.8 * pressure));
+            ctx.strokeStyle = state.currentColor;
+            ctx.globalCompositeOperation = 'source-over';
+        } else if (state.currentTool === 'eraser') {
+            const pressure = getPressure(e);
+            state.lastPressure = pressure;
+            ctx.lineWidth = Math.max(1, state.eraserSize * (0.2 + 0.8 * pressure));
+            ctx.globalCompositeOperation = 'destination-out';
+        }
+
+        ctx.moveTo(pos.x, pos.y);
     }
-
-    ctx.moveTo(pos.x, pos.y);
 
     // Record timelapse
     if (recordTimelapse) {
@@ -338,9 +373,13 @@ function handleDrawStart(e, layerIndex, recordTimelapse, pushUndo, setColor) {
             x: pos.x,
             y: pos.y,
             color: state.currentColor,
-            size: ctx.lineWidth,
+            size: state.currentTool === 'watercolor' ? state.watercolorMaxSize : ctx.lineWidth,
             pressure: state.lastPressure,
-            tool: state.currentTool
+            tool: state.currentTool,
+            ...(state.currentTool === 'watercolor' ? {
+                watercolorHardness: state.watercolorHardness,
+                watercolorOpacity: state.watercolorOpacity
+            } : {})
         });
     }
 }
@@ -354,28 +393,61 @@ function handleDrawMove(e, recordTimelapse) {
     const pos = getPointerPos(e, state.layers[state.activeLayer]);
     const ctx = state.contexts[state.activeLayer];
 
-    // apply dynamic pressure-based width
-    const pressure = getPressure(e);
-    // smoothing to avoid jitter
-    const smooth = (state.lastPressure * 0.6) + (pressure * 0.4);
-    state.lastPressure = smooth;
-    if (state.currentTool === 'pen') {
-        ctx.lineWidth = Math.max(1, state.penSize * (0.2 + 0.8 * smooth));
-    } else if (state.currentTool === 'eraser') {
-        ctx.lineWidth = Math.max(1, state.eraserSize * (0.2 + 0.8 * smooth));
+    if (state.currentTool === 'watercolor') {
+        // Interpolate between last position and current position
+        const lastPos = state.lastWatercolorPos || pos;
+        const dist = Math.sqrt(Math.pow(pos.x - lastPos.x, 2) + Math.pow(pos.y - lastPos.y, 2));
+        const steps = Math.max(1, Math.ceil(dist / 2)); // Draw every 2 pixels for smooth stroke
+
+        // Sample and draw every ~2px (matches live drawing)
+        const samplePressure = getPressure(e);
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const x = lastPos.x + (pos.x - lastPos.x) * t;
+            const y = lastPos.y + (pos.y - lastPos.y) * t;
+            drawWatercolorBrush(ctx, x, y, samplePressure);
+
+            // Record each sampled point so timelapse has the same density and pressure
+            // as the live drawing. We include pressure so playback can reproduce
+            // pressured radius per-sample.
+            if (recordTimelapse) {
+                recordTimelapse({
+                    t: Date.now(),
+                    type: 'move',
+                    layer: state.activeLayer,
+                    x: x,
+                    y: y,
+                    pressure: samplePressure
+                });
+            }
+        }
+
+        state.lastWatercolorPos = pos;
+    } else {
+        // apply dynamic pressure-based width
+        const pressure = getPressure(e);
+        // smoothing to avoid jitter
+        const smooth = (state.lastPressure * 0.6) + (pressure * 0.4);
+        state.lastPressure = smooth;
+        if (state.currentTool === 'pen') {
+            ctx.lineWidth = Math.max(1, state.penSize * (0.2 + 0.8 * smooth));
+        } else if (state.currentTool === 'eraser') {
+            ctx.lineWidth = Math.max(1, state.eraserSize * (0.2 + 0.8 * smooth));
+        }
+
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
     }
 
-    ctx.lineTo(pos.x, pos.y);
-    ctx.stroke();
-
-    if (recordTimelapse) {
+    // For watercolor, moves have already been recorded per-sample above.
+    if (recordTimelapse && state.currentTool !== 'watercolor') {
         recordTimelapse({
             t: Date.now(),
             type: 'move',
             layer: state.activeLayer,
             x: pos.x,
-            y: pos.y
-            ,pressure: state.lastPressure
+            y: pos.y,
+            pressure: state.lastPressure
         });
     }
 }
@@ -564,4 +636,55 @@ function colorMatch(c1, c2, tolerance) {
     return Math.abs(c1.r - c2.r) <= tolerance &&
         Math.abs(c1.g - c2.g) <= tolerance &&
         Math.abs(c1.b - c2.b) <= tolerance;
+}
+
+/**
+ * Draw watercolor brush with alpha gradient
+ * @param {CanvasRenderingContext2D} ctx - Canvas context
+ * @param {number} x - X position
+ * @param {number} y - Y position
+ * @param {number} pressure - Pen pressure (0-1)
+ */
+function drawWatercolorBrush(ctx, x, y, pressure) {
+    const maxRadius = state.watercolorMaxSize / 2;
+    const hardness = state.watercolorHardness / 100; // 0-1: 0=soft, 1=hard
+    const baseOpacity = state.watercolorOpacity || 0.3;
+
+    // Apply pressure to size if pressure is enabled
+    const pressuredMaxRadius = maxRadius * (0.5 + 0.5 * pressure);
+
+    // Parse current color to get RGB values
+    const colorRgb = ColorUtils.hexToRgb(state.currentColor);
+    if (!colorRgb) return;
+
+    // Create radial gradient from center to edge
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, pressuredMaxRadius);
+
+    // Hardness controls where the opacity starts to decay
+    // hardness = 1.0 (100%): maintain opacity until 80% of radius (sharp edge)
+    // hardness = 0.0 (0%): start decaying immediately from center (soft edge)
+    const solidStop = hardness * 0.8;
+
+    // Center to solidStop: maintain base opacity
+    gradient.addColorStop(0, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${baseOpacity})`);
+    if (solidStop > 0) {
+        gradient.addColorStop(solidStop, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${baseOpacity})`);
+    }
+
+    // Add a mid-point for smoother transition
+    const midStop = solidStop + (1 - solidStop) * 0.5;
+    const midOpacity = baseOpacity * 0.3;
+    gradient.addColorStop(midStop, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${midOpacity})`);
+
+    // Edge: transparent
+    gradient.addColorStop(1, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, 0)`);
+
+    // Draw circle with gradient
+    ctx.save();
+    ctx.fillStyle = gradient;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.beginPath();
+    ctx.arc(x, y, pressuredMaxRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
 }

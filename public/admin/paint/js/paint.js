@@ -105,7 +105,7 @@ async function initCanvas() {
         canvas.style.zIndex = i;
     });
 
-    // Load persisted state
+    // Load persisted state (do not auto-restore; no manual restore button present)
     await loadPersistedState(restoreCanvasStateWrapper, setStatus);
 }
 
@@ -190,6 +190,7 @@ function initHeaderButtons() {
             newIllust(renderLayersWrapper, updateIllustDisplay, setStatus);
         });
     }
+    
     if (elements.btnClear) {
         elements.btnClear.addEventListener('click', clearCurrentLayer);
     }
@@ -273,6 +274,9 @@ function initKeyboardShortcuts() {
                 case 'i':
                     setTool('eyedropper', updateStatusBar);
                     break;
+                case 'w':
+                    setTool('watercolor', updateStatusBar);
+                    break;
             }
         }
     });
@@ -291,7 +295,8 @@ function updateStatusBar() {
         pen: 'ペン',
         eraser: '消しゴム',
         bucket: '塗りつぶし',
-        eyedropper: 'スポイト'
+        eyedropper: 'スポイト',
+        watercolor: '水彩ブラシ'
     };
 
     if (elements.statusTool) {

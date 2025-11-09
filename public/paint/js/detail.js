@@ -24,6 +24,7 @@ export async function initTimelapse(illustId) {
             hideTimelapseSection();
             return;
         }
+        console.debug('initTimelapse: response format=', data.format, 'keys=', Object.keys(data));
         
         let frames = [];
         
@@ -38,11 +39,12 @@ export async function initTimelapse(illustId) {
         
     // Parsed frames count
         
-        if (frames.length === 0) {
+        if (!Array.isArray(frames) || frames.length === 0) {
             console.warn('No frames found');
             hideTimelapseSection();
             return;
         }
+        console.debug('initTimelapse: parsed frames count=', frames.length);
         
         // 重いタイムラプスの警告（1000フレーム以上）
         if (frames.length > 1000) {
@@ -55,8 +57,9 @@ export async function initTimelapse(illustId) {
             setTimeout(() => warningDiv.remove(), 5000);
         }
         
-        showTimelapseSection();
-        timelapsePlayer = new TimelapsePlayer('timelapseCanvas', frames);
+    // Prepare player but do NOT automatically show the overlay or autoplay.
+    timelapsePlayer = new TimelapsePlayer('timelapseCanvas', frames);
+    return true;
         
     } catch (error) {
         console.error('Timelapse initialization error:', error);
@@ -69,10 +72,11 @@ export async function initTimelapse(illustId) {
  * タイムラプスセクションを表示
  */
 function showTimelapseSection() {
-    // The detail page uses an overlay with id 'timelapseOverlay'. Show that.
+    // The detail page uses an overlay with id 'timelapseOverlay'. Show that by
+    // adding the 'show' class so CSS transitions and layout apply consistently
     const overlay = document.getElementById('timelapseOverlay');
     if (overlay) {
-        overlay.style.display = 'block';
+        overlay.classList.add('show');
     }
 }
 
@@ -83,7 +87,7 @@ function hideTimelapseSection() {
     // Hide the overlay used on the detail page
     const overlay = document.getElementById('timelapseOverlay');
     if (overlay) {
-        overlay.style.display = 'none';
+        overlay.classList.remove('show');
     }
 }
 
@@ -117,14 +121,24 @@ function toggleIgnoreTimestamps(ignore) {
 /**
  * オーバーレイを開く
  */
-function openTimelapseOverlay() {
+async function openTimelapseOverlay(illustId) {
     const overlay = document.getElementById('timelapseOverlay');
+
+    // If player not initialized, initialize but do not autoplay
+    try {
+        if (!timelapsePlayer && typeof initTimelapse === 'function') {
+            await initTimelapse(illustId);
+        }
+    } catch (e) {
+        console.error('Failed to initialize timelapse on overlay open:', e);
+    }
+
     if (overlay) {
         overlay.classList.add('show');
         if (timelapsePlayer) {
-            // プレイヤーをリセット（最初から再生できるように）
+            // Reset player so it's ready to play when user presses play
             timelapsePlayer.reset();
-            // キャンバスの表示サイズを調整
+            // Adjust canvas display size
             resizeCanvas();
         }
     }

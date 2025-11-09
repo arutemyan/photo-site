@@ -43,6 +43,8 @@ try {
                 i.thumbnail_path as thumb_path,
                 i.data_path,
                 i.timelapse_path,
+                i.nsfw,
+                i.is_visible,
                 i.canvas_width as width,
                 i.canvas_height as height,
                 i.created_at,
@@ -175,13 +177,14 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
     <div class="detail-container">
         <div class="detail-card">
             <!-- イラスト画像 -->
-            <div class="detail-image-wrapper">
-                <img 
-                    src="<?= escapeHtml($illust['image_path']) ?>" 
-                    alt="<?= escapeHtml($illust['title']) ?>"
-                    class="detail-image"
-                >
-            </div>
+                <div id="detailImageContainer" class="detail-image-wrapper">
+                    <img 
+                        id="detailImage"
+                        src="<?= escapeHtml($illust['image_path']) ?>" 
+                        alt="<?= escapeHtml($illust['title']) ?>"
+                        class="detail-image"
+                    >
+                </div>
             
             <!-- イラスト情報 -->
             <div class="detail-content">
@@ -208,6 +211,25 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
                     </div>
                 </div>
                 
+                <?php
+                // NSFW handling: if the illust is marked nsfw, show a warning box and hide the image/timelapse
+                $isNsfw = !empty($illust['nsfw']);
+                $isVisible = isset($illust['is_visible']) ? (int)$illust['is_visible'] : 1;
+                ?>
+
+                <?php if ($isNsfw): ?>
+                <div id="nsfwWarning" class="nsfw-warning" style="margin:16px 0;padding:12px;border-radius:8px;background:#fff3f3;border:1px solid #ffcccc;color:#800;">
+                    <strong>警告: NSFW コンテンツ</strong>
+                    <div style="margin-top:8px;color:#333;">この作品は成人向け（NSFW）にマークされています。表示する場合は下の「表示する」ボタンを押してください。</div>
+                    <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+                        <button id="btnShowNsfw" class="action-btn primary">表示する</button>
+                        <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.9em;color:#444;">
+                            <input type="checkbox" id="rememberShowNsfw"> 今後この設定を記憶する
+                        </label>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <?php if (!empty($illust['detail'])): ?>
                 <div class="detail-description">
                     <?= nl2br(escapeHtml($illust['detail'])) ?>
@@ -226,7 +248,7 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
                 
                 <div class="detail-actions">
                     <?php if (!empty($illust['timelapse_path'])): ?>
-                    <button class="action-btn" onclick="openTimelapseOverlay()">
+                    <button class="action-btn" id="btnOpenTimelapse" onclick="openTimelapseOverlay(<?= $id ?>)">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polygon points="5 3 19 12 5 21 5 3"></polygon>
                         </svg>
@@ -301,11 +323,52 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
     
     <!-- JavaScript -->
     <?php echo \App\Utils\AssetHelper::scriptTag('/paint/js/detail.js'); ?>
-    <?php if (!empty($illust['timelapse_path'])): ?>
+    <?php if (!empty($illust['timelapse_path']) || $isNsfw): ?>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            if (typeof initTimelapse === 'function') {
-                initTimelapse(<?= $id ?>);
+            // NSFW handling: hide image and timelapse controls unless user permits
+            const isNsfw = <?= $isNsfw ? 'true' : 'false' ?>;
+            const btnShow = document.getElementById('btnShowNsfw');
+            const img = document.getElementById('detailImage');
+            const imageContainer = document.getElementById('detailImageContainer');
+            const timelapseBtn = document.getElementById('btnOpenTimelapse');
+
+            function revealNsfw(savePref) {
+                if (imageContainer) imageContainer.style.display = '';
+                if (timelapseBtn) timelapseBtn.style.display = '';
+                const warning = document.getElementById('nsfwWarning');
+                if (warning) warning.style.display = 'none';
+                if (savePref) {
+                    try { localStorage.setItem('show_nsfw', '1'); } catch (e) {}
+                }
+            }
+
+            // If not NSFW, nothing to do
+            if (!isNsfw) return;
+
+            // If user has saved preference to show NSFW, reveal immediately
+            try {
+                if (localStorage.getItem('show_nsfw') === '1') {
+                    revealNsfw(false);
+                    return;
+                }
+            } catch (e) { /* ignore */ }
+
+            // Otherwise hide image and timelapse button until user confirms
+            if (imageContainer) imageContainer.style.display = 'none';
+            if (timelapseBtn) timelapseBtn.style.display = 'none';
+
+            if (btnShow) {
+                btnShow.addEventListener('click', () => {
+                    const remember = document.getElementById('rememberShowNsfw');
+                    revealNsfw(remember && remember.checked);
+                });
+            }
+
+            // Replace openTimelapseOverlay usage so it lazily loads timelapse only on button click
+            if (timelapseBtn) {
+                // ensure the button will call the global function with the id (button already has inline onclick as fallback)
+                // nothing else required here
             }
         });
     </script>

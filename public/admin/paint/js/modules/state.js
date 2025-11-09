@@ -18,7 +18,11 @@ export const state = {
     penSize: CONFIG.TOOLS.PEN_SIZE,
     eraserSize: CONFIG.TOOLS.ERASER_SIZE,
     bucketTolerance: CONFIG.TOOLS.BUCKET_TOLERANCE,
+    watercolorMaxSize: 40,
+    watercolorHardness: 50, // 0-100: 0=soft/gradual decay, 100=hard/sharp edge
+    watercolorOpacity: 0.3,
     isDrawing: false,
+    lastWatercolorPos: null,
 
     // History
     undoStacks: Array(CONFIG.CANVAS.LAYER_COUNT).fill().map(() => []),
@@ -110,9 +114,16 @@ export const elements = {
     eraserSizeValue: null,
     bucketTolerance: null,
     bucketToleranceValue: null,
+    watercolorMaxSize: null,
+    watercolorMaxSizeValue: null,
+    watercolorHardness: null,
+    watercolorHardnessValue: null,
+    watercolorOpacity: null,
+    watercolorOpacityValue: null,
     penSettings: null,
     eraserSettings: null,
     bucketSettings: null,
+    watercolorSettings: null,
 
     // Layers
     layersList: null,
@@ -234,9 +245,16 @@ export function initializeElements() {
     elements.eraserPressureValue = document.getElementById('eraser-pressure-value');
     elements.bucketTolerance = document.getElementById('bucket-tolerance');
     elements.bucketToleranceValue = document.getElementById('bucket-tolerance-value');
+    elements.watercolorMaxSize = document.getElementById('watercolor-max-size');
+    elements.watercolorMaxSizeValue = document.getElementById('watercolor-max-size-value');
+    elements.watercolorHardness = document.getElementById('watercolor-hardness');
+    elements.watercolorHardnessValue = document.getElementById('watercolor-hardness-value');
+    elements.watercolorOpacity = document.getElementById('watercolor-opacity');
+    elements.watercolorOpacityValue = document.getElementById('watercolor-opacity-value');
     elements.penSettings = document.getElementById('pen-settings');
     elements.eraserSettings = document.getElementById('eraser-settings');
     elements.bucketSettings = document.getElementById('bucket-settings');
+    elements.watercolorSettings = document.getElementById('watercolor-settings');
 
     // Layers
     elements.layersList = document.getElementById('layers-list');
@@ -262,6 +280,14 @@ export function initializeElements() {
     elements.saveModalOverlay = document.getElementById('save-modal-overlay');
     elements.saveModalCancel = document.getElementById('save-modal-cancel');
     elements.saveModalSave = document.getElementById('save-modal-save');
+    elements.saveTitle = document.getElementById('save-title');
+    elements.saveDescription = document.getElementById('save-description');
+    elements.saveTags = document.getElementById('save-tags');
+    elements.saveNsfw = document.getElementById('save-nsfw');
+    elements.saveVisible = document.getElementById('save-visible');
+    elements.saveModeGroup = document.getElementById('save-mode-group');
+    elements.saveModeNew = document.getElementById('save-mode-new');
+    elements.saveModeOverwrite = document.getElementById('save-mode-overwrite');
     elements.saveTitle = document.getElementById('save-title');
     elements.saveDescription = document.getElementById('save-description');
     elements.saveTags = document.getElementById('save-tags');

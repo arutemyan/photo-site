@@ -29,7 +29,9 @@ class IllustService
         // validate .illust
         $illust = IllustFile::validate($payload['illust_json']);
 
-        $userId = (int)$payload['user_id'];
+    $userId = (int)$payload['user_id'];
+    $nsfw = isset($payload['nsfw']) ? (int)$payload['nsfw'] : 0;
+    $isVisible = isset($payload['is_visible']) ? (int)$payload['is_visible'] : 1;
 
         // Determine if this is an update (id provided) or create
         $isUpdate = !empty($payload['id']);
@@ -52,9 +54,14 @@ class IllustService
                     throw new \RuntimeException('Permission denied');
                 }
             } else {
-                // generate id by inserting DB record placeholder
-                $stmt = $this->db->prepare('INSERT INTO paint (user_id, title) VALUES (:user_id, :title)');
-                $stmt->execute([':user_id' => $userId, ':title' => $payload['title'] ?? '']);
+                // generate id by inserting DB record placeholder; include nsfw/visibility
+                $stmt = $this->db->prepare('INSERT INTO paint (user_id, title, nsfw, is_visible) VALUES (:user_id, :title, :nsfw, :is_visible)');
+                $stmt->execute([
+                    ':user_id' => $userId,
+                    ':title' => $payload['title'] ?? '',
+                    ':nsfw' => $nsfw,
+                    ':is_visible' => $isVisible
+                ]);
                 $id = (int)$this->db->lastInsertId();
             }
 
@@ -347,7 +354,7 @@ class IllustService
             }
 
             // update DB row with paths and sizes
-            $update = $this->db->prepare('UPDATE paint SET title = :title, description = :description, tags = :tags, data_path = :data_path, image_path = :image_path, thumbnail_path = :thumbnail_path, timelapse_path = :timelapse_path, file_size = :file_size WHERE id = :id');
+            $update = $this->db->prepare('UPDATE paint SET title = :title, description = :description, tags = :tags, data_path = :data_path, image_path = :image_path, thumbnail_path = :thumbnail_path, timelapse_path = :timelapse_path, file_size = :file_size, nsfw = :nsfw, is_visible = :is_visible WHERE id = :id');
             $update->execute([
                 ':title' => $payload['title'] ?? '',
                 ':description' => $payload['description'] ?? '',
@@ -357,6 +364,8 @@ class IllustService
                 ':thumbnail_path' => (file_exists($thumbPath) ? $this->toPublicPath($thumbPath) : null),
                 ':timelapse_path' => file_exists($timelapsePath) ? $this->toPublicPath($timelapsePath) : null,
                 ':file_size' => filesize($dataPath) ?: 0,
+                ':nsfw' => $nsfw,
+                ':is_visible' => $isVisible,
                 ':id' => $id,
             ]);
 

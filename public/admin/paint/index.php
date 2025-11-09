@@ -55,13 +55,13 @@ try {
 
     <div class="header-center">
         <button class="header-btn secondary" id="btn-new">新規作成</button>
-        <button class="header-btn secondary" id="btn-open">開く</button>
+    <button class="header-btn secondary" id="btn-open">開く</button>
         <button class="header-btn secondary" id="btn-clear">クリア</button>
         <button class="header-btn secondary" id="btn-resize">サイズ変更</button>
     </div>
 
     <div class="header-right">
-        <button class="header-btn" id="btn-save">保存</button>
+    <button class="header-btn" id="btn-save" style="display:none;">保存</button>
         <button class="header-btn secondary" id="btn-save-as">名前を付けて保存</button>
         <button class="header-btn secondary" id="btn-timelapse">タイムラプス</button>
         <button class="header-btn secondary" id="btn-export">エクスポート</button>
@@ -77,10 +77,11 @@ try {
 
     <!-- Toolbar (Vertical) -->
     <div class="toolbar">
-        <button class="tool-btn active" id="tool-pen" title="ペン" data-tool="pen">🖊️</button>
-        <button class="tool-btn" id="tool-eraser" title="消しゴム" data-tool="eraser">🧽</button>
-        <button class="tool-btn" id="tool-bucket" title="塗りつぶし" data-tool="bucket">🪣</button>
-        <button class="tool-btn" id="tool-eyedropper" title="スポイト" data-tool="eyedropper">💧</button>
+        <button class="tool-btn active" id="tool-pen" title="ペン (P)" data-tool="pen">🖊️</button>
+        <button class="tool-btn" id="tool-eraser" title="消しゴム (E)" data-tool="eraser">🧽</button>
+        <button class="tool-btn" id="tool-watercolor" title="水彩ブラシ (W)" data-tool="watercolor">🎨</button>
+        <button class="tool-btn" id="tool-bucket" title="塗りつぶし (B)" data-tool="bucket">🪣</button>
+        <button class="tool-btn" id="tool-eyedropper" title="スポイト (I)" data-tool="eyedropper">💧</button>
 
         <div class="tool-separator"></div>
 
@@ -210,6 +211,29 @@ try {
                         許容値: <span class="setting-value" id="bucket-tolerance-value">32</span>
                     </label>
                     <input type="range" id="bucket-tolerance" class="setting-slider" min="0" max="255" value="32">
+                </div>
+            </div>
+
+            <div id="watercolor-settings" class="tool-settings-group hidden">
+                <div class="setting-row">
+                    <label class="setting-label">
+                        サイズ: <span class="setting-value" id="watercolor-max-size-value">40</span>px
+                    </label>
+                    <input type="range" id="watercolor-max-size" class="setting-slider" min="5" max="200" value="40">
+                </div>
+
+                <div class="setting-row">
+                    <label class="setting-label">
+                        硬さ: <span class="setting-value" id="watercolor-hardness-value">50</span>%
+                    </label>
+                    <input type="range" id="watercolor-hardness" class="setting-slider" min="0" max="100" value="50">
+                </div>
+
+                <div class="setting-row">
+                    <label class="setting-label">
+                        不透明度: <span class="setting-value" id="watercolor-opacity-value">30</span>%
+                    </label>
+                    <input type="range" id="watercolor-opacity" class="setting-slider" min="1" max="100" value="30">
                 </div>
             </div>
             </div>
@@ -472,6 +496,21 @@ try {
             <div class="form-group">
                 <label for="save-tags">タグ (オプション)</label>
                 <input type="text" id="save-tags" placeholder="タグをカンマ区切りで入力 (例: 風景, 人物, イラスト)" maxlength="200">
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="save-nsfw"> NSFW（成人向け）</label>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="save-visible" checked> 公開（表示する）</label>
+            </div>
+            <div class="form-group" id="save-mode-group" style="display:none;">
+                <label>保存方法</label>
+                <div>
+                    <label><input type="radio" name="save-mode" value="new" id="save-mode-new" checked> 新規として保存</label>
+                </div>
+                <div>
+                    <label><input type="radio" name="save-mode" value="overwrite" id="save-mode-overwrite"> 上書き保存</label>
+                </div>
             </div>
         </div>
         <div class="modal-actions">

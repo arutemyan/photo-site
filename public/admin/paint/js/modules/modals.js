@@ -252,9 +252,26 @@ function initSaveModal(saveIllust) {
                 return;
             }
 
+            // Determine options: NSFW and visibility
+            const nsfw = !!(elements.saveNsfw && elements.saveNsfw.checked);
+            const isVisible = !!(elements.saveVisible && elements.saveVisible.checked);
+
+            // Determine save mode: when an existing illust is loaded, show choice in modal
+            let forceNew = false;
+            if (elements.saveModeGroup && elements.saveModeGroup.style.display !== 'none') {
+                // If radio present, check selection
+                if (elements.saveModeOverwrite && elements.saveModeOverwrite.checked) {
+                    forceNew = false;
+                } else {
+                    // default to new
+                    forceNew = true;
+                }
+            }
+
             closeSaveModal();
             if (saveIllust) {
-                saveIllust(title, description, tags);
+                // pass options as last param
+                saveIllust(title, description, tags, undefined, undefined, undefined, { nsfw, is_visible: isVisible, forceNew });
             }
         });
     }
@@ -277,6 +294,21 @@ export function openSaveModal() {
     elements.saveDescription.value = state.currentIllustDescription || '';
     elements.saveTags.value = state.currentIllustTags || '';
     elements.saveTitle.focus();
+
+    // If there is an existing saved illustration, allow user to choose new vs overwrite
+    try {
+        if (elements.saveModeGroup) {
+            if (state.currentIllustId) {
+                elements.saveModeGroup.style.display = '';
+            } else {
+                elements.saveModeGroup.style.display = 'none';
+            }
+        }
+        // default NSFW/visible to unchecked/checked
+        if (elements.saveNsfw) elements.saveNsfw.checked = false;
+        if (elements.saveVisible) elements.saveVisible.checked = true;
+        if (elements.saveModeNew) elements.saveModeNew.checked = true;
+    } catch (e) {}
 }
 
 /**
