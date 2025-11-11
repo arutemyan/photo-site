@@ -182,7 +182,8 @@ export class TimelapsePlayer {
                 if (!el) continue;
                 const visible = el.style && el.style.display === 'none' ? false : true;
                 const opacity = el.style && el.style.opacity ? parseFloat(el.style.opacity) : 1;
-                this.layerStates[i] = { visible: !!visible, opacity: typeof opacity === 'number' ? opacity : 1 };
+                const blendMode = (el.dataset && el.dataset.blendMode) ? el.dataset.blendMode : (el.style && el.style.mixBlendMode ? el.style.mixBlendMode : 'source-over');
+                this.layerStates[i] = { visible: !!visible, opacity: typeof opacity === 'number' ? opacity : 1, blendMode: blendMode };
             }
 
             // Set layerOrder according to editor state. Assume editor.state.layers is
@@ -235,23 +236,39 @@ export class TimelapsePlayer {
         if (this.layerOrder && this.layerOrder.length > 0) {
             for (const li of this.layerOrder) {
                 const layerCanvas = this.layerCanvases[li];
-                const st = this.layerStates[li] || { visible: true, opacity: 1 };
+                const st = this.layerStates[li] || { visible: true, opacity: 1, blendMode: 'source-over' };
                 if (!layerCanvas) continue;
                 if (st.visible === false) continue;
+                // apply per-layer blend mode if provided
+                const mode = st.blendMode || 'source-over';
+                try {
+                    this.ctx.globalCompositeOperation = mode;
+                } catch (e) {
+                    this.ctx.globalCompositeOperation = 'source-over';
+                }
                 this.ctx.globalAlpha = typeof st.opacity === 'number' ? st.opacity : 1;
                 this.ctx.drawImage(layerCanvas, 0, 0, this.canvas.width, this.canvas.height);
+                // reset to defaults
                 this.ctx.globalAlpha = 1;
+                this.ctx.globalCompositeOperation = 'source-over';
             }
         } else {
             // fallback: natural order
             for (let li = 0; li < this.layerCanvases.length; li++) {
                 const layerCanvas = this.layerCanvases[li];
-                const st = this.layerStates[li] || { visible: true, opacity: 1 };
+                const st = this.layerStates[li] || { visible: true, opacity: 1, blendMode: 'source-over' };
                 if (!layerCanvas) continue;
                 if (st.visible === false) continue;
+                const mode = st.blendMode || 'source-over';
+                try {
+                    this.ctx.globalCompositeOperation = mode;
+                } catch (e) {
+                    this.ctx.globalCompositeOperation = 'source-over';
+                }
                 this.ctx.globalAlpha = typeof st.opacity === 'number' ? st.opacity : 1;
                 this.ctx.drawImage(layerCanvas, 0, 0, this.canvas.width, this.canvas.height);
                 this.ctx.globalAlpha = 1;
+                this.ctx.globalCompositeOperation = 'source-over';
             }
         }
     }
@@ -394,6 +411,18 @@ export class TimelapsePlayer {
                 }
             } catch (e) {
                 console.warn('Failed to apply reorder frame:', e);
+            }
+            this.compositeToMain();
+        } else if (frame.type === 'blend') {
+            try {
+                const li = Number(frame.layer);
+                if (!Number.isNaN(li)) {
+                    if (!this.layerStates[li]) this.layerStates[li] = { visible: true, opacity: 1 };
+                    // store the blendMode value (string like 'overlay','screen','lighter','multiply','source-over')
+                    this.layerStates[li].blendMode = frame.blend || 'source-over';
+                }
+            } catch (e) {
+                console.warn('Failed to apply blend frame:', e);
             }
             this.compositeToMain();
         } else if (frame.type === 'visibility') {

@@ -188,6 +188,45 @@ export function renderLayers(updateStatusBar, setStatus) {
             row2.appendChild(opacity);
             row2.appendChild(opacityValue);
 
+            // Blend mode selector
+            const blendLabel = document.createElement('span');
+            blendLabel.textContent = '合成:';
+            blendLabel.style.fontSize = '11px';
+            blendLabel.style.color = '#666';
+            blendLabel.style.marginLeft = '8px';
+            blendLabel.style.flexShrink = '0';
+
+            const blendSelect = document.createElement('select');
+            blendSelect.className = 'layer-blend';
+            blendSelect.style.fontSize = '12px';
+            blendSelect.style.marginLeft = '4px';
+            blendSelect.title = 'レイヤー合成モード';
+
+            const blendOptions = [
+                { value: 'source-over', label: '通常' },
+                { value: 'overlay', label: 'オーバーレイ' },
+                { value: 'screen', label: 'スクリーン' },
+                { value: 'lighter', label: '加算' },
+                { value: 'multiply', label: '乗算' }
+            ];
+
+            blendOptions.forEach(opt => {
+                const o = document.createElement('option');
+                o.value = opt.value;
+                o.textContent = opt.label;
+                blendSelect.appendChild(o);
+            });
+
+            // Initialize from canvas dataset or default
+            const currentBlend = layer.dataset && layer.dataset.blendMode ? layer.dataset.blendMode : 'source-over';
+            blendSelect.value = currentBlend;
+            blendSelect.addEventListener('change', (e) => {
+                setLayerBlendMode(layerIndex, e.target.value);
+            });
+
+            row2.appendChild(blendLabel);
+            row2.appendChild(blendSelect);
+
             // === Row 3: Spacer + Layer Menu Button ===
             const row3 = document.createElement('div');
             row3.className = 'layer-row layer-row-3';
@@ -337,6 +376,29 @@ export function setLayerOpacity(index, opacity) {
         }
     } catch (e) {
         console.warn('Failed to record opacity change for timelapse:', e);
+    }
+}
+
+/**
+ * Set layer blend/composite mode
+ */
+export function setLayerBlendMode(index, blendMode) {
+    if (index < 0 || index >= state.layers.length) return;
+    const canvas = state.layers[index];
+    try {
+        // store mode on dataset for persistence in DOM
+        canvas.dataset = canvas.dataset || {};
+        canvas.dataset.blendMode = blendMode;
+
+        // record the change for timelapse playback
+        if (typeof recordTimelapse === 'function') {
+            recordTimelapse({ t: Date.now(), type: 'blend', layer: index, blend: blendMode });
+            if (typeof createTimelapseSnapshotPublic === 'function') {
+                createTimelapseSnapshotPublic();
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to set layer blend mode:', e);
     }
 }
 

@@ -155,11 +155,12 @@ export function convertEventsToStrokes(events) {
                 endTime: event.t !== undefined ? event.t : lastEventTime
             });
             if (event.t !== undefined) lastEventTime = event.t;
-        } else if (event.type === 'reorder' || event.type === 'visibility' || event.type === 'opacity' || event.type === 'snapshot') {
+        } else if (event.type === 'reorder' || event.type === 'visibility' || event.type === 'opacity' || event.type === 'blend' || event.type === 'snapshot') {
             const ctrl = Object.assign({}, event);
             if (ctrl.layer !== undefined) ctrl.layer = Number(ctrl.layer);
             if (ctrl.opacity !== undefined) ctrl.opacity = parseFloat(ctrl.opacity);
             if (ctrl.visible !== undefined) ctrl.visible = !!ctrl.visible;
+            if (ctrl.blend !== undefined) ctrl.blend = String(ctrl.blend);
             strokes.push(ctrl);
             if (event.t !== undefined) lastEventTime = event.t;
         }
