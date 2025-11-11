@@ -10,6 +10,10 @@
  * - CSV/JSON format support
  */
 
+import { parseTimelapseCSV, parseCSVLine, convertEventsToStrokes, calculateFrameDurations, normalizeFrameDurations } from './timelapse_utils.js';
+import { hexToRgb } from './color_utils.js';
+import { drawStrokePrimitive, drawFillPrimitive } from './draw_primitives.js';
+
 export class TimelapsePlayer {
     constructor(canvasId, timelapseData) {
         this.canvas = document.getElementById(canvasId);
@@ -21,14 +25,14 @@ export class TimelapsePlayer {
         // アルファチャンネルなしのコンテキストを取得（常に不透明な白背景）
         this.ctx = this.canvas.getContext('2d', { alpha: false });
         this.frames = timelapseData;
-    // Track per-layer state and create offscreen canvases for full compositing.
-    // We'll infer layer count from timelapseData when possible.
-    this.layerStates = {}; // { [layerIndex]: { visible: true/false, opacity: number } }
-    this.layerOrder = null; // array of layer indexes in compositing order
-    this.layerCanvases = []; // offscreen canvases per layer
-    this.layerContexts = []; // their 2D contexts
-    this.baseCanvas = null; // flattened snapshot canvas
-    this.baseCtx = null;
+        // Track per-layer state and create offscreen canvases for full compositing.
+        // We'll infer layer count from timelapseData when possible.
+        this.layerStates = {}; // { [layerIndex]: { visible: true/false, opacity: number } }
+        this.layerOrder = null; // array of layer indexes in compositing order
+        this.layerCanvases = []; // offscreen canvases per layer
+        this.layerContexts = []; // their 2D contexts
+        this.baseCanvas = null; // flattened snapshot canvas
+        this.baseCtx = null;
         // -1 を初期値として、まだ何も描画していない状態を表す
         // これにより再生開始前はプログレスが0%のままになる
         this.currentFrame = -1;
@@ -102,7 +106,7 @@ export class TimelapsePlayer {
         this.canvas.width = firstFrame.width || 800;
         this.canvas.height = firstFrame.height || 600;
 
-    // Canvas size set
+        // Canvas size set
 
         // Prepare base canvas (for snapshots) and per-layer offscreen canvases.
         this.baseCanvas = document.createElement('canvas');
@@ -145,6 +149,75 @@ export class TimelapsePlayer {
 
         // 初期状態の進捗を更新
         this.updateProgress();
+    }
+
+    /**
+     * Sync layer count/order/visibility/opacity from editor state object.
+     * The editor state is expected to have a `layers` array of canvas elements
+     * and optionally `layerNames`. This will ensure the player's internal
+     * per-layer canvases and layerStates match the editor so timelapse playback
+     * reflects the current editor view when opened.
+     */
+    syncLayersFromEditor(editorState) {
+        try {
+            if (!editorState || !Array.isArray(editorState.layers)) return;
+
+            const editorLayers = editorState.layers;
+            const count = editorLayers.length;
+
+            // Ensure we have at least as many offscreen canvases/contexts
+            while (this.layerCanvases.length < count) {
+                const c = document.createElement('canvas');
+                c.width = this.canvas.width;
+                c.height = this.canvas.height;
+                const ctx = c.getContext('2d', { willReadFrequently: true });
+                ctx.clearRect(0, 0, c.width, c.height);
+                this.layerCanvases.push(c);
+                this.layerContexts.push(ctx);
+            }
+
+            // Build layerStates from editor DOM canvas styles
+            for (let i = 0; i < count; i++) {
+                const el = editorLayers[i];
+                if (!el) continue;
+                const visible = el.style && el.style.display === 'none' ? false : true;
+                const opacity = el.style && el.style.opacity ? parseFloat(el.style.opacity) : 1;
+                this.layerStates[i] = { visible: !!visible, opacity: typeof opacity === 'number' ? opacity : 1 };
+            }
+
+            // Set layerOrder according to editor state. Assume editor.state.layers is
+            // bottom-to-top; keep same order unless the editor exposes a different order.
+            this.layerOrder = Array.from({ length: count }, (_, i) => i);
+            
+            // Copy current editor canvases into player offscreen canvases so the
+            // initial composite matches the editor's visible content. This also
+            // makes visibility/opacity/reorder frames meaningful immediately.
+            try {
+                for (let i = 0; i < count; i++) {
+                    const src = editorLayers[i];
+                    const dstCtx = this.layerContexts[i];
+                    if (!src || !dstCtx) continue;
+                    // Ensure destination canvas matches size
+                    const dst = this.layerCanvases[i];
+                    if (dst.width !== src.width || dst.height !== src.height) {
+                        dst.width = src.width;
+                        dst.height = src.height;
+                    }
+                    dstCtx.clearRect(0, 0, dst.width, dst.height);
+                    try {
+                        dstCtx.globalAlpha = 1;
+                        dstCtx.drawImage(src, 0, 0, dst.width, dst.height);
+                        dstCtx.globalAlpha = 1;
+                    } catch (e) {
+                        // drawImage can throw if source canvas is tainted; ignore
+                    }
+                }
+            } catch (e) {
+                // non-fatal
+            }
+        } catch (e) {
+            console.warn('Failed to sync layers from editor state:', e);
+        }
     }
 
     // Composite base + layers onto main canvas according to current layerOrder and states
@@ -352,142 +425,11 @@ export class TimelapsePlayer {
     }
 
     drawStroke(frame, targetCtx = null) {
-        if (!frame.path || frame.path.length === 0) return;
-        // Respect per-layer visibility/opacity if available (minimal support).
-        if (typeof frame.layer !== 'undefined') {
-            const li = Number(frame.layer);
-            const st = this.layerStates[li];
-            if (st && st.visible === false) return; // layer hidden -> skip drawing
-            // merge layer opacity into frame opacity for immediate effect
-            if (st && typeof st.opacity === 'number') {
-                frame._originalOpacity = frame._originalOpacity === undefined ? (frame.opacity !== undefined ? frame.opacity : 1) : frame._originalOpacity;
-                frame.opacity = (frame._originalOpacity !== undefined ? frame._originalOpacity : 1) * st.opacity;
-            }
-        }
-
         const ctx = targetCtx || this.ctx;
-        ctx.save();
-
-        if (frame.tool === 'watercolor') {
-            // Watercolor brush: draw each point as a circle with gradient
-            const maxRadius = (frame.size || 40) / 2;
-            const hardness = (frame.watercolorHardness !== undefined ? frame.watercolorHardness : 50) / 100;
-            const baseOpacity = frame.watercolorOpacity || 0.3;
-
-            // Parse color
-            const colorRgb = this.hexToRgb(frame.color || '#000000');
-            if (!colorRgb) {
-                ctx.restore();
-                return;
-            }
-
-            // Draw each point in the path using per-sample pressure when available
-            let totalRadius = 0;
-            for (let i = 0; i < frame.path.length; i++) {
-                const pt = frame.path[i];
-                const pressure = (pt.pressure !== undefined ? pt.pressure : 1);
-                const pressuredRadius = maxRadius * (0.5 + 0.5 * pressure);
-                totalRadius += pressuredRadius;
-
-                const gradient = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, pressuredRadius);
-
-                // Hardness controls where opacity starts to decay
-                const solidStop = hardness * 0.8;
-
-                gradient.addColorStop(0, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${baseOpacity})`);
-                if (solidStop > 0) {
-                    gradient.addColorStop(solidStop, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${baseOpacity})`);
-                }
-
-                // Mid-point for smooth transition
-                const midStop = solidStop + (1 - solidStop) * 0.5;
-                const midOpacity = baseOpacity * 0.3;
-                gradient.addColorStop(midStop, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${midOpacity})`);
-
-                gradient.addColorStop(1, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, 0)`);
-
-                ctx.fillStyle = gradient;
-                ctx.globalCompositeOperation = 'source-over';
-                ctx.beginPath();
-                ctx.arc(pt.x, pt.y, pressuredRadius, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            // If points are spaced apart (recorded sparsely), draw a soft connecting stroke
-            // using an average pressured radius to choose a good connector width.
-            if (frame.path.length > 1) {
-                try {
-                    ctx.save();
-                    ctx.globalCompositeOperation = 'source-over';
-                    const connectorAlpha = Math.max(0.12, Math.min(0.9, baseOpacity * 0.55));
-                    ctx.strokeStyle = `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${connectorAlpha})`;
-                    const avgRadius = (frame.path.length > 0) ? (totalRadius / frame.path.length) : maxRadius;
-                    // Make the connector a bit thinner than the average diameter so it blends
-                    ctx.lineWidth = Math.max(1, avgRadius * 1.6);
-                    ctx.lineCap = 'round';
-                    ctx.lineJoin = 'round';
-                    ctx.beginPath();
-                    ctx.moveTo(frame.path[0].x, frame.path[0].y);
-                    for (let i = 1; i < frame.path.length; i++) {
-                        ctx.lineTo(frame.path[i].x, frame.path[i].y);
-                    }
-                    ctx.stroke();
-                } catch (e) {
-                    console.warn('Connector stroke render failed:', e);
-                } finally {
-                    ctx.restore();
-                }
-            }
-        } else {
-            // Regular pen/eraser stroke
-            ctx.strokeStyle = frame.color || '#000000';
-            ctx.lineWidth = frame.size || 5;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.globalAlpha = frame.opacity !== undefined ? frame.opacity : 1;
-
-            if (frame.tool === 'eraser') {
-                ctx.globalCompositeOperation = 'destination-out';
-            } else {
-                ctx.globalCompositeOperation = 'source-over';
-            }
-
-            if (frame.path.length === 1) {
-                // Single-point stroke: draw a dot (stroke with round cap may not render a single point)
-                const p = frame.path[0];
-                const r = (frame.size || 5) / 2;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, Math.max(1, r), 0, Math.PI * 2);
-                if (frame.tool === 'eraser') {
-                    // Eraser: clear a circle
-                    ctx.globalCompositeOperation = 'destination-out';
-                    ctx.fill();
-                } else {
-                    ctx.fillStyle = frame.color || ctx.strokeStyle;
-                    ctx.fill();
-                }
-            } else {
-                // Multi-point stroke: draw polyline (simple interpolation)
-                ctx.beginPath();
-                ctx.moveTo(frame.path[0].x, frame.path[0].y);
-                for (let i = 1; i < frame.path.length; i++) {
-                    ctx.lineTo(frame.path[i].x, frame.path[i].y);
-                }
-                ctx.stroke();
-            }
-        }
-
-        ctx.restore();
+        drawStrokePrimitive(ctx, frame, this.layerStates);
     }
 
-    hexToRgb(hex) {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16)
-        } : null;
-    }
+    /* hexToRgb moved to public/paint/js/color_utils.js */
 
     drawFill(frame, targetCtx = null) {
         if (frame.x === undefined || frame.y === undefined) return;
@@ -500,86 +442,8 @@ export class TimelapsePlayer {
                 frame.opacity = (frame._originalOpacity !== undefined ? frame._originalOpacity : 1) * st.opacity;
             }
         }
-
         const ctx = targetCtx || this.ctx;
-
-        // Get image data for flood fill
-        const imageData = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        const data = imageData.data;
-
-        const startX = Math.floor(frame.x);
-        const startY = Math.floor(frame.y);
-
-        // Check if coordinates are within bounds
-        if (startX < 0 || startX >= this.canvas.width || startY < 0 || startY >= this.canvas.height) {
-            return;
-        }
-
-        // Get target color
-        const startPos = (startY * this.canvas.width + startX) * 4;
-        const targetR = data[startPos];
-        const targetG = data[startPos + 1];
-        const targetB = data[startPos + 2];
-        const targetA = data[startPos + 3];
-
-        // Parse fill color
-        const fillColor = frame.color || '#000000';
-        let fillR, fillG, fillB;
-        if (fillColor.startsWith('#')) {
-            const hex = fillColor.substring(1);
-            fillR = parseInt(hex.substring(0, 2), 16);
-            fillG = parseInt(hex.substring(2, 4), 16);
-            fillB = parseInt(hex.substring(4, 6), 16);
-        } else {
-            fillR = fillG = fillB = 0;
-        }
-
-        // Check if target and fill colors are the same
-        if (targetR === fillR && targetG === fillG && targetB === fillB && targetA === 255) {
-            return; // Nothing to fill
-        }
-
-        // Flood fill using stack
-        const stack = [[startX, startY]];
-        const visited = new Set();
-
-        while (stack.length > 0) {
-            const [x, y] = stack.pop();
-
-            // Check bounds
-            if (x < 0 || x >= this.canvas.width || y < 0 || y >= this.canvas.height) {
-                continue;
-            }
-
-            // Check if already visited
-            const key = `${x},${y}`;
-            if (visited.has(key)) {
-                continue;
-            }
-            visited.add(key);
-
-            // Check if pixel matches target color
-            const pos = (y * this.canvas.width + x) * 4;
-            if (data[pos] !== targetR || data[pos + 1] !== targetG ||
-                data[pos + 2] !== targetB || data[pos + 3] !== targetA) {
-                continue;
-            }
-
-            // Fill pixel
-            data[pos] = fillR;
-            data[pos + 1] = fillG;
-            data[pos + 2] = fillB;
-            data[pos + 3] = 255;
-
-            // Add neighbors
-            stack.push([x + 1, y]);
-            stack.push([x - 1, y]);
-            stack.push([x, y + 1]);
-            stack.push([x, y - 1]);
-        }
-
-        // Put the modified image data back
-        ctx.putImageData(imageData, 0, 0);
+        drawFillPrimitive(ctx, frame, this.canvas.width, this.canvas.height, this.layerStates);
     }
 
     seek(frameIndex) {
@@ -659,305 +523,4 @@ export class TimelapsePlayer {
     }
 }
 
-/**
- * CSV形式のタイムラプスをパース（イベントベース）
- */
-export function parseTimelapseCSV(csv) {
-    const lines = csv.trim().split('\n');
-    if (lines.length === 0) return [];
-
-    const events = [];
-    let headers = [];
-
-    // ヘッダー行をパース
-    const headerLine = lines[0].trim();
-    headers = parseCSVLine(headerLine);
-
-    // 2種類の CSV 形式に対応する:
-    // A) ヘッダーがフィールド名の通常の行ベース形式
-    // B) ヘッダーが "0,1,2,..." のような数値インデックスで、各セルに JSON イベント文字列が格納されている形式
-    const numericHeader = headers.length > 0 && headers.every(h => /^\d+$/.test(h));
-
-    if (numericHeader) {
-        // 各行の各セルが JSON 文字列になっているケース
-        for (let i = 1; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (!line) continue;
-
-            const values = parseCSVLine(line);
-            for (let v of values) {
-                if (!v) continue;
-                // 値は JSON 文字列になっているはずなのでパースを試みる
-                try {
-                    const obj = JSON.parse(v);
-                    events.push(obj);
-                } catch (e) {
-                    // JSON パース失敗なら生文字列を格納（後で検査できるように）
-                    // 例えばダブルクォートのエスケープが甘い等の可能性をここで捕捉
-                    try {
-                        // 引用符が二重になっている場合の救済処理: 内部の "" を " に置換して再試行
-                        const repaired = v.replace(/""/g, '"');
-                        const obj2 = JSON.parse(repaired);
-                        events.push(obj2);
-                    } catch (e2) {
-                        // 最終手段で文字列イベントとして push
-                        events.push({ raw: v });
-                    }
-                }
-            }
-        }
-    } else {
-        // データ行をパース（従来のヘッダー/値マッピング形式）
-        for (let i = 1; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (!line) continue;
-
-            const values = parseCSVLine(line);
-            const event = {};
-
-            headers.forEach((header, index) => {
-                const value = values[index];
-                if (value !== undefined && value !== '') {
-                    event[header] = value;
-                }
-            });
-
-            // 数値型に変換
-            if (event.t) event.t = parseFloat(event.t);
-            if (event.x) event.x = parseFloat(event.x);
-            if (event.y) event.y = parseFloat(event.y);
-            if (event.size) event.size = parseFloat(event.size);
-            if (event.layer) event.layer = parseInt(event.layer);
-            // pressure はCSV/JSON経由で文字列になっている場合があるため明示的に数値化
-            if (event.pressure !== undefined && event.pressure !== '') {
-                const p = parseFloat(event.pressure);
-                if (!Number.isNaN(p)) event.pressure = p;
-            }
-
-            events.push(event);
-        }
-    }
-
-    // Parsed drawing events
-
-    // イベントをストロークに変換
-    return convertEventsToStrokes(events);
-}
-
-/**
- * CSV行をパース
- */
-export function parseCSVLine(line) {
-    const values = [];
-    let current = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-
-        if (char === '"') {
-            // Handle escaped double quotes inside quoted fields: "" -> literal "
-            if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
-                // append a single quote and skip the escape
-                current += '"';
-                i++; // skip next quote
-            } else {
-                // toggle quote state
-                inQuotes = !inQuotes;
-            }
-        } else if (char === ',' && !inQuotes) {
-            values.push(current);
-            current = '';
-        } else {
-            current += char;
-        }
-    }
-    values.push(current);
-
-    return values;
-}
-
-/**
- * 描画イベントをストロークフレームに変換
- */
-export function convertEventsToStrokes(events) {
-    const strokes = [];
-    let currentStroke = null;
-    let lastEventTime = null;
-    let canvasWidth = 800;
-    let canvasHeight = 600;
-
-    for (const event of events) {
-        if (event.type === 'meta') {
-            // Extract canvas metadata
-            if (event.canvas_width) canvasWidth = parseInt(event.canvas_width);
-            if (event.canvas_height) canvasHeight = parseInt(event.canvas_height);
-            // Canvas metadata found
-            continue; // Skip meta events in stroke generation
-        } else if (event.type === 'start') {
-            // 新しいストロークを開始
-            currentStroke = {
-                type: 'stroke',
-                color: event.color || '#000000',
-                size: event.size || 5,
-                tool: event.tool || 'pen',
-                layer: event.layer || 0,
-                path: [{ x: event.x, y: event.y, pressure: (event.pressure !== undefined ? parseFloat(event.pressure) : 1) }],
-                // 開始時刻と終了時刻を保持
-                startTime: event.t !== undefined ? event.t : null,
-                endTime: null
-            };
-            // Watercolor brush settings
-            if (event.tool === 'watercolor') {
-                if (event.watercolorHardness !== undefined) {
-                    currentStroke.watercolorHardness = event.watercolorHardness;
-                }
-                if (event.watercolorOpacity !== undefined) {
-                    currentStroke.watercolorOpacity = event.watercolorOpacity;
-                }
-            }
-            lastEventTime = event.t !== undefined ? event.t : lastEventTime;
-        } else if (event.type === 'move' && currentStroke) {
-            // ストロークにポイントを追加
-            // Interpolate between last recorded point and this point so timelapse
-            // rendering matches live drawing (which draws every ~2px).
-            const lastPt = currentStroke.path.length > 0 ? currentStroke.path[currentStroke.path.length - 1] : { x: event.x, y: event.y, pressure: (event.pressure !== undefined ? event.pressure : 1) };
-            const dx = event.x - lastPt.x;
-            const dy = event.y - lastPt.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            const stepSize = 2; // pixels between interpolated samples (matches live code)
-            const steps = Math.max(1, Math.ceil(dist / stepSize));
-            for (let i = 1; i <= steps; i++) {
-                const t = i / steps;
-                const ix = lastPt.x + dx * t;
-                const iy = lastPt.y + dy * t;
-                // interpolate pressure if available, otherwise default to 1
-                const lastPressure = (lastPt.pressure !== undefined ? parseFloat(lastPt.pressure) : 1);
-                const eventPressure = (event.pressure !== undefined ? parseFloat(event.pressure) : lastPressure);
-                const p = lastPressure + (eventPressure - lastPressure) * t;
-                currentStroke.path.push({ x: ix, y: iy, pressure: p });
-            }
-            if (event.t !== undefined) lastEventTime = event.t;
-        } else if (event.type === 'end' && currentStroke) {
-            // ストロークを完成
-            if (event.x !== undefined && event.y !== undefined) {
-                // Interpolate to final end point as well, preserving/interpolating pressure
-                const lastPt = currentStroke.path.length > 0 ? currentStroke.path[currentStroke.path.length - 1] : { x: event.x, y: event.y, pressure: (event.pressure !== undefined ? event.pressure : 1) };
-                const dx = event.x - lastPt.x;
-                const dy = event.y - lastPt.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const stepSize = 2;
-                const steps = Math.max(1, Math.ceil(dist / stepSize));
-                for (let i = 1; i <= steps; i++) {
-                    const t = i / steps;
-                    const ix = lastPt.x + dx * t;
-                    const iy = lastPt.y + dy * t;
-                    const lastPressure = (lastPt.pressure !== undefined ? parseFloat(lastPt.pressure) : 1);
-                    const eventPressure = (event.pressure !== undefined ? parseFloat(event.pressure) : lastPressure);
-                    const p = lastPressure + (eventPressure - lastPressure) * t;
-                    currentStroke.path.push({ x: ix, y: iy, pressure: p });
-                }
-            }
-            currentStroke.endTime = event.t !== undefined ? event.t : lastEventTime;
-
-            strokes.push(currentStroke);
-            currentStroke = null;
-        } else if (event.type === 'fill') {
-            // 塗りつぶしイベントを追加
-            strokes.push({
-                type: 'fill',
-                x: event.x,
-                y: event.y,
-                color: event.color || '#000000',
-                layer: event.layer || 0,
-                startTime: event.t !== undefined ? event.t : lastEventTime,
-                endTime: event.t !== undefined ? event.t : lastEventTime
-            });
-            if (event.t !== undefined) lastEventTime = event.t;
-        } else if (event.type === 'reorder' || event.type === 'visibility' || event.type === 'opacity' || event.type === 'snapshot') {
-            // Preserve control events so the player can interpret them.
-            // We copy relevant fields and keep timestamps when available.
-            const ctrl = Object.assign({}, event);
-            // normalize boolean/number fields
-            if (ctrl.layer !== undefined) ctrl.layer = Number(ctrl.layer);
-            if (ctrl.opacity !== undefined) ctrl.opacity = parseFloat(ctrl.opacity);
-            if (ctrl.visible !== undefined) ctrl.visible = !!ctrl.visible;
-            strokes.push(ctrl);
-            if (event.t !== undefined) lastEventTime = event.t;
-        }
-    }
-
-    // 未完のストロークがあれば追加
-    if (currentStroke && currentStroke.path.length > 0) {
-        strokes.push(currentStroke);
-    }
-
-    // Add canvas size to the first stroke
-    if (strokes.length > 0) {
-        strokes[0].width = canvasWidth;
-        strokes[0].height = canvasHeight;
-    // Canvas size added to first stroke
-    }
-
-    // フレーム間のdurationを計算
-    return calculateFrameDurations(strokes);
-}
-
-/**
- * ストローク間の時間間隔を考慮したフレームdurationを計算
- */
-export function calculateFrameDurations(strokes) {
-    if (strokes.length === 0) return [];
-
-    // Default behavior: compute durations based on timestamps but do not assume "real-time excluding pauses".
-    return normalizeFrameDurations(strokes, { realTime: false });
-}
-
-/**
- * Recompute frame durations from startTime/endTime.
- * Options:
- *  - realTime: if true, use recorded intervals but exclude long pauses (set them to 0)
- *  - pauseThresholdMs: gap (ms) above which an interval is considered a pause and excluded
- *  - minInterval / maxInterval: clamps for durations when not excluded
- */
-export function normalizeFrameDurations(strokes, options = {}) {
-    const realTime = !!options.realTime;
-    const pauseThresholdMs = options.pauseThresholdMs || 2000;
-    const minInterval = options.minInterval || 10;
-    const maxInterval = options.maxInterval || 10000;
-
-    if (!strokes || strokes.length === 0) return strokes;
-
-    for (let i = 0; i < strokes.length; i++) {
-        let durationMs = 0;
-
-        if (i === 0) {
-            durationMs = 0;
-        } else {
-            const prevStroke = strokes[i - 1];
-            const currentStroke = strokes[i];
-
-            let intervalMs = 0;
-            if (prevStroke && prevStroke.endTime !== null && currentStroke && currentStroke.startTime !== null) {
-                const dt = currentStroke.startTime - prevStroke.endTime;
-                if (dt > 0) intervalMs = dt;
-            }
-
-            if (realTime) {
-                // If the gap is larger than the pause threshold, treat it as pause and exclude it
-                if (intervalMs > pauseThresholdMs) {
-                    intervalMs = 0;
-                }
-                // Allow zero-interval (immediate) or small real intervals
-                durationMs = Math.max(0, Math.min(intervalMs, maxInterval));
-            } else {
-                // Legacy: clamp into reasonable range
-                durationMs = Math.max(minInterval, Math.min(intervalMs, maxInterval));
-            }
-        }
-
-        strokes[i].durationMs = durationMs;
-    }
-
-    return strokes;
-}
+/* CSV functions moved to ./timelapse_utils.js */

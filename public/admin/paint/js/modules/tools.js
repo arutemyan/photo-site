@@ -5,6 +5,32 @@
 
 import { CONFIG } from './config.js';
 import { state, elements } from './state.js';
+import { hexToRgb as _hexToRgb, rgbToHex as _rgbToHex } from '../../../../paint/js/color_utils.js';
+import { drawStrokePrimitive, drawFillPrimitive } from '../../../../paint/js/draw_primitives.js';
+import { sampleInterpolatedPoints } from '../../../../paint/js/timelapse_utils.js';
+
+// Render queue to batch draw calls and reduce immediate per-sample overhead.
+// Stored on state to keep lifecycle with the canvas/session.
+if (!state._renderQueue) state._renderQueue = [];
+if (state._renderScheduled === undefined) state._renderScheduled = false;
+
+function flushRenderQueue() {
+    const q = state._renderQueue.splice(0, state._renderQueue.length);
+    for (const item of q) {
+        try {
+            drawStrokePrimitive(item.ctx, item.frame, item.layerStates || {});
+        } catch (e) {
+            console.warn('render queue draw error:', e);
+        }
+    }
+    state._renderScheduled = false;
+}
+
+function scheduleRenderFlush() {
+    if (state._renderScheduled) return;
+    state._renderScheduled = true;
+    requestAnimationFrame(() => flushRenderQueue());
+}
 
 /**
  * Color conversion utilities
@@ -74,19 +100,11 @@ export const ColorUtils = {
     },
 
     rgbToHex(r, g, b) {
-        return '#' + [r, g, b].map(x => {
-            const hex = x.toString(16);
-            return hex.length === 1 ? '0' + hex : hex;
-        }).join('');
+        return _rgbToHex(r, g, b);
     },
 
     hexToRgb(hex) {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16)
-        } : null;
+        return _hexToRgb(hex);
     }
 };
 
@@ -340,28 +358,22 @@ function handleDrawStart(e, layerIndex, recordTimelapse, pushUndo, setColor) {
     // Start drawing
     if (state.currentTool === 'watercolor') {
         // Watercolor brush uses different drawing method
-        drawWatercolorBrush(ctx, pos.x, pos.y, getPressure(e));
+        const pressure = getPressure(e);
+        drawWatercolorBrush(ctx, pos.x, pos.y, pressure);
         state.lastWatercolorPos = pos;
+        state.lastWatercolorPressure = pressure;
     } else {
-        ctx.beginPath();
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        // For pen/eraser live drawing, render per-segment using drawStrokePrimitive so
+        // editor and timelapse rendering share the same algorithm.
+        const pressure = getPressure(e);
+        state.lastPressure = pressure;
 
-        if (state.currentTool === 'pen') {
-            // apply pressure to line width if available
-            const pressure = getPressure(e);
-            state.lastPressure = pressure;
-            ctx.lineWidth = Math.max(1, state.penSize * (0.2 + 0.8 * pressure));
-            ctx.strokeStyle = state.currentColor;
-            ctx.globalCompositeOperation = 'source-over';
-        } else if (state.currentTool === 'eraser') {
-            const pressure = getPressure(e);
-            state.lastPressure = pressure;
-            ctx.lineWidth = Math.max(1, state.eraserSize * (0.2 + 0.8 * pressure));
-            ctx.globalCompositeOperation = 'destination-out';
-        }
-
-        ctx.moveTo(pos.x, pos.y);
+        // initialize a small path buffer for the current live stroke
+        state.currentStrokePath = [{ x: pos.x, y: pos.y, pressure }];
+        // compute starting size (kept for potential use)
+        state.currentStrokeSize = state.currentTool === 'pen'
+            ? Math.max(1, state.penSize * (0.2 + 0.8 * pressure))
+            : Math.max(1, state.eraserSize * (0.2 + 0.8 * pressure));
     }
 
     // Record timelapse
@@ -401,42 +413,60 @@ function handleDrawMove(e, recordTimelapse) {
 
         // Sample and draw every ~2px (matches live drawing)
         const samplePressure = getPressure(e);
-        for (let i = 0; i <= steps; i++) {
-            const t = i / steps;
-            const x = lastPos.x + (pos.x - lastPos.x) * t;
-            const y = lastPos.y + (pos.y - lastPos.y) * t;
-            drawWatercolorBrush(ctx, x, y, samplePressure);
-
-            // Record each sampled point so timelapse has the same density and pressure
-            // as the live drawing. We include pressure so playback can reproduce
-            // pressured radius per-sample.
+        const lastPressure = state.lastWatercolorPressure !== undefined ? state.lastWatercolorPressure : samplePressure;
+        const samples = sampleInterpolatedPoints(lastPos, pos, lastPressure, samplePressure, 2);
+        for (const s of samples) {
+            drawWatercolorBrush(ctx, s.x, s.y, s.pressure);
             if (recordTimelapse) {
                 recordTimelapse({
                     t: Date.now(),
                     type: 'move',
                     layer: state.activeLayer,
-                    x: x,
-                    y: y,
-                    pressure: samplePressure
+                    x: s.x,
+                    y: s.y,
+                    pressure: s.pressure
                 });
             }
         }
 
         state.lastWatercolorPos = pos;
+        state.lastWatercolorPressure = samplePressure;
     } else {
-        // apply dynamic pressure-based width
+        // apply dynamic pressure-based width and render a short segment using shared primitive
         const pressure = getPressure(e);
         // smoothing to avoid jitter
         const smooth = (state.lastPressure * 0.6) + (pressure * 0.4);
-        state.lastPressure = smooth;
-        if (state.currentTool === 'pen') {
-            ctx.lineWidth = Math.max(1, state.penSize * (0.2 + 0.8 * smooth));
-        } else if (state.currentTool === 'eraser') {
-            ctx.lineWidth = Math.max(1, state.eraserSize * (0.2 + 0.8 * smooth));
-        }
+        // compute width for this sample
+        const width = state.currentTool === 'pen'
+            ? Math.max(1, state.penSize * (0.2 + 0.8 * smooth))
+            : Math.max(1, state.eraserSize * (0.2 + 0.8 * smooth));
 
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
+        // last recorded point for this live stroke
+        const lastPt = (state.currentStrokePath && state.currentStrokePath.length)
+            ? state.currentStrokePath[state.currentStrokePath.length - 1]
+            : { x: pos.x, y: pos.y, pressure: smooth };
+
+        // build a tiny frame segment and delegate rendering to shared primitive
+        const segFrame = {
+            type: 'stroke',
+            tool: state.currentTool,
+            color: state.currentColor,
+            size: width,
+            path: [
+                { x: lastPt.x, y: lastPt.y, pressure: lastPt.pressure },
+                { x: pos.x, y: pos.y, pressure: smooth }
+            ]
+        };
+
+    // enqueue segment to be drawn on the next animation frame to batch work
+    state._renderQueue.push({ ctx, frame: segFrame, layerStates: {} });
+    scheduleRenderFlush();
+
+        // append to current stroke buffer
+        if (!state.currentStrokePath) state.currentStrokePath = [];
+        state.currentStrokePath.push({ x: pos.x, y: pos.y, pressure: smooth });
+
+        state.lastPressure = smooth;
     }
 
     // For watercolor, moves have already been recorded per-sample above.
@@ -550,71 +580,19 @@ function floodFill(layerIndex, pos, pushUndo, recordTimelapse) {
 
     const canvas = state.layers[layerIndex];
     const ctx = state.contexts[layerIndex];
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const pixels = imageData.data;
-
     const startX = Math.floor(pos.x);
     const startY = Math.floor(pos.y);
-    const startIndex = (startY * canvas.width + startX) * 4;
 
-    const targetColor = {
-        r: pixels[startIndex],
-        g: pixels[startIndex + 1],
-        b: pixels[startIndex + 2],
-        a: pixels[startIndex + 3]
+    // Use shared primitive with tolerance option (bucket tool requires tolerance)
+    const frame = {
+        type: 'fill',
+        x: startX,
+        y: startY,
+        color: state.currentColor,
+        layer: layerIndex
     };
 
-    // Parse fill color (normalize and validate)
-    const fillColor = ColorUtils.hexToRgb(state.currentColor);
-    if (!fillColor) {
-        // Invalid current color, nothing to do
-        return;
-    }
-
-    // Only skip filling when the target pixel is fully opaque and rgb matches exactly.
-    // If the target pixel is transparent (alpha !== 255) we should still fill.
-    const fillAlpha = 255;
-    if (targetColor.a === fillAlpha && colorMatch(targetColor, fillColor, 0)) {
-        return;
-    }
-
-    // Flood fill algorithm
-    const stack = [[startX, startY]];
-    const visited = new Set();
-
-    while (stack.length > 0) {
-        const [x, y] = stack.pop();
-
-        if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) continue;
-
-        const key = `${x},${y}`;
-        if (visited.has(key)) continue;
-        visited.add(key);
-
-        const index = (y * canvas.width + x) * 4;
-        const currentColor = {
-            r: pixels[index],
-            g: pixels[index + 1],
-            b: pixels[index + 2],
-            a: pixels[index + 3]
-        };
-
-        if (!colorMatch(currentColor, targetColor, state.bucketTolerance)) continue;
-
-        // Fill pixel
-        pixels[index] = fillColor.r;
-        pixels[index + 1] = fillColor.g;
-        pixels[index + 2] = fillColor.b;
-        pixels[index + 3] = 255;
-
-        // Add neighbors
-        stack.push([x + 1, y]);
-        stack.push([x - 1, y]);
-        stack.push([x, y + 1]);
-        stack.push([x, y - 1]);
-    }
-
-    ctx.putImageData(imageData, 0, 0);
+    drawFillPrimitive(ctx, frame, canvas.width, canvas.height, {}, { tolerance: state.bucketTolerance });
 
     if (recordTimelapse) {
         recordTimelapse({
@@ -646,45 +624,16 @@ function colorMatch(c1, c2, tolerance) {
  * @param {number} pressure - Pen pressure (0-1)
  */
 function drawWatercolorBrush(ctx, x, y, pressure) {
-    const maxRadius = state.watercolorMaxSize / 2;
-    const hardness = state.watercolorHardness / 100; // 0-1: 0=soft, 1=hard
-    const baseOpacity = state.watercolorOpacity || 0.3;
+    // Build a one-sample frame and delegate to shared primitive for consistency
+    const frame = {
+        type: 'stroke',
+        tool: 'watercolor',
+        color: state.currentColor,
+        size: state.watercolorMaxSize,
+        watercolorHardness: state.watercolorHardness,
+        watercolorOpacity: state.watercolorOpacity,
+        path: [{ x, y, pressure }]
+    };
 
-    // Apply pressure to size if pressure is enabled
-    const pressuredMaxRadius = maxRadius * (0.5 + 0.5 * pressure);
-
-    // Parse current color to get RGB values
-    const colorRgb = ColorUtils.hexToRgb(state.currentColor);
-    if (!colorRgb) return;
-
-    // Create radial gradient from center to edge
-    const gradient = ctx.createRadialGradient(x, y, 0, x, y, pressuredMaxRadius);
-
-    // Hardness controls where the opacity starts to decay
-    // hardness = 1.0 (100%): maintain opacity until 80% of radius (sharp edge)
-    // hardness = 0.0 (0%): start decaying immediately from center (soft edge)
-    const solidStop = hardness * 0.8;
-
-    // Center to solidStop: maintain base opacity
-    gradient.addColorStop(0, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${baseOpacity})`);
-    if (solidStop > 0) {
-        gradient.addColorStop(solidStop, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${baseOpacity})`);
-    }
-
-    // Add a mid-point for smoother transition
-    const midStop = solidStop + (1 - solidStop) * 0.5;
-    const midOpacity = baseOpacity * 0.3;
-    gradient.addColorStop(midStop, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${midOpacity})`);
-
-    // Edge: transparent
-    gradient.addColorStop(1, `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, 0)`);
-
-    // Draw circle with gradient
-    ctx.save();
-    ctx.fillStyle = gradient;
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.beginPath();
-    ctx.arc(x, y, pressuredMaxRadius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    drawStrokePrimitive(ctx, frame, {});
 }

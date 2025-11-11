@@ -6,7 +6,8 @@
  */
 
 import { state, elements } from './state.js';
-import { TimelapsePlayer, parseTimelapseCSV, convertEventsToStrokes } from '../../../../paint/js/timelapse_player.js';
+import { TimelapsePlayer } from '../../../../paint/js/timelapse_player.js';
+import { parseTimelapseCSV, convertEventsToStrokes } from '../../../../paint/js/timelapse_utils.js';
 
 let timelapsePlayer = null;
 
@@ -241,6 +242,16 @@ function playTimelapse(events) {
     // Create TimelapsePlayer
     const canvasId = 'timelapse-canvas';
     timelapsePlayer = new TimelapsePlayer(canvasId, frames);
+
+    // Ensure the player's layer canvases and visible/opacity states match the
+    // current editor layers so the timelapse preview reflects the editor view.
+    try {
+        if (typeof timelapsePlayer.syncLayersFromEditor === 'function') {
+            timelapsePlayer.syncLayersFromEditor(state);
+        }
+    } catch (e) {
+        console.warn('Failed to sync timelapse player layers with editor state:', e);
+    }
 
     // Apply initial settings
     timelapsePlayer.setSpeed(parseFloat(elements.timelapseSpeed.value) || 1);

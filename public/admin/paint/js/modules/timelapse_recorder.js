@@ -66,7 +66,18 @@ function createTimelapseSnapshot(eventIndex) {
     });
 
     const data = tmp.toDataURL('image/png');
-    state.timelapseSnapshots.push({ idx: eventIndex, t: Date.now(), data });
+    const ts = Date.now();
+    state.timelapseSnapshots.push({ idx: eventIndex, t: ts, data });
+
+    // Also insert a 'snapshot' event into the event stream so playback (which
+    // converts events -> frames) includes the snapshot at the correct position.
+    // This avoids having snapshots stored separately from events which would
+    // otherwise be ignored during event-based playback.
+    try {
+        state.timelapseEvents.push({ t: ts, type: 'snapshot', data: data, width: w, height: h });
+    } catch (e) {
+        console.warn('Failed to append snapshot event to timelapseEvents:', e);
+    }
 
     // Keep last few snapshots to limit memory
     if (state.timelapseSnapshots.length > 10) {

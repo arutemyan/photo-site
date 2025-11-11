@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>timelapse_utils tests</title>
+  <style>body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:16px}pre{background:#f6f8fa;padding:12px;border-radius:6px}</style>
+</head>
+<body>
+  <h1>timelapse_utils.js - Simple Tests</h1>
+  <div id="summary"></div>
+  <pre id="log"></pre>
+
+  <script type="module">
+  import { parseTimelapseCSV, parseCSVLine, convertEventsToStrokes, normalizeFrameDurations, sampleInterpolatedPoints } from '../../public/paint/js/timelapse_utils.js';
+
+    const logEl = document.getElementById('log');
+    const summaryEl = document.getElementById('summary');
+
+    function log(msg) { logEl.textContent += msg + '\n'; }
+    function assert(cond, msg) { if (!cond) throw new Error(msg || 'Assertion failed'); }
+    function eq(a, b, msg) { if (a !== b) throw new Error(msg || `Expected ${a} === ${b}`); }
+
+    const tests = [];
+
+    tests.push(() => {
+      // parseCSVLine: commas and quoted fields
+      const line = 'a,b,"c,d","e""f"';
+      const out = parseCSVLine(line);
+      assert(Array.isArray(out), 'parseCSVLine should return array');
+      eq(out[0], 'a');
+      eq(out[1], 'b');
+      eq(out[2], 'c,d');
+      eq(out[3], 'e"f');
+    });
+
+    tests.push(() => {
+      // convert events -> strokes (start, move, end interpolation)
+      const events = [
+        { t: 0, type: 'start', x: 10, y: 10, color: '#ff0000', size: 6, pressure: 1, tool: 'pen', layer: 0 },
+        { t: 10, type: 'move', x: 14, y: 14, pressure: 1 },
+        { t: 20, type: 'end', x: 20, y: 20, pressure: 1 }
+      ];
+      const strokes = convertEventsToStrokes(events);
+      assert(Array.isArray(strokes), 'convertEventsToStrokes should return array');
+      assert(strokes.length >= 1, 'should produce at least one stroke');
+      const s = strokes[0];
+      eq(s.type, 'stroke');
+      eq(s.color, '#ff0000');
+      eq(s.size, 6);
+      assert(s.path && s.path.length > 1, 'stroke path should be interpolated');
+      // width/height should be set on first frame
+      assert(typeof strokes[0].width === 'number' && typeof strokes[0].height === 'number', 'frame width/height set');
+    });
+
+    tests.push(() => {
+      // parseTimelapseCSV: headered CSV
+      const csv = `t,type,x,y,layer,color,size,pressure,tool\n0,start,5,5,0,#00ff00,8,1,pen\n10,move,7,7,,,1\n20,end,9,9,,,1`;
+      const frames = parseTimelapseCSV(csv);
+      assert(Array.isArray(frames), 'parseTimelapseCSV should return array');
+      assert(frames.length >= 1, 'should parse at least one frame');
+      const f = frames[0];
+      eq(f.type, 'stroke');
+      eq(f.color, '#00ff00');
+      eq(f.size, 8);
+      assert(f.path && f.path.length > 1, 'parsed stroke should have path');
+    });
+
+    tests.push(() => {
+      // normalizeFrameDurations: durations between strokes
+      const strokes = [
+        { type: 'stroke', startTime: 0, endTime: 0 },
+        { type: 'stroke', startTime: 500, endTime: 500 },
+        { type: 'stroke', startTime: 4000, endTime: 4000 }
+      ];
+      const normalized = normalizeFrameDurations(JSON.parse(JSON.stringify(strokes)), { realTime: false, pauseThresholdMs: 2000 });
+      assert(normalized.length === 3, 'length preserved');
+      // when realTime=false minInterval default is 10ms => duration should be >=10
+      normalized.forEach((s, i) => {
+        assert(typeof s.durationMs === 'number', 'durationMs set');
+        if (i === 0) eq(s.durationMs, 0);
+      });
+
+      const normalizedRT = normalizeFrameDurations(JSON.parse(JSON.stringify(strokes)), { realTime: true, pauseThresholdMs: 2000 });
+      // third interval is 3500ms which is > pauseThreshold => becomes 0 in realTime mode
+      eq(normalizedRT[2].durationMs, 0);
+    });
+
+    tests.push(() => {
+      // sampleInterpolatedPoints: basic interpolation
+      const a = { x: 0, y: 0, pressure: 1 };
+      const b = { x: 5, y: 0 };
+      const samples = sampleInterpolatedPoints(a, b, 1, 1, 2);
+      // distance 5, stepSize 2 => steps = ceil(5/2)=3 -> 3 samples
+      if (samples.length !== 3) throw new Error('expected 3 samples got ' + samples.length);
+      // first sample should be near x ~ 1.666...
+      if (Math.abs(samples[0].x - (5/3)) > 0.1) throw new Error('unexpected sample x');
+
+      // zero-distance case
+      const z = sampleInterpolatedPoints({ x: 10, y: 10, pressure: 0.5 }, { x: 10, y: 10 }, 0.5, 0.5, 2);
+      if (z.length !== 1) throw new Error('zero-distance should produce one sample');
+    });
+
+    // Run tests
+    (async () => {
+      let passed = 0, failed = 0;
+      for (let i = 0; i < tests.length; i++) {
+        try {
+          await tests[i]();
+          log(`ok ${i + 1}`);
+          passed++;
+        } catch (err) {
+          log(`fail ${i + 1}: ${err.message}`);
+          failed++;
+        }
+      }
+      summaryEl.innerHTML = `<strong>Passed:</strong> ${passed} &nbsp; <strong>Failed:</strong> ${failed}`;
+    })();
+
+  </script>
+</body>
+</html>

@@ -3,7 +3,8 @@
  * イラスト詳細ページのタイムラプス再生機能
  */
 
-import { TimelapsePlayer, parseTimelapseCSV, convertEventsToStrokes } from './timelapse_player.js';
+import { TimelapsePlayer } from './timelapse_player.js';
+import { parseTimelapseCSV, convertEventsToStrokes } from './timelapse_utils.js';
 
 // グローバル変数
 let timelapsePlayer = null;
