@@ -6,6 +6,32 @@
 import { state, elements } from './state.js';
 
 /**
+ * Convert Canvas 2D API composite operation to CSS mix-blend-mode
+ */
+function canvasBlendToCSSBlend(canvasBlend) {
+    const map = {
+        'source-over': 'normal',
+        'multiply': 'multiply',
+        'screen': 'screen',
+        'overlay': 'overlay',
+        'lighter': 'screen', // 加算合成：CSSには完全一致なし、screenが近い
+        'lighten': 'lighten',
+        'darken': 'darken',
+        'color-dodge': 'color-dodge',
+        'color-burn': 'color-burn',
+        'hard-light': 'hard-light',
+        'soft-light': 'soft-light',
+        'difference': 'difference',
+        'exclusion': 'exclusion',
+        'hue': 'hue',
+        'saturation': 'saturation',
+        'color': 'color',
+        'luminosity': 'luminosity'
+    };
+    return map[canvasBlend] || 'normal';
+}
+
+/**
  * Load persisted state from localStorage
  * @param {Function} restoreCanvasState - Callback to restore canvas state
  * @param {Function} setStatus - Callback to update status bar
@@ -208,6 +234,7 @@ export function captureCanvasState() {
         index: index,
         visible: canvas.style.display !== 'none',
         opacity: parseFloat(canvas.style.opacity || '1'),
+        blendMode: canvas.dataset && canvas.dataset.blendMode ? canvas.dataset.blendMode : 'source-over',
         dataUrl: canvas.toDataURL('image/png')
     }));
 
@@ -272,11 +299,19 @@ function createCompositeImage() {
     octx.fillStyle = '#FFFFFF';
     octx.fillRect(0, 0, w, h);
 
-    // Draw all visible layers
+    // Draw all visible layers with blend mode applied
     state.layers.forEach(canvas => {
         if (canvas.style.display !== 'none') {
             octx.globalAlpha = parseFloat(canvas.style.opacity || '1');
+
+            // Apply blend mode if set
+            const blendMode = canvas.dataset && canvas.dataset.blendMode ? canvas.dataset.blendMode : 'source-over';
+            octx.globalCompositeOperation = blendMode;
+
             octx.drawImage(canvas, 0, 0);
+
+            // Reset to defaults for next layer
+            octx.globalCompositeOperation = 'source-over';
         }
     });
 
@@ -303,6 +338,7 @@ function buildIllustData() {
             order: idx,
             visible: canvas.style.display !== 'none',
             opacity: parseFloat(canvas.style.opacity || '1'),
+            blendMode: canvas.dataset && canvas.dataset.blendMode ? canvas.dataset.blendMode : 'source-over',
             type: 'raster',
             data: canvas.toDataURL('image/png'),
             width: w,
@@ -335,6 +371,15 @@ async function compressTimelapseData() {
             },
             ...state.timelapseEvents
         ];
+
+        // Debug: report events count and last sequence id when available
+        try {
+            const last = state.timelapseEvents.length > 0 ? state.timelapseEvents[state.timelapseEvents.length - 1] : null;
+            const lastSeq = last && typeof last._seq !== 'undefined' ? last._seq : null;
+            console.debug('[timelapse] compressTimelapseData: eventsWithMeta=', eventsWithMeta.length, 'last_seq=', lastSeq);
+        } catch (e) {
+            // ignore
+        }
 
         // If snapshots exist, produce a JSON package including events and snapshots so playback
         // can render snapshots (which capture composite including layer order changes).
@@ -620,6 +665,16 @@ export function restoreCanvasState(canvasState, renderLayers, setActiveLayer, up
 
                             canvas.style.display = layerInfo.visible ? 'block' : 'none';
                             canvas.style.opacity = layerInfo.opacity;
+
+                            // Restore blend mode
+                            if (layerInfo.blendMode) {
+                                if (!canvas.dataset) {
+                                    canvas.dataset = {};
+                                }
+                                canvas.dataset.blendMode = layerInfo.blendMode;
+                                // Apply CSS mix-blend-mode for preview
+                                canvas.style.mixBlendMode = canvasBlendToCSSBlend(layerInfo.blendMode);
+                            }
                         } else {
                             resolveLayer();
                         }
@@ -781,6 +836,16 @@ export async function loadIllustLayers(illustData, renderLayers) {
 
                             state.layers[targetIdx].style.opacity = layerData.opacity !== undefined ? layerData.opacity.toString() : '1';
                             state.layers[targetIdx].style.display = layerData.visible !== false ? 'block' : 'none';
+
+                            // Restore blend mode
+                            if (layerData.blendMode) {
+                                if (!state.layers[targetIdx].dataset) {
+                                    state.layers[targetIdx].dataset = {};
+                                }
+                                state.layers[targetIdx].dataset.blendMode = layerData.blendMode;
+                                // Apply CSS mix-blend-mode for preview
+                                state.layers[targetIdx].style.mixBlendMode = canvasBlendToCSSBlend(layerData.blendMode);
+                            }
 
                             if (layerData.name) {
                                 state.layerNames[targetIdx] = layerData.name;

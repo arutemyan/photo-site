@@ -32,6 +32,8 @@ export const state = {
     timelapseEvents: [],
     timelapseSnapshots: [], // { idx, t, data }
     lastSnapshotTime: 0,
+    // Monotonic sequence for timelapse events (debug/instrumentation)
+    timelapseSeq: 0,
 
     // Paint
     currentIllustId: null,

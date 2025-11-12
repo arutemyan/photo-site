@@ -14,7 +14,31 @@ import { state } from './state.js';
  * Record a timelapse event
  */
 export function recordTimelapse(event) {
+    // Attach a monotonic sequence id for debugging/ordering checks
+    if (typeof state.timelapseSeq === 'undefined') state.timelapseSeq = 0;
+    state.timelapseSeq += 1;
+    try {
+        // mutate event in-place so callers/consumers see _seq
+        event._seq = state.timelapseSeq;
+        event._recordedAt = Date.now();
+    } catch (e) {
+        // non-fatal
+    }
     state.timelapseEvents.push(event);
+
+    // Debug: log layer-related events and occasional sampling of sequences
+    try {
+        // Log layer-related events (include common edit ops)
+        if (event.type && (event.type === 'visibility' || event.type === 'opacity' || event.type === 'blend' || event.type === 'reorder' || event.type === 'duplicate' || event.type === 'merge' || event.type === 'clear' || event.type === 'delete')) {
+            console.debug('[timelapse] recorded layer-event', event.type, 'layer=', event.layer ?? event.from ?? event.to ?? null, '_seq=', event._seq);
+        }
+        // light debug sampling for high-frequency events
+        if (event.type === 'move' && (event._seq % 500 === 0)) {
+            console.debug('[timelapse] recorded move sample _seq=', event._seq);
+        }
+    } catch (e) {
+        // ignore console failures
+    }
 
     // Create snapshot every N events or every M ms
     const SNAPSHOT_EVENTS = 200;
@@ -74,7 +98,11 @@ function createTimelapseSnapshot(eventIndex) {
     // This avoids having snapshots stored separately from events which would
     // otherwise be ignored during event-based playback.
     try {
-        state.timelapseEvents.push({ t: ts, type: 'snapshot', data: data, width: w, height: h });
+        // Insert snapshot event with its own sequence id to preserve ordering
+        if (typeof state.timelapseSeq === 'undefined') state.timelapseSeq = 0;
+        state.timelapseSeq += 1;
+        const snapEv = { t: ts, type: 'snapshot', data: data, width: w, height: h, _seq: state.timelapseSeq, _recordedAt: Date.now() };
+        state.timelapseEvents.push(snapEv);
     } catch (e) {
         console.warn('Failed to append snapshot event to timelapseEvents:', e);
     }

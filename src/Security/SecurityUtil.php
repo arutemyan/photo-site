@@ -32,6 +32,12 @@ function forceHttps(): void
 {
     if (!isHttps()) {
         $redirect = 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+        // If headers already sent, log and avoid calling header() which would raise a warning
+        if (headers_sent($file, $line)) {
+            Logger::getInstance()->warning(sprintf('Cannot redirect to HTTPS because headers already sent at %s:%d', $file ?? 'unknown', $line ?? 0));
+            return;
+        }
+
         header('Location: ' . $redirect, true, 301);
         exit;
     }
@@ -45,6 +51,15 @@ function forceHttps(): void
  */
 function sendSecurityHeaders(array $config = []): void
 {
+    // If output has already started, headers cannot be modified. Log and return early.
+    if (headers_sent($file, $line)) {
+        try {
+            Logger::getInstance()->warning(sprintf('sendSecurityHeaders skipped: headers already sent at %s:%d', $file ?? 'unknown', $line ?? 0));
+        } catch (Throwable $e) {
+            // Logging failure should not break execution
+        }
+        return;
+    }
     // X-Content-Type-Options
     header('X-Content-Type-Options: nosniff');
 

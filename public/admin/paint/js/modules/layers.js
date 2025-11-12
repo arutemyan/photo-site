@@ -6,6 +6,8 @@
 import { CONFIG } from './config.js';
 import { state, elements } from './state.js';
 import { recordTimelapse, createTimelapseSnapshotPublic } from './timelapse_recorder.js';
+// helper to sync an open timelapse player with current editor state
+import { syncPlayerWithEditor } from './timelapse.js';
 
 // Context menu state
 let contextMenuTargetLayer = -1;
@@ -140,6 +142,46 @@ export function renderLayers(updateStatusBar, setStatus) {
             row1.appendChild(nameContainer);
             row1.appendChild(editBtn);
 
+            // Blend mode select (small, next to layer name)
+            const blendSelectSmall = document.createElement('select');
+            blendSelectSmall.className = 'layer-blend';
+            blendSelectSmall.style.marginLeft = '8px';
+            blendSelectSmall.style.fontSize = '12px';
+            blendSelectSmall.title = '合成モード';
+
+            const smallOptions = [
+                { value: 'source-over', label: '通常' },
+                { value: 'overlay', label: 'オーバーレイ' },
+                { value: 'screen', label: 'スクリーン' },
+                { value: 'lighter', label: '加算' },
+                { value: 'multiply', label: '乗算' }
+            ];
+            smallOptions.forEach(o => {
+                const opt = document.createElement('option');
+                opt.value = o.value;
+                opt.textContent = o.label;
+                blendSelectSmall.appendChild(opt);
+            });
+
+            // initialize from dataset
+            const initialBlend = layer.dataset && layer.dataset.blendMode ? layer.dataset.blendMode : 'source-over';
+            blendSelectSmall.value = initialBlend;
+            blendSelectSmall.addEventListener('change', (e) => {
+                setLayerBlendMode(layerIndex, e.target.value);
+            });
+            // prevent clicks/presses on the select from bubbling to document and
+            // to the layerItem click handler which would re-render/close popups
+            ['pointerdown', 'mousedown', 'click', 'focus'].forEach(evt => {
+                blendSelectSmall.addEventListener(evt, (ev) => {
+                    ev.stopPropagation();
+                });
+            });
+
+            // put the select next to the name display
+            // place the small blend select to the right of the edit button so it fits
+            // in narrow UIs and stays inline with the layer name and controls
+            row1.appendChild(blendSelectSmall);
+
             // === Row 2: Spacer + Opacity Slider ===
             const row2 = document.createElement('div');
             row2.className = 'layer-row layer-row-2';
@@ -188,44 +230,7 @@ export function renderLayers(updateStatusBar, setStatus) {
             row2.appendChild(opacity);
             row2.appendChild(opacityValue);
 
-            // Blend mode selector
-            const blendLabel = document.createElement('span');
-            blendLabel.textContent = '合成:';
-            blendLabel.style.fontSize = '11px';
-            blendLabel.style.color = '#666';
-            blendLabel.style.marginLeft = '8px';
-            blendLabel.style.flexShrink = '0';
-
-            const blendSelect = document.createElement('select');
-            blendSelect.className = 'layer-blend';
-            blendSelect.style.fontSize = '12px';
-            blendSelect.style.marginLeft = '4px';
-            blendSelect.title = 'レイヤー合成モード';
-
-            const blendOptions = [
-                { value: 'source-over', label: '通常' },
-                { value: 'overlay', label: 'オーバーレイ' },
-                { value: 'screen', label: 'スクリーン' },
-                { value: 'lighter', label: '加算' },
-                { value: 'multiply', label: '乗算' }
-            ];
-
-            blendOptions.forEach(opt => {
-                const o = document.createElement('option');
-                o.value = opt.value;
-                o.textContent = opt.label;
-                blendSelect.appendChild(o);
-            });
-
-            // Initialize from canvas dataset or default
-            const currentBlend = layer.dataset && layer.dataset.blendMode ? layer.dataset.blendMode : 'source-over';
-            blendSelect.value = currentBlend;
-            blendSelect.addEventListener('change', (e) => {
-                setLayerBlendMode(layerIndex, e.target.value);
-            });
-
-            row2.appendChild(blendLabel);
-            row2.appendChild(blendSelect);
+            
 
             // === Row 3: Spacer + Layer Menu Button ===
             const row3 = document.createElement('div');
@@ -314,11 +319,15 @@ export function renderLayers(updateStatusBar, setStatus) {
 
             // Click on layer item to select (unless clicking on interactive elements)
             layerItem.addEventListener('click', (e) => {
-                // Ignore clicks on buttons, inputs, and sliders
-                if (e.target.tagName === 'BUTTON' || 
-                    e.target.tagName === 'INPUT' || 
-                    e.target.className.includes('layer-visibility') ||
-                    e.target.className.includes('layer-menu-btn')) {
+                // Ignore clicks on buttons, inputs, selects and sliders so
+                // interactive controls don't trigger layer selection/re-render
+                const tag = e.target.tagName;
+                const cls = e.target.className || '';
+                if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'SELECT' ||
+                    cls.includes('layer-visibility') ||
+                    cls.includes('layer-menu-btn') ||
+                    cls.includes('layer-blend') ||
+                    cls.includes('layer-opacity') ) {
                     return;
                 }
                 setActiveLayer(layerIndex, updateStatusBar, setStatus);
@@ -354,6 +363,14 @@ export function toggleLayerVisibility(index, updateStatusBar, setStatus) {
             if (typeof createTimelapseSnapshotPublic === 'function') {
                 createTimelapseSnapshotPublic();
             }
+            // live-sync timelapse preview if it's open
+            try {
+                if (typeof syncPlayerWithEditor === 'function') {
+                    syncPlayerWithEditor(state);
+                }
+            } catch (e) {
+                // non-fatal
+            }
         }
     } catch (e) {
         console.warn('Failed to record visibility change for timelapse:', e);
@@ -373,10 +390,44 @@ export function setLayerOpacity(index, opacity) {
             if (typeof createTimelapseSnapshotPublic === 'function') {
                 createTimelapseSnapshotPublic();
             }
+            // live-sync timelapse preview if it's open
+            try {
+                if (typeof syncPlayerWithEditor === 'function') {
+                    syncPlayerWithEditor(state);
+                }
+            } catch (e) {
+                // non-fatal
+            }
         }
     } catch (e) {
         console.warn('Failed to record opacity change for timelapse:', e);
     }
+}
+
+/**
+ * Convert Canvas 2D API composite operation to CSS mix-blend-mode
+ */
+function canvasBlendToCSSBlend(canvasBlend) {
+    const map = {
+        'source-over': 'normal',
+        'multiply': 'multiply',
+        'screen': 'screen',
+        'overlay': 'overlay',
+        'lighter': 'screen', // 加算合成：CSSには完全一致なし、screenが近い
+        'lighten': 'lighten',
+        'darken': 'darken',
+        'color-dodge': 'color-dodge',
+        'color-burn': 'color-burn',
+        'hard-light': 'hard-light',
+        'soft-light': 'soft-light',
+        'difference': 'difference',
+        'exclusion': 'exclusion',
+        'hue': 'hue',
+        'saturation': 'saturation',
+        'color': 'color',
+        'luminosity': 'luminosity'
+    };
+    return map[canvasBlend] || 'normal';
 }
 
 /**
@@ -385,10 +436,20 @@ export function setLayerOpacity(index, opacity) {
 export function setLayerBlendMode(index, blendMode) {
     if (index < 0 || index >= state.layers.length) return;
     const canvas = state.layers[index];
-    try {
+        try {
         // store mode on dataset for persistence in DOM
-        canvas.dataset = canvas.dataset || {};
-        canvas.dataset.blendMode = blendMode;
+        // NOTE: HTMLElement.dataset is read-only as a property (the object is writable),
+        // so don't assign to canvas.dataset — set the specific key instead.
+        if (canvas && canvas.dataset) {
+            canvas.dataset.blendMode = blendMode;
+        }
+
+        // Apply CSS mix-blend-mode for real-time preview in editor
+        // (actual pixel-level blending happens in createCompositeImage during save)
+        if (canvas && canvas.style) {
+            const cssBlendMode = canvasBlendToCSSBlend(blendMode);
+            canvas.style.mixBlendMode = cssBlendMode;
+        }
 
         // record the change for timelapse playback
         if (typeof recordTimelapse === 'function') {
@@ -396,6 +457,17 @@ export function setLayerBlendMode(index, blendMode) {
             if (typeof createTimelapseSnapshotPublic === 'function') {
                 createTimelapseSnapshotPublic();
             }
+        }
+
+        // If a timelapse modal/player is active, request an immediate sync so
+        // the open preview reflects the new blend mode without needing to
+        // re-open the modal.
+        try {
+            if (typeof syncPlayerWithEditor === 'function') {
+                syncPlayerWithEditor(state);
+            }
+        } catch (e) {
+            // non-fatal
         }
     } catch (e) {
         console.warn('Failed to set layer blend mode:', e);
@@ -446,6 +518,14 @@ export function moveLayer(index, delta, updateStatusBar, setStatus) {
         }
         if (typeof createTimelapseSnapshotPublic === 'function') {
             createTimelapseSnapshotPublic();
+        }
+        // live-sync timelapse preview if it's open
+        try {
+            if (typeof syncPlayerWithEditor === 'function') {
+                syncPlayerWithEditor(state);
+            }
+        } catch (e) {
+            // non-fatal
         }
     } catch (err) {
         // non-fatal
@@ -519,6 +599,25 @@ export function removeLayer(layerIndex, updateStatusBar, setStatus) {
     // Adjust active layer if necessary
     if (state.activeLayer >= state.layers.length) {
         state.activeLayer = state.layers.length - 1;
+    }
+
+    // Record delete action for timelapse playback and request an immediate snapshot
+    try {
+        if (typeof recordTimelapse === 'function') {
+            recordTimelapse({ t: Date.now(), type: 'delete', layer: layerIndex });
+        }
+        if (typeof createTimelapseSnapshotPublic === 'function') {
+            createTimelapseSnapshotPublic();
+        }
+        try {
+            if (typeof syncPlayerWithEditor === 'function') {
+                syncPlayerWithEditor(state);
+            }
+        } catch (e) {
+            // non-fatal
+        }
+    } catch (e) {
+        console.warn('Failed to record delete layer event for timelapse:', e);
     }
 
     renderLayers(updateStatusBar, setStatus);
@@ -604,6 +703,25 @@ export function duplicateLayer(layerIndex, pushUndo, updateStatusBar, setStatus)
 
     state.layerNames[(layerIndex + 1) % state.layers.length] = state.layerNames[layerIndex] + ' (コピー)';
 
+    // Record duplicate action for timelapse playback and request an immediate snapshot
+    try {
+        if (typeof recordTimelapse === 'function') {
+            recordTimelapse({ t: Date.now(), type: 'duplicate', from: layerIndex, to: (layerIndex + 1) % state.layers.length });
+        }
+        if (typeof createTimelapseSnapshotPublic === 'function') {
+            createTimelapseSnapshotPublic();
+        }
+        try {
+            if (typeof syncPlayerWithEditor === 'function') {
+                syncPlayerWithEditor(state);
+            }
+        } catch (e) {
+            // non-fatal
+        }
+    } catch (e) {
+        console.warn('Failed to record duplicate layer event for timelapse:', e);
+    }
+
     renderLayers(updateStatusBar, setStatus);
     setStatus(`レイヤー ${layerIndex} を複製しました`);
 }
@@ -631,6 +749,25 @@ export function mergeLayerDown(layerIndex, pushUndo, updateStatusBar, setStatus)
     const sourceCtx = state.contexts[layerIndex];
     sourceCtx.clearRect(0, 0, sourceCanvas.width, sourceCanvas.height);
 
+    // Record merge-down action for timelapse playback and request an immediate snapshot
+    try {
+        if (typeof recordTimelapse === 'function') {
+            recordTimelapse({ t: Date.now(), type: 'merge', from: layerIndex, to: layerIndex - 1 });
+        }
+        if (typeof createTimelapseSnapshotPublic === 'function') {
+            createTimelapseSnapshotPublic();
+        }
+        try {
+            if (typeof syncPlayerWithEditor === 'function') {
+                syncPlayerWithEditor(state);
+            }
+        } catch (e) {
+            // non-fatal
+        }
+    } catch (e) {
+        console.warn('Failed to record merge layer event for timelapse:', e);
+    }
+
     renderLayers(updateStatusBar, setStatus);
     setStatus(`レイヤー ${layerIndex} を下のレイヤーと結合しました`);
 }
@@ -649,6 +786,25 @@ export function clearLayer(layerIndex, pushUndo, updateStatusBar, setStatus) {
     const canvas = state.layers[layerIndex];
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Record clear action for timelapse playback and request an immediate snapshot
+    try {
+        if (typeof recordTimelapse === 'function') {
+            recordTimelapse({ t: Date.now(), type: 'clear', layer: layerIndex });
+        }
+        if (typeof createTimelapseSnapshotPublic === 'function') {
+            createTimelapseSnapshotPublic();
+        }
+        try {
+            if (typeof syncPlayerWithEditor === 'function') {
+                syncPlayerWithEditor(state);
+            }
+        } catch (e) {
+            // non-fatal
+        }
+    } catch (e) {
+        console.warn('Failed to record clear layer event for timelapse:', e);
+    }
 
     setStatus(`レイヤー ${layerIndex} をクリアしました`);
 }

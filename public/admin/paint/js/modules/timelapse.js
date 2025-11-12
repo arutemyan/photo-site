@@ -87,6 +87,22 @@ export function openTimelapseModal(setStatus) {
 }
 
 /**
+ * Sync the active timelapsePlayer with the given editor state if the modal/player
+ * is currently active. This is a small helper so other admin modules (layers)
+ * can request a live update when editor state changes (blend/opacity/visibility).
+ */
+export function syncPlayerWithEditor(editorState) {
+    try {
+        if (timelapsePlayer && typeof timelapsePlayer.syncLayersFromEditor === 'function') {
+            timelapsePlayer.syncLayersFromEditor(editorState);
+        }
+    } catch (e) {
+        // non-fatal
+        console.warn('Failed to sync timelapse player with editor state:', e);
+    }
+}
+
+/**
  * Close timelapse modal
  */
 export function closeTimelapseModal() {
