@@ -9,6 +9,10 @@ const fs = require('fs');
 
 const isProduction = process.env.NODE_ENV === 'production';
 const isWatch = process.argv.includes('--watch');
+// Allow forcing console stripping via --strip-console or STRIP_CONSOLE=true
+const stripConsoleFlag = process.argv.includes('--strip-console') || process.env.STRIP_CONSOLE === 'true';
+// Default: strip console in production builds, but allow override with flag/env
+const stripConsole = stripConsoleFlag || isProduction;
 
 // ビルド対象の定義
 const builds = [
@@ -122,6 +126,11 @@ async function buildAll() {
           await ctx.watch();
           console.log(`👀 Watching: ${name}`);
         } else {
+          // Inject optional drop settings for JS builds to remove console/debugger when requested
+          if (stripConsole && config.outfile && config.outfile.endsWith('.js')) {
+            config.drop = ['console', 'debugger'];
+          }
+
           await esbuild.build(config);
           
           // ファイルサイズを表示
