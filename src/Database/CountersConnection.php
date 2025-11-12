@@ -116,7 +116,7 @@ class CountersConnection
                     PRIMARY KEY (post_id, post_type)
                 )
             ");
-            $db->exec("CREATE INDEX IF NOT EXISTS idx_view_counts_updated ON view_counts(updated_at DESC)");
+            \App\Database\DatabaseHelper::createIndexIfNotExists($db, 'idx_view_counts_updated', 'view_counts', 'updated_at DESC');
             Logger::getInstance()->info("CountersConnection: Successfully created view_counts table");
             return;
         }
@@ -189,7 +189,7 @@ class CountersConnection
                 $db->exec("DROP TABLE view_counts_temp");
 
                 Logger::getInstance()->info("CountersConnection: Step 9 - Creating index");
-                $db->exec("CREATE INDEX IF NOT EXISTS idx_view_counts_updated ON view_counts(updated_at DESC)");
+                \App\Database\DatabaseHelper::createIndexIfNotExists($db, 'idx_view_counts_updated', 'view_counts', 'updated_at DESC');
 
                 Logger::getInstance()->info("CountersConnection: Step 10 - Committing transaction");
                 $db->exec("COMMIT");
@@ -240,7 +240,7 @@ class CountersConnection
             }
         } else {
             // post_typeカラムが既に存在する場合、インデックスのみ確認
-            $db->exec("CREATE INDEX IF NOT EXISTS idx_view_counts_updated ON view_counts(updated_at DESC)");
+            \App\Database\DatabaseHelper::createIndexIfNotExists($db, 'idx_view_counts_updated', 'view_counts', 'updated_at DESC');
         }
     }
 

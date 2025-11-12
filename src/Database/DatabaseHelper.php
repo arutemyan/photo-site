@@ -214,4 +214,49 @@ class DatabaseHelper
             default => 'TIMESTAMP'
         };
     }
+
+    /**
+     * 指定したインデックスが存在しなければ作成する（DBごとの差分を吸収）
+     *
+     * - MySQL: information_schema を参照して存在チェック後に作成（MySQLは "CREATE INDEX IF NOT EXISTS" をサポートしない場合がある）
+     * - SQLite/PostgreSQL: "CREATE INDEX IF NOT EXISTS" を使用
+     *
+     * @param PDO $pdo
+     * @param string $indexName
+     * @param string $table
+     * @param string $columns 列定義（必要に応じて DESC を含めて良い）
+     */
+    public static function createIndexIfNotExists(PDO $pdo, string $indexName, string $table, string $columns): void
+    {
+        $driver = self::getDriver($pdo);
+
+        if ($driver === 'mysql') {
+            // MySQL: database() で現在のスキーマ名を取得して情報スキーマを検索
+            try {
+                $dbStmt = $pdo->query('SELECT DATABASE() as db');
+                $dbName = $dbStmt ? $dbStmt->fetchColumn() : null;
+
+                if ($dbName) {
+                    $check = $pdo->prepare(
+                        'SELECT COUNT(*) as cnt FROM information_schema.statistics WHERE table_schema = ? AND table_name = ? AND index_name = ?'
+                    );
+                    $check->execute([$dbName, $table, $indexName]);
+                    $row = $check->fetch(PDO::FETCH_ASSOC);
+                    if ($row && intval($row['cnt']) > 0) {
+                        return; // 既に存在
+                    }
+                }
+            } catch (\Exception $e) {
+                // チェックに失敗しても作成を試みる
+            }
+
+            // MySQLでは列定義に DESC が含まれると古いバージョンでエラーになることがあるため除去して作成
+            $columnsForMy = preg_replace('/\s+DESC/i', '', $columns);
+            $pdo->exec("CREATE INDEX {$indexName} ON {$table}({$columnsForMy})");
+            return;
+        }
+
+        // SQLite/PostgreSQL は IF NOT EXISTS を利用（Postgres はバージョンによるがここでは信頼する）
+        $pdo->exec("CREATE INDEX IF NOT EXISTS {$indexName} ON {$table}({$columns})");
+    }
 }

@@ -136,9 +136,9 @@ class AccessLogsConnection
             )
         ");
 
-        // インデックス作成
-        $db->exec("CREATE INDEX IF NOT EXISTS idx_access_logs_created ON access_logs(created_at DESC)");
-        $db->exec("CREATE INDEX IF NOT EXISTS idx_access_logs_ip ON access_logs(ip_address)");
+    // インデックス作成
+    \App\Database\DatabaseHelper::createIndexIfNotExists($db, 'idx_access_logs_created', 'access_logs', 'created_at DESC');
+    \App\Database\DatabaseHelper::createIndexIfNotExists($db, 'idx_access_logs_ip', 'access_logs', 'ip_address');
     }
 
     /**

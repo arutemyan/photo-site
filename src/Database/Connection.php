@@ -232,9 +232,9 @@ class Connection
             )
         ");
 
-        // postsテーブルのインデックス
-        $db->exec("CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC)");
-        $db->exec("CREATE INDEX IF NOT EXISTS idx_posts_visible ON posts(is_visible, created_at DESC)");
+    // postsテーブルのインデックス
+    \App\Database\DatabaseHelper::createIndexIfNotExists($db, 'idx_posts_created_at', 'posts', 'created_at DESC');
+    \App\Database\DatabaseHelper::createIndexIfNotExists($db, 'idx_posts_visible', 'posts', 'is_visible, created_at DESC');
 
         // tagsテーブル（タグマスタ）
         $db->exec("
@@ -245,8 +245,8 @@ class Connection
             )
         ");
 
-        // tagsテーブルのインデックス
-        $db->exec("CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name)");
+    // tagsテーブルのインデックス
+    \App\Database\DatabaseHelper::createIndexIfNotExists($db, 'idx_tags_name', 'tags', 'name');
 
         // migrationsテーブル（マイグレーションバージョン管理）
         $db->exec("
@@ -310,7 +310,7 @@ class Connection
                     PRIMARY KEY (post_id, post_type)
                 )
             ");
-            $db->exec("CREATE INDEX IF NOT EXISTS idx_view_counts_updated ON view_counts(updated_at DESC)");
+            \App\Database\DatabaseHelper::createIndexIfNotExists($db, 'idx_view_counts_updated', 'view_counts', 'updated_at DESC');
         }
 
         // デフォルトテーマを作成（存在しない場合）
