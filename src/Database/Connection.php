@@ -171,8 +171,8 @@ class Connection
                     }
                 }
 
-                // データベーススキーマを初期化
-                self::initializeSchema();
+                // スキーマ初期化はマイグレーションで管理します。
+                // ここでは自動的にスキーマを作成しません（public/setup/run_migrations.php を使ってください）。
 
                 // マイグレーションを自動実行するかどうかは設定で制御
                 $runMigrations = self::$config['database']['run_migrations_on_connect'] ?? true;
@@ -273,28 +273,28 @@ class Connection
                 id {$autoInc},
                 header_html {$textType},
                 footer_html {$textType},
-                site_title {$textType} DEFAULT 'イラストポートフォリオ',
-                site_subtitle {$textType} DEFAULT 'Illustration Portfolio',
-                site_description {$textType} DEFAULT 'イラストレーターのポートフォリオサイト',
-                primary_color {$textType} DEFAULT '#8B5AFA',
-                secondary_color {$textType} DEFAULT '#667eea',
-                accent_color {$textType} DEFAULT '#FFD700',
-                background_color {$textType} DEFAULT '#1a1a1a',
-                text_color {$textType} DEFAULT '#ffffff',
-                heading_color {$textType} DEFAULT '#ffffff',
-                footer_bg_color {$textType} DEFAULT '#2a2a2a',
-                footer_text_color {$textType} DEFAULT '#cccccc',
-                card_border_color {$textType} DEFAULT '#333333',
-                card_bg_color {$textType} DEFAULT '#252525',
-                card_shadow_opacity {$textType} DEFAULT '0.3',
-                link_color {$textType} DEFAULT '#8B5AFA',
-                link_hover_color {$textType} DEFAULT '#a177ff',
-                tag_bg_color {$textType} DEFAULT '#8B5AFA',
-                tag_text_color {$textType} DEFAULT '#ffffff',
-                filter_active_bg_color {$textType} DEFAULT '#8B5AFA',
-                filter_active_text_color {$textType} DEFAULT '#ffffff',
-                header_image {$textType},
-                logo_image {$textType},
+                site_title {$shortText} DEFAULT 'イラストポートフォリオ',
+                site_subtitle {$shortText} DEFAULT 'Illustration Portfolio',
+                site_description {$shortText} DEFAULT 'イラストレーターのポートフォリオサイト',
+                primary_color {$shortText} DEFAULT '#8B5AFA',
+                secondary_color {$shortText} DEFAULT '#667eea',
+                accent_color {$shortText} DEFAULT '#FFD700',
+                background_color {$shortText} DEFAULT '#1a1a1a',
+                text_color {$shortText} DEFAULT '#ffffff',
+                heading_color {$shortText} DEFAULT '#ffffff',
+                footer_bg_color {$shortText} DEFAULT '#2a2a2a',
+                footer_text_color {$shortText} DEFAULT '#cccccc',
+                card_border_color {$shortText} DEFAULT '#333333',
+                card_bg_color {$shortText} DEFAULT '#252525',
+                card_shadow_opacity {$shortText} DEFAULT '0.3',
+                link_color {$shortText} DEFAULT '#8B5AFA',
+                link_hover_color {$shortText} DEFAULT '#a177ff',
+                tag_bg_color {$shortText} DEFAULT '#8B5AFA',
+                tag_text_color {$shortText} DEFAULT '#ffffff',
+                filter_active_bg_color {$shortText} DEFAULT '#8B5AFA',
+                filter_active_text_color {$shortText} DEFAULT '#ffffff',
+                header_image {$shortText},
+                logo_image {$shortText},
                 updated_at {$datetimeType} DEFAULT {$currentTimestamp}
             )
         ");
