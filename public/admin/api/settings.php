@@ -34,7 +34,16 @@ class SettingsController extends AdminControllerBase
     private function handleGet(): void
     {
         $settings = $this->settingModel->getAll();
-        $this->sendSuccess(['settings' => $settings]);
+        // Model returns rows with 'setting_key' and 'setting_value'.
+        // Convert to legacy API shape { key, value } expected by admin JS.
+        $out = [];
+        foreach ($settings as $row) {
+            $out[] = [
+                'key' => $row['setting_key'],
+                'value' => $row['setting_value'],
+            ];
+        }
+        $this->sendSuccess(['settings' => $out]);
     }
 
     private function handlePost(): void
