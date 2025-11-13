@@ -16,10 +16,13 @@ return [
         $helper = \App\Database\DatabaseHelper::class;
         $driver = $helper::getDriver($db);
         $textType = $helper::getTextType($db);
+        // Use a shorter VARCHAR for columns that will have DEFAULT values to avoid
+        // MySQL error: TEXT columns cannot have default values.
+        $shortText = $helper::getTextType($db, 191);
 
         // themesテーブルに一覧に戻るボタンの設定カラムを追加
         try {
-            $db->exec("ALTER TABLE themes ADD COLUMN back_button_text {$textType} DEFAULT '一覧に戻る'");
+            $db->exec("ALTER TABLE themes ADD COLUMN back_button_text {$shortText} DEFAULT '一覧に戻る'");
         } catch (PDOException $e) {
             if (strpos($e->getMessage(), 'Duplicate column') === false &&
                 strpos($e->getMessage(), 'already exists') === false) {
@@ -28,7 +31,7 @@ return [
         }
 
         try {
-            $db->exec("ALTER TABLE themes ADD COLUMN back_button_bg_color {$textType} DEFAULT '#8B5AFA'");
+            $db->exec("ALTER TABLE themes ADD COLUMN back_button_bg_color {$shortText} DEFAULT '#8B5AFA'");
         } catch (PDOException $e) {
             if (strpos($e->getMessage(), 'Duplicate column') === false &&
                 strpos($e->getMessage(), 'already exists') === false) {
@@ -37,7 +40,7 @@ return [
         }
 
         try {
-            $db->exec("ALTER TABLE themes ADD COLUMN back_button_text_color {$textType} DEFAULT '#FFFFFF'");
+            $db->exec("ALTER TABLE themes ADD COLUMN back_button_text_color {$shortText} DEFAULT '#FFFFFF'");
         } catch (PDOException $e) {
             if (strpos($e->getMessage(), 'Duplicate column') === false &&
                 strpos($e->getMessage(), 'already exists') === false) {
