@@ -148,12 +148,13 @@ class Connection
                 if ($driver === 'postgresql') {
                     $schema = self::$config['database']['postgresql']['schema'] ?? 'public';
                     // SQLインジェクション対策: スキーマ名を正規表現で検証
-                    // 正規表現で検証済みなので、直接使用可能（クォート不要）
                     if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $schema)) {
-                        throw new \PDOException("Invalid PostgreSQL schema name: {$schema}");
+                        throw new \InvalidArgumentException(sprintf('Invalid PostgreSQL schema name: %s', $schema));
                     }
-                    // 検証済みのスキーマ名を直接使用
-                    self::$instance->exec("SET search_path TO {$schema}");
+                    // PDO::quote() でクォートしてから、クォート文字を取り除いて SET に渡す
+                    $quoted = self::$instance->quote($schema);
+                    $schemaForSet = trim($quoted, "'");
+                    self::$instance->exec("SET search_path TO " . $schemaForSet);
                 }
 
                 // SQLiteではロック待ちタイムアウトやWALモード、外部キーを有効にしておく

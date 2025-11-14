@@ -49,13 +49,15 @@ PostgreSQL のスキーマ設定で文字列補間を使用しており、潜在
 ```php
 // 修正後（安全）
 if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $schema)) {
-    throw new \PDOException("Invalid PostgreSQL schema name: {$schema}");
+    throw new \InvalidArgumentException(sprintf('Invalid PostgreSQL schema name: %s', $schema));
 }
-$quotedSchema = self::$instance->quote($schema);
-self::$instance->exec("SET search_path TO " . trim($quotedSchema, "'"));
+// PDO::quote() でクォートしてから、クォート文字を取り除いて SET に渡す
+$quoted = self::$instance->quote($schema);
+$schemaForSet = trim($quoted, "'");
+self::$instance->exec("SET search_path TO " . $schemaForSet);
 ```
 
-スキーマ名を正規表現で検証し、適切にクォートしてから使用するように修正しました。
+スキーマ名を正規表現で検証し、適切にクォートしてから使用するように修正しました。不正なスキーマ名の場合は `InvalidArgumentException` を投げます。
 
 **影響範囲**: PostgreSQL を使用する場合のみ
 
