@@ -90,7 +90,7 @@ class Session
             // HTTPS環境でのみsecure cookieを有効化
             // 本番環境では常にHTTPS前提でsecure=1を設定することを推奨
             $isHttps = isHttps();
-            $forceSecure = $config['session']['force_secure_cookie'] ?? false;
+            $forceSecure = $config['security']['session']['force_secure_cookie'] ?? false;
             ini_set('session.cookie_secure', ($isHttps || $forceSecure) ? '1' : '0');
             ini_set('session.cookie_samesite', 'Strict');
             ini_set('session.use_strict_mode', '1');

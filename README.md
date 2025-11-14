@@ -96,6 +96,31 @@ cp config/config.local.example.php config/config.local.php
 - `data/`, `config/`, `config/session_keys/` 等のパーミッションを適切に設定する
 - 強力な管理者パスワードを設定する（推奨: 12文字以上・複雑）
 
+### セッションセキュリティ設定（本番環境推奨）
+
+本番環境では、プロキシやロードバランサ経由で HTTPS 判定が正しく機能しない場合があります。
+セッションクッキーの secure フラグを確実に有効化するため、以下のいずれかの設定を推奨します:
+
+**方法1: 環境変数で設定（推奨）**
+```bash
+# HTTPS 環境でセキュアクッキーを強制
+export FORCE_SECURE_COOKIE=1
+
+# または APP_ENV=production で自動有効化
+export APP_ENV=production
+```
+
+**方法2: config.local.php で設定**
+```php
+return [
+    'security' => [
+        'session' => [
+            'force_secure_cookie' => true,
+        ],
+    ],
+];
+```
+
 詳細な手順や推奨設定は以下を参照してください:
 
 - `docs/SECURITY.md`

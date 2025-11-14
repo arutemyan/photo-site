@@ -178,8 +178,9 @@ return [
             'use_strict_mode' => true,
             'use_only_cookies' => true,
             // 本番環境ではHTTPSが検出されなくてもsecure cookieを強制
+            // FORCE_SECURE_COOKIE=1 環境変数、または APP_ENV=production で自動的に有効化
             // 開発環境（HTTP）では false に設定してください
-            'force_secure_cookie' => false,
+            'force_secure_cookie' => getenv('FORCE_SECURE_COOKIE') === '1' || getenv('APP_ENV') === 'production',
         ],
 
         // CSRF保護設定
