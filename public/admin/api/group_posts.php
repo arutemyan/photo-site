@@ -42,13 +42,15 @@ class GroupPostsController extends AdminControllerBase
     {
         // 詳細取得
         if (isset($_GET['id'])) {
-            $groupPost = $this->postModel->getById((int)$_GET['id']);
-            if ($groupPost && $groupPost['post_type'] == 1) {
+            $groupPost = $this->postModel->getByIdForAdmin((int)$_GET['id']);
+            if ($groupPost && ($groupPost['post_type'] ?? 0) == 1) {
                 // グループ投稿の画像を取得
                 $groupPost['images'] = $this->groupPostImageModel->getImagesByPostId($groupPost['id']);
                 $this->sendSuccess(['data' => $groupPost]);
+                return;
             } else {
                 $this->sendError('グループ投稿が見つかりません', 404);
+                return;
             }
         }
 
@@ -58,7 +60,7 @@ class GroupPostsController extends AdminControllerBase
         $groupPosts = $this->postModel->getAllUnified($limit, 'all', null, $offset);
 
         // post_type=1のみフィルタ
-        $groupPosts = array_filter($groupPosts, fn($post) => $post['post_type'] == 1);
+        $groupPosts = array_filter($groupPosts, fn($post) => ($post['post_type'] ?? 0) == 1);
         $groupPosts = array_values($groupPosts); // 配列のインデックスを詰める
 
         $this->sendSuccess([
