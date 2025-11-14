@@ -21,7 +21,7 @@ final class TagTest extends TestCase
 
     /**
      * 各テストメソッドの前に実行
-     * テスト用のSQLiteデータベースを作成
+     * テスト用のSQLiteデータベースを作成し、マイグレーションを実行
      */
     protected function setUp(): void
     {
@@ -34,33 +34,9 @@ final class TagTest extends TestCase
         Connection::setDatabasePath($this->testDbPath);
         $this->pdo = Connection::getInstance();
 
-        // テーブル作成
-        $this->pdo->exec('
-            CREATE TABLE IF NOT EXISTS tags (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        ');
-
-        // テスト用のpostsテーブルも作成（post_countのため）
-        $this->pdo->exec('
-            CREATE TABLE IF NOT EXISTS posts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT,
-                is_visible INTEGER DEFAULT 1,
-                tag1 INTEGER,
-                tag2 INTEGER,
-                tag3 INTEGER,
-                tag4 INTEGER,
-                tag5 INTEGER,
-                tag6 INTEGER,
-                tag7 INTEGER,
-                tag8 INTEGER,
-                tag9 INTEGER,
-                tag10 INTEGER
-            )
-        ');
+        // マイグレーションを明示的に実行してスキーマを作成
+        $migrationRunner = Connection::getMigrationRunner();
+        $migrationRunner->run();
 
         // Tagモデルのインスタンスを作成
         $this->tagModel = new Tag();
