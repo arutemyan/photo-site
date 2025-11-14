@@ -110,6 +110,10 @@ class Session
             if (!mkdir($this->keyDir, 0700, true) && !is_dir($this->keyDir)) {
                 throw new Exception('Failed to create key directory: ' . $this->keyDir);
             }
+        } else {
+            // 既存ディレクトリのパーミッションを強制的に0700に設定
+            // セキュリティ上重要なディレクトリのため、所有者のみアクセス可能にする
+            chmod($this->keyDir, 0700);
         }
     }
 

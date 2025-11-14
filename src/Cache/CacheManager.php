@@ -101,6 +101,12 @@ class CacheManager
 
             return true;
         } catch (Exception $e) {
+            // エラーをログに記録（デバッグ用）
+            \App\Utils\Logger::getInstance()->error('Cache write failed', [
+                'key' => $key,
+                'error' => $e->getMessage(),
+                'file' => $filePath
+            ]);
             @unlink($tempFile);
             return false;
         }

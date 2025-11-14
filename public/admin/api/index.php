@@ -109,18 +109,26 @@ $router->post('/admin/api/posts', function () {
         }
 
         // 画像アップロード処理
-        $imageUploader = new ImageUploader();
         $uploadDir = __DIR__ . '/../../../uploads/images/';
         $thumbDir = __DIR__ . '/../../../uploads/thumbs/';
+        $imageUploader = new ImageUploader($uploadDir, $thumbDir);
 
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
-        if (!is_dir($thumbDir)) {
-            mkdir($thumbDir, 0755, true);
+        // ファイルの検証
+        $validation = $imageUploader->validateFile($_FILES['image']);
+        if (!$validation['valid']) {
+            Router::error($validation['error'], 400);
+            return;
         }
 
-        $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
+        // MIMEタイプに基づいた拡張子を決定（セキュリティ対策）
+        $ext = match($validation['mime_type']) {
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            'image/gif' => 'gif',
+            default => 'webp' // フォールバック
+        };
+
         $filename = date('Ymd_His') . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
         $uploadPath = $uploadDir . $filename;
         $thumbFilename = pathinfo($filename, PATHINFO_FILENAME) . '.webp';

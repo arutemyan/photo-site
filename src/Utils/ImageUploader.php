@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Utils;
 
+use App\Constants\ImageConstants;
 use Exception;
 
 /**
@@ -209,7 +210,7 @@ class ImageUploader
             $originalWidth, $originalHeight
         );
 
-        imagewebp($thumbImage, $outputPath, 85);
+        imagewebp($thumbImage, $outputPath, ImageConstants::THUMBNAIL_QUALITY);
         imagedestroy($thumbImage);
     }
 

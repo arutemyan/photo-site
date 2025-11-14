@@ -7,7 +7,9 @@ namespace App\Models;
 use App\Database\Connection;
 use App\Utils\ViewCounter;
 use App\Utils\AccessLogger;
+use App\Utils\InputValidator;
 use App\Services\PostTagService;
+use App\Constants\PostConstants;
 use PDO;
 
 /**
@@ -38,11 +40,11 @@ class Post
      * @param int|null $tagId タグフィルタ（タグID）
      * @return array 投稿データの配列
      */
-    public function getAll(int $limit = 18, string $nsfwFilter = 'all', ?int $tagId = null, int $offset = 0): array
+    public function getAll(int $limit = PostConstants::DEFAULT_POSTS_PER_PAGE, string $nsfwFilter = PostConstants::NSFW_FILTER_ALL, ?int $tagId = null, int $offset = 0): array
     {
         // セキュリティ: 上限値を強制（DoS攻撃対策）
-        $limit = min($limit, 50); // 絶対に50件以上は返さない
-        $offset = max($offset, 0); // 負のオフセットは無効
+        $limit = min($limit, PostConstants::MAX_POSTS_PER_PAGE);
+        $offset = max($offset, 0);
 
         $sql = "
             SELECT id, title, detail, image_path, thumb_path, is_sensitive, is_visible, created_at, updated_at,
@@ -59,15 +61,8 @@ class Post
             $sql .= " AND is_sensitive = 1";
         }
 
-        // 以下の文字は解析しないで結果なしにする
-        function checkNGTag($t) {
-            if (empty($t)) return false;
-            return false
-                || strpos($t, ";") !== false
-                || strpos($t, '"') !== false
-                || strpos($t, "'") !== false;
-        }
-        if ((!empty($tagId) && !is_numeric($tagId)) || checkNGTag($nsfwFilter)) {
+        // 入力検証
+        if (!InputValidator::validateTagId($tagId) || !InputValidator::validateNsfwFilter($nsfwFilter)) {
             return [];
         }
         // タグフィルタ（tag1～tag10のいずれかに一致）
@@ -133,15 +128,8 @@ class Post
             $sql .= " AND is_sensitive = 1";
         }
 
-        // セキュリティチェック
-        function checkNGTag($t) {
-            if (empty($t)) return false;
-            return false
-                || strpos($t, ";") !== false
-                || strpos($t, '"') !== false
-                || strpos($t, "'") !== false;
-        }
-        if ((!empty($tagId) && !is_numeric($tagId)) || checkNGTag($nsfwFilter)) {
+        // 入力検証
+        if (!InputValidator::validateTagId($tagId) || !InputValidator::validateNsfwFilter($nsfwFilter)) {
             return [];
         }
 

@@ -43,14 +43,19 @@ class User
             return null;
         }
 
-        // 空のパスワードハッシュの場合は認証失敗（セキュリティ対策）
+        // タイミング攻撃対策: 常にpassword_verify()を実行
+        // 空のパスワードハッシュの場合は無効なハッシュを使用
+        $hash = !empty($user['password_hash']) ? $user['password_hash'] : '$2y$10$invalidhashxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+        $isValid = password_verify($password, $hash);
+
+        // 空のパスワードハッシュの場合は警告ログを記録
         if (empty($user['password_hash'])) {
             Logger::getInstance()->warning('Login attempt with empty password hash for user: ' . $username);
             return null;
         }
 
-        // パスワード検証
-        if (!password_verify($password, $user['password_hash'])) {
+        // パスワード検証失敗
+        if (!$isValid) {
             return null;
         }
 
