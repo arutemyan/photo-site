@@ -24,6 +24,16 @@ composer install
 
 2. 開発時は PHP 8.1+ を推奨しています。ローカルに PHP がない場合は Docker を利用してください。
 
+### 開発環境と本番環境のセッション設定について
+
+開発環境では HTTP（非HTTPS）でテストする場合が多いため、`force_secure_cookie` はデフォルトで `false` に設定されています。本番環境では以下の方法でセキュアクッキーを強制してください:
+
+- 環境変数 `FORCE_SECURE_COOKIE=1` を設定
+- または環境変数 `APP_ENV=production` を設定
+- または `config/config.local.php` で `['security']['session']['force_secure_cookie'] = true` を設定
+
+これにより、プロキシやロードバランサ経由でも確実にセッションクッキーに secure フラグが付与されます。
+
 ## テストの実行
 ユニット/統合テストは PHPUnit で管理されています。簡単な実行方法:
 
