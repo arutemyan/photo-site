@@ -34,10 +34,11 @@ try {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
     <title>お絵描き - 管理</title>
     <?php echo \App\Utils\AssetHelper::linkTag(PathHelper::getAdminUrl('/paint/css/style.css')); ?>
 </head>
-<body>
+<body data-paint-base-url="<?= htmlspecialchars(rtrim(PathHelper::getAdminUrl('/paint/'), '/') . '/', ENT_QUOTES, 'UTF-8') ?>">
 
 <!-- Header -->
 <header class="header">
@@ -524,149 +525,9 @@ try {
     </div>
 </div>
 
-<script>window.CSRF_TOKEN = '<?php echo htmlspecialchars($csrf, ENT_QUOTES, "UTF-8"); ?>';</script>
-<!-- Base URL for admin/paint assets (used by JS to build absolute paths) -->
-<script>
-    // Ensure trailing slash
-    window.PAINT_BASE_URL = '<?php echo rtrim(PathHelper::getAdminUrl('/paint/'), '/'); ?>' + '/';
-</script>
-<!-- Shim Worker constructor for timelapse worker so relative "js/..." paths resolve under PAINT_BASE_URL -->
-<script>
-    (function(){
-        if (typeof window === 'undefined' || typeof window.Worker === 'undefined') return;
-        try {
-            const OrigWorker = window.Worker;
-            window.Worker = function(scriptUrl) {
-                try {
-                    if (typeof scriptUrl === 'string' && scriptUrl.indexOf('timelapse_worker.js') !== -1 && window.PAINT_BASE_URL) {
-                        const base = String(window.PAINT_BASE_URL).replace(/\/$/, '');
-                        return new OrigWorker(base + '/js/timelapse_worker.js');
-                    }
-                } catch (e) {
-                    // ignore and fall back
-                }
-                return new OrigWorker(scriptUrl);
-            };
-            // preserve prototype
-            window.Worker.prototype = OrigWorker.prototype;
-        } catch (e) {
-            // ignore
-        }
-    })();
-            // Fetch wrapper: prefix relative "api/..." requests with PAINT_BASE_URL so JS can use simple relative paths
-            // Also: special-case timelapse API responses to normalize them into a gzipped binary payload
-            (function(){
-                try {
-                    if (typeof window === 'undefined' || typeof window.fetch !== 'function') return;
-                    const _origFetch = window.fetch.bind(window);
-
-                    // helper to gzip a string (if pako available)
-                    const gzipString = async (str) => {
-                        try{
-                            if (typeof pako !== 'undefined' && typeof pako.gzip === 'function'){
-                                const arr = pako.gzip(str);
-                                return new Uint8Array(arr);
-                            }
-                        }catch(e){/* fallthrough */}
-                        // no pako: return utf-8 bytes (non-gz) as fallback
-                        const enc = new TextEncoder();
-                        return enc.encode(str);
-                    };
-
-                    window.fetch = async function(input, init){
-                        try {
-                            // Only rewrite string URLs (most code uses string literals like 'api/...')
-                            if (typeof input === 'string'){
-                                const s = input.trim();
-                                // ignore absolute URLs (scheme) and root-absolute paths
-                                if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(s) && s.charAt(0) !== '/'){
-                                    // match optional ./ or ../ then api/...
-                                    const m = s.match(/^(?:\.\/|\.\.\/)?(api\/.*)$/);
-                                    if (m && m[1]){
-                                        const base = (typeof window.PAINT_BASE_URL === 'string' ? String(window.PAINT_BASE_URL).replace(/\/$/, '') : '');
-                                        if (base) {
-                                            input = base + '/' + m[1];
-                                        }
-                                    }
-                                }
-                            } else if (input && input.url && typeof input.url === 'string' && !/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(input.url) && input.url.charAt(0) !== '/'){
-                                // If a Request object is used, attempt to rewrite by creating a new Request
-                                const s = input.url.trim();
-                                const m = s.match(/^(?:\.\/|\.\.\/)?(api\/.*)$/);
-                                if (m && m[1]){
-                                    const base = (typeof window.PAINT_BASE_URL === 'string' ? String(window.PAINT_BASE_URL).replace(/\/$/, '') : '');
-                                    if (base) {
-                                        input = new Request(base + '/' + m[1], input);
-                                    }
-                                }
-                            }
-                        } catch (e) {
-                            // fall back to original input
-                        }
-
-                        // Special-case: normalize timelapse API to gzipped binary so existing bundle logic (which expects gz) will work.
-                        try{
-                            let url = (typeof input === 'string') ? input : (input && input.url ? input.url : null);
-                            if (url && /\/?api\/timelapse\.php(?:\?|$)/.test(url)){
-                                // Fetch original response
-                                const orig = await _origFetch(input, init);
-                                if (!orig.ok) return orig;
-
-                                // If already an octet-stream (gz) just return as-is
-                                let ct = '';
-                                try{ ct = orig.headers && orig.headers.get ? (orig.headers.get('content-type')||'') : ''; }catch(e){ct='';}
-                                if(ct.indexOf('application/octet-stream') !== -1 || ct.indexOf('application/gzip') !== -1){
-                                    return orig;
-                                }
-
-                                // Try to parse JSON wrapper first
-                                let parsed = null;
-                                try{
-                                    parsed = await orig.json();
-                                }catch(e){
-                                    // not JSON, fall back to text
-                                }
-
-                                if(parsed && typeof parsed === 'object'){
-                                    // server wrapper: { format: 'csv', csv: '...' }
-                                    if(parsed.format === 'csv' && typeof parsed.csv === 'string'){
-                                        const gz = await gzipString(parsed.csv);
-                                        const blob = new Blob([gz], { type: 'application/octet-stream' });
-                                        return new Response(blob, { status: 200, statusText: 'OK', headers: { 'Content-Type': 'application/octet-stream' } });
-                                    }
-                                    // server wrapper: { format: 'json', timelapse: {...} }
-                                    if(parsed.format === 'json' && parsed.timelapse){
-                                        // Unguarded: create a JSON text of the timelapse object so bundle can JSON.parse after ungzip
-                                        const txt = JSON.stringify(parsed.timelapse);
-                                        const gz = await gzipString(txt);
-                                        const blob = new Blob([gz], { type: 'application/octet-stream' });
-                                        return new Response(blob, { status: 200, statusText: 'OK', headers: { 'Content-Type': 'application/octet-stream' } });
-                                    }
-                                }
-
-                                // If we get here: not a wrapper JSON; try to read text and gzip that
-                                try{
-                                    const txt = await orig.text();
-                                    const gz = await gzipString(txt);
-                                    const blob = new Blob([gz], { type: 'application/octet-stream' });
-                                    return new Response(blob, { status: 200, statusText: 'OK', headers: { 'Content-Type': 'application/octet-stream' } });
-                                }catch(e){
-                                    return orig; // fallback
-                                }
-                            }
-                        }catch(e){
-                            // ignore and continue to normal fetch
-                        }
-
-                        return _origFetch(input, init);
-                    };
-                } catch (e) {
-                    // ignore
-                }
-            })();
-        </script>
 <!-- pako (gzip) for timelapse compression -->
 <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+<?php echo \App\Utils\AssetHelper::scriptTag(PathHelper::getAdminUrl('/paint/js/paint-init.js')); ?>
 <?php echo \App\Utils\AssetHelper::scriptTag(PathHelper::getAdminUrl('/paint/js/paint.js')); ?>
 </body>
 </html>

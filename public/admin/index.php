@@ -31,12 +31,13 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= escapeHtml($csrfToken) ?>">
     <title>管理ダッシュボード - イラストポートフォリオ</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <?php echo \App\Utils\AssetHelper::linkTag('/res/css/admin.css'); ?>
 </head>
-<body>
+<body data-admin-path="<?= escapeHtml(PathHelper::getAdminPath()) ?>">
     <!-- ナビゲーションバー -->
     <nav class="navbar navbar-expand-lg navbar-dark mb-4">
         <div class="container-fluid">
@@ -1007,10 +1008,6 @@ try {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script>
-        // 管理画面パスをJavaScriptで使用可能にする
-        const ADMIN_PATH = '<?= PathHelper::getAdminPath() ?>';
-    </script>
     <?php echo \App\Utils\AssetHelper::scriptTag(PathHelper::getAdminUrl('js/admin.js')); ?>
     <?php echo \App\Utils\AssetHelper::scriptTag(PathHelper::getAdminUrl('js/sns-share.js')); ?>
 </body>

@@ -79,34 +79,15 @@ function sendSecurityHeaders(array $config = []): void
     }
 
     // Content-Security-Policy（オプション）
+    // Phase 1: Now using nonce-based CSP via CspMiddleware (no unsafe-inline, no unsafe-eval)
     if (!empty($config['csp']['enabled'])) {
         // 管理画面かどうかを判定
         $isAdmin = (strpos($_SERVER['REQUEST_URI'] ?? '', '/admin') !== false);
-
-        if ($isAdmin) {
-            // 管理画面では画像プレビュー等のためにより緩和されたCSP
-            $csp = "default-src 'self'; " .
-                   "script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net code.jquery.com; " .
-                   "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; " .
-                   "img-src 'self' data: blob: https:; " .
-                   "font-src 'self' fonts.gstatic.com cdn.jsdelivr.net; " .
-                   "connect-src 'self'";
-        } else {
-            // 公開ページでは厳格なCSP
-            $csp = "default-src 'self'; " .
-                   "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net code.jquery.com; " .
-                   "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; " .
-                   "img-src 'self' data: blob:; " .
-                   "font-src 'self' fonts.gstatic.com; " .
-                   "connect-src 'self'";
-        }
-
-        // レポートのみモードか通常モードか
-        $headerName = !empty($config['csp']['report_only'])
-            ? 'Content-Security-Policy-Report-Only'
-            : 'Content-Security-Policy';
-
-        header($headerName . ': ' . $csp);
+        $reportOnly = !empty($config['csp']['report_only']);
+        
+        // Use new nonce-based CSP middleware
+        $cspMiddleware = \App\Security\CspMiddleware::getInstance();
+        $cspMiddleware->sendCspHeader($isAdmin, $reportOnly);
     }
 
     // Permissions-Policy

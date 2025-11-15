@@ -4,6 +4,10 @@
  * jQuery + AJAX で REST API を呼び出し
  */
 
+// Get configuration from meta tags and data attributes (CSP compliance)
+const ADMIN_PATH = document.body.dataset.adminPath || '';
+const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
 // モーダルインスタンス
 let editModal;
 
@@ -543,30 +547,37 @@ function loadPosts(append = false) {
 // Expose commonly-used functions to the global window so inline onclick
 // attributes and other non-module consumers can call them when this file
 // is loaded with type="module" (modules don't automatically export to window).
+// Updated to use function map instead of eval() for CSP compliance (no unsafe-eval needed)
 (function exposeAdminGlobals() {
     if (typeof window === 'undefined') return;
-    const toExpose = [
-        'loadPosts', 'loadMorePosts', 'editPost', 'deletePost', 'savePost',
-        'loadGroupPosts', 'renderGroupPosts', 'editGroupPost', 'addImagesToGroup',
-        'shareGroupPostToSNS', 'deleteGroupPost', 'replaceGroupImage', 'deleteGroupImage',
-        'copyShareGroupUrl', 'shareToSNS', 'copyShareUrl',
-        'editPost', 'editGroupPost',
-        'deletePost', 'deleteGroupPost',
-        'shareToSNS', 'shareGroupPostToSNS',
-        'loadMorePosts', 'loadPosts',
-        'updateBulkActionButtons', 'bulkUpdateVisibility',
-        'savePost', 'updateSinglePost'
-    ];
+    
+    // Function map to avoid using eval() - CSP unsafe-eval removal
+    const functionMap = {
+        'loadPosts': loadPosts,
+        'loadMorePosts': loadMorePosts,
+        'editPost': editPost,
+        'deletePost': deletePost,
+        'savePost': savePost,
+        'loadGroupPosts': loadGroupPosts,
+        'renderGroupPosts': renderGroupPosts,
+        'editGroupPost': editGroupPost,
+        'addImagesToGroup': addImagesToGroup,
+        'shareGroupPostToSNS': shareGroupPostToSNS,
+        'deleteGroupPost': deleteGroupPost,
+        'replaceGroupImage': replaceGroupImage,
+        'deleteGroupImage': deleteGroupImage,
+        'copyShareGroupUrl': copyShareGroupUrl,
+        'shareToSNS': (typeof shareToSNS !== 'undefined') ? shareToSNS : ((typeof window !== 'undefined' && typeof window.shareToSNS !== 'undefined') ? window.shareToSNS : null),
+        'copyShareUrl': (typeof copyShareUrl !== 'undefined') ? copyShareUrl : ((typeof window !== 'undefined' && typeof window.copyShareUrl !== 'undefined') ? window.copyShareUrl : null),
+        'updateBulkActionButtons': updateBulkActionButtons,
+        'bulkUpdateVisibility': bulkUpdateVisibility,
+        'updateSinglePost': updateSinglePost
+    };
 
-    toExpose.forEach(name => {
-        try {
-            if (typeof window[name] === 'undefined') {
-                // eslint-disable-next-line no-eval
-                const fn = (typeof eval(name) === 'function') ? eval(name) : null;
-                if (fn) window[name] = fn;
-            }
-        } catch (e) {
-            // ignore
+    // Expose functions to window
+    Object.keys(functionMap).forEach(name => {
+        if (typeof window[name] === 'undefined' && functionMap[name]) {
+            window[name] = functionMap[name];
         }
     });
 })();
