@@ -81,4 +81,4 @@ style-src 'self' 'nonce-XXXXX' cdn.jsdelivr.net fonts.googleapis.com
 2. **本番環境での監視** - CSP violation の発生状況を確認
 3. **Phase 3/4 の実施判断** - 必要性に応じて実施
 
-詳細な技術情報は `docs/PHASE1_COMPLETION_REPORT.md` を参照してください。
+詳細な技術情報は `PHASE1_COMPLETION_REPORT.md` を参照してください。

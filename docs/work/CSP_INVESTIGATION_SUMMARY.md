@@ -49,4 +49,4 @@
 2. CSP violation の監視
 3. Phase 2 実施の判断
 
-詳細は `docs/CSP_MIGRATION_PLAN.md` および `docs/PHASE1_COMPLETION_REPORT.md` を参照。
+詳細は `CSP_MIGRATION_PLAN.md` および `PHASE1_COMPLETION_REPORT.md` を参照。

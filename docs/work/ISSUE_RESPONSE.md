@@ -56,4 +56,4 @@
 2. 1週間の監視後、enforce モードに移行
 3. Phase 2 の実施は優先度に応じて判断
 
-詳細: `docs/CSP_MIGRATION_PLAN.md`, `docs/PHASE1_COMPLETION_REPORT.md`
+詳細: `CSP_MIGRATION_PLAN.md`, `PHASE1_COMPLETION_REPORT.md`
