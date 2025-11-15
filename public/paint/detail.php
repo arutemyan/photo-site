@@ -183,7 +183,7 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
     <?php echo \App\Utils\AssetHelper::linkTag('/res/css/main.css'); ?>
     <?php echo \App\Utils\AssetHelper::linkTag('/paint/css/gallery.css'); ?>
     <?php echo \App\Utils\AssetHelper::linkTag('/paint/css/detail.css'); ?>
-    <?php echo \App\Utils\AssetHelper::linkTag('/css/inline-styles.css'); ?>
+    <?php echo \App\Utils\AssetHelper::linkTag('/res/css/inline-styles.css'); ?>
 
     <!-- テーマカラー -->
     <style>

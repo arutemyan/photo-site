@@ -199,7 +199,7 @@ $imageUrl = !empty($shareImagePath) ? $protocol . ($_SERVER['HTTP_HOST'] ?? 'loc
 
     <!-- スタイルシート -->
     <?php echo \App\Utils\AssetHelper::linkTag('/res/css/main.css'); ?>
-    <?php echo \App\Utils\AssetHelper::linkTag('/css/inline-styles.css'); ?>
+    <?php echo \App\Utils\AssetHelper::linkTag('/res/css/inline-styles.css'); ?>
 
     <!-- テーマカラー -->
     <style>
