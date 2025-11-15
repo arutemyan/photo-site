@@ -48,7 +48,7 @@ class PostRepository
         $offset = max($offset, 0);
 
         $sql = "
-            SELECT id, title, detail, image_path, thumb_path, is_sensitive, is_visible, created_at, updated_at,
+            SELECT id, post_type, title, detail, image_path, thumb_path, is_sensitive, is_visible, created_at, updated_at,
                    tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, sort_order
             FROM posts
             WHERE is_visible = 1
@@ -112,7 +112,7 @@ class PostRepository
         $offset = max($offset, 0);
 
         $sql = "
-            SELECT id, title, detail, image_path, thumb_path, is_sensitive, is_visible, created_at, updated_at,
+            SELECT id, post_type, title, detail, image_path, thumb_path, is_sensitive, is_visible, created_at, updated_at,
                    tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, sort_order
             FROM posts
             WHERE is_visible = 1
@@ -150,34 +150,32 @@ class PostRepository
         // グループ投稿も取得
         require_once __DIR__ . '/../Models/GroupPost.php';
         $groupPostModel = new \App\Models\GroupPost();
-        $groupPosts = $groupPostModel->getAll($limit, $nsfwFilter, $tagId, $offset);
 
-        // マージして日付順にソート
-        $allPosts = array_merge($posts, $groupPosts);
-        usort($allPosts, function ($a, $b) {
-            $sortOrderA = $a['sort_order'] ?? 0;
-            $sortOrderB = $b['sort_order'] ?? 0;
-            if ($sortOrderA !== $sortOrderB) {
-                return $sortOrderB <=> $sortOrderA;
-            }
-            return strtotime($b['created_at']) <=> strtotime($a['created_at']);
-        });
+        // グループ投稿（posts テーブル内の post_type=1）の image_count / 代表画像を補完
+        require_once __DIR__ . '/../Models/GroupPostImage.php';
+        $groupPostImageModel = new \App\Models\GroupPostImage();
 
-        // limit分だけ取得
-        $allPosts = array_slice($allPosts, 0, $limit);
+        foreach ($posts as &$post) {
+            // attach tags for all posts
+            $post['tags'] = $this->tagService->getTagsFromRow($post);
 
-        // 閲覧数を一括取得
-        if (!empty($posts)) {
-            $postIds = array_column($posts, 'id');
-            $viewCounts = $this->viewCounter->getBatch($postIds, PostConstants::POST_TYPE_SINGLE);
+            if (($post['post_type'] ?? 0) == 1) {
+                // image count
+                $post['image_count'] = $groupPostImageModel->getImageCountByPostId((int)$post['id']);
 
-            foreach ($posts as &$post) {
-                $post['view_count'] = $viewCounts[$post['id']] ?? 0;
-                $post['tags'] = $this->tagService->getTagsFromRow($post);
+                // representative image (first)
+                $firstImage = $groupPostImageModel->getFirstImageByPostId((int)$post['id']);
+                if ($firstImage) {
+                    $post['image_path'] = $firstImage['image_path'];
+                    $post['thumb_path'] = $firstImage['thumb_path'];
+                } else {
+                    $post['image_path'] = $post['image_path'] ?? null;
+                    $post['thumb_path'] = $post['thumb_path'] ?? null;
+                }
             }
         }
 
-        return $allPosts;
+        return $posts;
     }
 
     /**
