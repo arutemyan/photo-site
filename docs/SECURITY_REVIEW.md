@@ -76,6 +76,20 @@ self::$instance->exec("SET search_path TO {$schema}");
 **推奨事項**:
 - テンプレートエンジン（Twig、Blade等）の導入を検討すると、自動エスケープが有効になりさらに安全
 
+### 2.1 Inline styles / CSP 周りの追加対応（本レビュー時点での注記）
+
+最近の変更でテンプレート内の `style` 属性や `data-inline-style` を削除し、静的クラスに移行する作業が進められています。主なポイント:
+
+- `public/css/inline-styles.css` を作成し、従来テンプレートに埋め込まれていたスタイルをユーティリティクラスとして収容しました。
+- `public/paint/detail.php` 等のテンプレートは `data-inline-style` をクラス化して置換済みで、動作に応じたクラス（例: `timelapse-size-note`）が追加されています。
+- 一時的に導入された `public/js/inline-style-applier.js` の動的パーサは安全性と安定性の観点から簡素化（`data-bg` / `data-color` のみ適用）され、後に元の単純実装に戻されました。
+
+影響と推奨:
+
+- これにより CSP の `unsafe-inline` への依存を減らすことができ、XSS リスク低減に貢献します。
+- ただし、ビルド済みバンドル（`*.bundle.js`）内のインラインスタイルはまだ残存しているため、ソース側の修正とビルド再実行が必要です。デプロイ前にバンドルを再ビルドしてください。
+- 本レビューではこれらの移行を評価に反映済み。今後は本番環境での CSP ヘッダー厳格化（`script-src`/`style-src` の nonce/hash 適用）を段階的に行うことを推奨します。
+
 ---
 
 ### 3. CSRF対策 ✅
