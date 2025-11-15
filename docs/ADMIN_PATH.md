@@ -134,6 +134,4 @@ mv fehihfnFG__ admin
 - `config/config.local.php` - ローカル設定（推奨）
 - `src/Utils/PathHelper.php` - パスヘルパークラス
 - `src/Utils/path_helpers.php` - グローバル関数
-- `public/.htaccess` - URL Rewriteル
-
-ール
+- `public/.htaccess` - URL Rewriteルール

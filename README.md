@@ -145,6 +145,8 @@ vendor/bin/phpunit
 - `design/` — 設計・実装メモ（開発者向け）
 - `scripts/` — 補助スクリプト（サムネ生成など）
 
+（運用向けリリース手順は `design/RELEASE.md` にあります）
+
 ## ドキュメント（詳細）
 
 ユーザー向けドキュメント（`docs/`）と設計資料（`design/`）を README から参照できます。主な参照先:
@@ -152,6 +154,7 @@ vendor/bin/phpunit
 - docs (ユーザー向け): `docs/README.md`
   - 設定: `docs/CONFIG.md`
   - ビルド / デプロイ: `docs/BUILD.md`
+  - リリース（運用向け）: `design/RELEASE.md`
   - 管理画面パス: `docs/ADMIN_PATH.md`
   - ドキュメントルート設定: `docs/DOCUMENT_ROOT.md`
   - 公開 API: `docs/ILLUST_BOARD_API.md`
