@@ -1,0 +1,54 @@
+/* Inline style fixes extracted from templates to support CSP and consistency
+	Consolidated from `inline-fixes.css` to create a single canonical file.
+*/
+.no-underline{ text-decoration: none !important; }
+.icon-large{ font-size: 3rem !important; }
+.clipboard-preview{ display: none; position: relative; }
+.clipboard-preview img{ max-width: 100%; border-radius: 4px; }
+.absolute-top-right{ position: absolute; top: 10px; right: 10px; }
+.badge-pos{ position: absolute; top: 5px; right: 5px; }
+.preview-container{ display: flex; justify-content: center; padding: 20px; min-height: 600px; }
+.preview-frame{ width: 100%; height: 600px; border: none; border-radius: 4px; }
+.img-preview{ max-width: 150px; }
+.header-back-button-inline{ display: inline-block; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+.d-none-important{ display: none !important; }
+.current-color-hex{ font-size:12px; font-weight:600; color:#666; }
+.current-color-rgb{ font-size:10px; color:#999; }
+.palette-note{ font-size:10px; color:#999; margin-bottom:8px; text-align:center; }
+.btn-login{ background: #8B5AFA; color: #fff; }
+.muted-text{ color: #666; }
+.summary-toggle{ cursor: pointer; color: #667eea; font-weight: 500; margin-bottom: 10px; }
+.clickable-label{ cursor: pointer; display: flex; align-items: center; color: #666; }
+.label-input-spacing{ margin-right: 8px; }
+.small-note{ font-size: 0.85em; color: #999; margin-top: 5px; margin-left: 24px; }
+.mb-3{ margin-bottom: 15px; }
+.muted-small{ font-size: 0.9em; color: #999; margin-top: 20px; }
+.centered-margin{ margin-bottom: 20px; text-align: center; }
+.inline-display{ display: inline; }
+.emoji-large{ font-size: 4em; }
+.cursor-pointer{ cursor: pointer; }
+.svg-vertical-align{ vertical-align: -2px; }
+.detail-actions{ margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+.inline-flex-center{ display: inline-flex; align-items: center; gap: 8px; }
+.btn-twitter{ background-color: #1DA1F2; border-color: #1DA1F2; }
+.btn-misskey{ background-color: #86b300; border-color: #86b300; }
+.empty-state{ grid-column: 1 / -1; }
+.open-modal-content{ padding: 20px; }
+.open-modal{ max-width: 400px; }
+.edit-color-preview{ display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.color-mode-tabs{ display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #ddd; }
+.rgb-label-text--h{ color: #ff6b6b; }
+.rgb-label-text--s{ color: #51cf66; }
+.rgb-label-text--v{ color: #4dabf7; }
+.color-sliders-hidden{ display: none; }
+.form-group-hidden{ display: none; }
+.img-logo{ max-height: 80px; margin-bottom: 10px; }
+.header-back-button-inline{ display: inline-block; padding: 10px 20px; border-radius: 8px; cursor: pointer; background-color: var(--back-bg, #8B5AFA); color: var(--back-color, #FFFFFF); }
+.small-muted{ display: block; margin-top: 4px; color: #666; font-size: 0.85em; }
+.detail-nsfw-badge{ display: inline-block; padding: 6px 12px; background: #ff6b6b; color: white; border-radius: 4px; font-size: 0.9em; margin-bottom: 10px; }
+.mt-3{ margin-top: 15px; }
+
+/* Timelapse / detail page helpers */
+.timelapse-size-note { opacity: 0.8; margin-left: 5px; display: inline-block; }
+.timelapse-options-center { margin-top: 10px; text-align: center; }
+.timelapse-option-label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }

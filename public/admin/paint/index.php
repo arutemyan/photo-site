@@ -37,6 +37,7 @@ try {
     <meta name="csrf-token" content="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
     <title>お絵描き - 管理</title>
     <?php echo \App\Utils\AssetHelper::linkTag(PathHelper::getAdminUrl('/paint/css/style.css')); ?>
+    <?php echo \App\Utils\AssetHelper::linkTag('/css/inline-styles.css'); ?>
 </head>
 <body data-paint-base-url="<?= htmlspecialchars(rtrim(PathHelper::getAdminUrl('/paint/'), '/') . '/', ENT_QUOTES, 'UTF-8') ?>">
 
@@ -62,12 +63,12 @@ try {
     </div>
 
     <div class="header-right">
-    <button class="header-btn" id="btn-save" style="display:none;">保存</button>
+    <button class="header-btn d-none" id="btn-save">保存</button>
         <button class="header-btn secondary" id="btn-save-as">名前を付けて保存</button>
         <button class="header-btn secondary" id="btn-timelapse">タイムラプス</button>
         <button class="header-btn secondary" id="btn-export">エクスポート</button>
-        <label class="header-btn secondary" for="import-file-input" id="btn-import" style="cursor:pointer;">インポート</label>
-        <input type="file" id="import-file-input" accept=".json,.gz,.json.gz,.paint" style="display:none" />
+        <label class="header-btn secondary" for="import-file-input" id="btn-import" data-inline-style="cursor:pointer;">インポート</label>
+        <input type="file" id="import-file-input" accept=".json,.gz,.json.gz,.paint" class="d-none" />
     </div>
 </header>
 
@@ -127,15 +128,15 @@ try {
             <div class="panel-content">
 
             <div class="color-current">
-                <div class="color-swatch" id="current-color" style="background:#000000;" title="現在の色"></div>
-                <div style="flex: 1;">
-                    <div id="current-color-hex" style="font-size:12px;font-weight:600;color:#666;">#000000</div>
-                    <div id="current-color-rgb" style="font-size:10px;color:#999;">RGB(0, 0, 0)</div>
+                <div class="color-swatch" id="current-color" data-inline-style="background:#000000;" title="現在の色"></div>
+                <div data-inline-style="flex: 1;">
+                    <div id="current-color-hex" class="current-color-hex">#000000</div>
+                    <div id="current-color-rgb" class="current-color-rgb">RGB(0, 0, 0)</div>
                 </div>
                 <button class="color-edit-btn" id="current-color-edit-btn" title="色を編集">EDIT</button>
             </div>
 
-            <div style="font-size:10px;color:#999;margin-bottom:8px;text-align:center;">
+            <div class="palette-note">
                 パレット: クリック=選択 / ダブルクリック=編集
             </div>
 
@@ -366,7 +367,7 @@ try {
             <h2 class="open-modal-title">キャンバスサイズ変更</h2>
             <button class="timelapse-close" id="resize-modal-close">×</button>
         </div>
-        <div class="open-modal-content" style="padding: 20px;">
+        <div class="open-modal-content" data-inline-style="padding: 20px;">
             <div class="resize-options">
                 <div class="setting-row">
                     <label class="setting-label">幅 (px):</label>
@@ -383,8 +384,8 @@ try {
                     </div>
                 </div>
                 <div class="resize-presets">
-                    <h4 style="margin: 15px 0 10px; font-size: 0.9em; color: #999;">プリセット:</h4>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <h4 data-inline-style="margin: 15px 0 10px; font-size: 0.9em; color: #999;">プリセット:</h4>
+                    <div data-inline-style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button class="preset-btn" data-width="512" data-height="512">512×512</button>
                         <button class="preset-btn" data-width="800" data-height="600">800×600</button>
                         <button class="preset-btn" data-width="1024" data-height="768">1024×768</button>
@@ -402,22 +403,22 @@ try {
 
 <!-- Edit Color Modal -->
 <div class="open-modal-overlay" id="edit-color-modal-overlay">
-    <div class="open-modal" style="max-width: 400px;">
+    <div class="open-modal" data-inline-style="max-width: 400px;">
         <div class="open-modal-header">
             <h2 class="open-modal-title">パレット色の編集</h2>
             <button class="timelapse-close" id="edit-color-modal-close">×</button>
         </div>
-        <div class="open-modal-content" style="padding: 20px;">
-            <div class="edit-color-preview" style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
-                <div style="width: 80px; height: 80px; border-radius: 8px; border: 2px solid #ddd;" id="edit-color-preview"></div>
-                <div style="flex: 1;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">カラーコード:</label>
+        <div class="open-modal-content" data-inline-style="padding: 20px;">
+            <div class="edit-color-preview" data-inline-style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
+                <div data-inline-style="width: 80px; height: 80px; border-radius: 8px; border: 2px solid #ddd;" id="edit-color-preview"></div>
+                <div data-inline-style="flex: 1;">
+                    <label data-inline-style="display: block; margin-bottom: 8px; font-weight: 600;">カラーコード:</label>
                     <input type="text" id="edit-color-input" class="resize-input" placeholder="#000000" pattern="^#[0-9A-Fa-f]{6}$" maxlength="7">
                 </div>
             </div>
             
             <!-- Tab buttons -->
-            <div class="color-mode-tabs" style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #ddd;">
+            <div class="color-mode-tabs" data-inline-style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #ddd;">
                 <button class="color-mode-tab active" data-mode="hsv">HSV</button>
                 <button class="color-mode-tab" data-mode="rgb">RGB</button>
             </div>
@@ -426,21 +427,21 @@ try {
             <div id="hsv-sliders" class="color-sliders-group">
                 <div class="rgb-slider-group">
                     <label class="rgb-label">
-                        <span class="rgb-label-text" style="color: #ff6b6b;">H</span>
+                        <span class="rgb-label-text" data-inline-style="color: #ff6b6b;">H</span>
                         <input type="range" id="edit-hsv-h" class="rgb-slider" min="0" max="360" value="0">
                         <span class="rgb-value" id="edit-hsv-h-value">0°</span>
                     </label>
                 </div>
                 <div class="rgb-slider-group">
                     <label class="rgb-label">
-                        <span class="rgb-label-text" style="color: #51cf66;">S</span>
+                        <span class="rgb-label-text" data-inline-style="color: #51cf66;">S</span>
                         <input type="range" id="edit-hsv-s" class="rgb-slider" min="0" max="100" value="0">
                         <span class="rgb-value" id="edit-hsv-s-value">0%</span>
                     </label>
                 </div>
                 <div class="rgb-slider-group">
                     <label class="rgb-label">
-                        <span class="rgb-label-text" style="color: #4dabf7;">V</span>
+                        <span class="rgb-label-text" data-inline-style="color: #4dabf7;">V</span>
                         <input type="range" id="edit-hsv-v" class="rgb-slider" min="0" max="100" value="0">
                         <span class="rgb-value" id="edit-hsv-v-value">0%</span>
                     </label>
@@ -448,24 +449,24 @@ try {
             </div>
             
             <!-- RGB Sliders -->
-            <div id="rgb-sliders" class="color-sliders-group" style="display: none;">
+            <div id="rgb-sliders" class="color-sliders-group" data-inline-style="display: none;">
                 <div class="rgb-slider-group">
                     <label class="rgb-label">
-                        <span class="rgb-label-text" style="color: #ff6b6b;">R</span>
+                        <span class="rgb-label-text" data-inline-style="color: #ff6b6b;">R</span>
                         <input type="range" id="edit-rgb-r" class="rgb-slider" min="0" max="255" value="0">
                         <span class="rgb-value" id="edit-rgb-r-value">0</span>
                     </label>
                 </div>
                 <div class="rgb-slider-group">
                     <label class="rgb-label">
-                        <span class="rgb-label-text" style="color: #51cf66;">G</span>
+                        <span class="rgb-label-text" data-inline-style="color: #51cf66;">G</span>
                         <input type="range" id="edit-rgb-g" class="rgb-slider" min="0" max="255" value="0">
                         <span class="rgb-value" id="edit-rgb-g-value">0</span>
                     </label>
                 </div>
                 <div class="rgb-slider-group">
                     <label class="rgb-label">
-                        <span class="rgb-label-text" style="color: #4dabf7;">B</span>
+                        <span class="rgb-label-text" data-inline-style="color: #4dabf7;">B</span>
                         <input type="range" id="edit-rgb-b" class="rgb-slider" min="0" max="255" value="0">
                         <span class="rgb-value" id="edit-rgb-b-value">0</span>
                     </label>
@@ -508,7 +509,7 @@ try {
             <div class="form-group">
                 <label><input type="checkbox" id="save-visible" checked> 公開（表示する）</label>
             </div>
-            <div class="form-group" id="save-mode-group" style="display:none;">
+            <div class="form-group" id="save-mode-group" data-inline-style="display:none;">
                 <label>保存方法</label>
                 <div>
                     <label><input type="radio" name="save-mode" value="new" id="save-mode-new" checked> 新規として保存</label>

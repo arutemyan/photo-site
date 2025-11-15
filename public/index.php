@@ -36,8 +36,8 @@ try {
     $showViewCount = $settingModel->get('show_view_count', '1') === '1';
 
     // OGP設定を取得
-    $ogpTitle = $settingModel->get('ogp_title', '') ?: ($theme['site_title'] ?? 'イラストポートフォリオ');
-    $ogpDescription = $settingModel->get('ogp_description', '') ?: ($theme['site_description'] ?? 'イラストレーターのポートフォリオサイト');
+    $ogpTitle = $settingModel->get('ogp_title', '') ?: ($theme['site_title'] ?? '');
+    $ogpDescription = $settingModel->get('ogp_description', '') ?: ($theme['site_description'] ?? '');
     $ogpImage = $settingModel->get('ogp_image', '');
     $twitterCard = $settingModel->get('twitter_card', 'summary_large_image');
     $twitterSite = $settingModel->get('twitter_site', '');
@@ -90,7 +90,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= escapeHtml($theme['site_title'] ?? 'イラストポートフォリオ') ?></title>
+    <title><?= escapeHtml($theme['site_title']) ?></title>
     <meta name="description" content="<?= escapeHtml($theme['site_description'] ?? 'イラストレーターのポートフォリオサイト') ?>">
 
     <!-- OGP (Open Graph Protocol) -->
@@ -116,6 +116,7 @@ try {
     <!-- CSS -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
     <?php echo \App\Utils\AssetHelper::linkTag('/res/css/main.css'); ?>
+    <?php echo \App\Utils\AssetHelper::linkTag('/css/inline-styles.css'); ?>
 
     <!-- テーマカラー -->
     <style>
@@ -141,7 +142,7 @@ try {
             <div class="modal-body">
                 <p>このコンテンツは18歳未満の閲覧に適さない可能性があります。</p>
                 <p><strong>あなたは18歳以上ですか？</strong></p>
-                <p style="font-size: 0.9em; color: #999; margin-top: 20px;">
+                <p class="muted-small">
                     <?php
                     if ($ageVerificationMinutes < 60) {
                         $displayTime = $ageVerificationMinutes . '分間';
@@ -168,9 +169,9 @@ try {
     <div class="container">
         <!-- ペイントギャラリーへのリンク -->
         <?php if (!empty($config['paint']) ? ($config['paint']['enabled'] ?? true) : true): ?>
-        <div style="margin-bottom: 20px; text-align: center;">
+        <div class="centered-margin">
             <a href="/paint/" class="paint-gallery-btn">
-                🎨 ペイントギャラリーを見る
+                ペイントギャラリーを見る
             </a>
         </div>
         <?php endif; ?>
@@ -190,7 +191,7 @@ try {
                 <div class="filter-group">
                     <span class="filter-label">タグ:</span>
                     <button class="tag-btn tag-btn-compact tag-btn-all active" data-tag="" onclick="clearTagFilter(); setActiveTagButton(this);">すべて</button>
-                    <div id="tagList" style="display: inline;">
+                    <div id="tagList" class="inline-display">
                         <!-- JavaScriptで動的に読み込まれます -->
                     </div>
                 </div>
@@ -199,7 +200,7 @@ try {
 
         <?php if (empty($posts)): ?>
             <div class="empty-state">
-                <span style="font-size: 4em;">🎨</span>
+                <span class="emoji-large">🎨</span>
                 <h2>まだ投稿がありません</h2>
                 <p>管理画面から作品を投稿してください</p>
             </div>
@@ -222,9 +223,9 @@ try {
                     $detailUrl = '/detail.php?id=' . $post['id'] . "&viewtype=" . $viewType;
                     ?>
                     <div class="card <?= $isSensitive ? 'nsfw-card' : '' ?><?= $isGroup ? ' group-card' : '' ?>" data-post-id="<?= $post['id'] ?>" data-post-type="<?= $isGroup ? 'group' : 'single' ?>" data-view-type="<?= $viewType ?>">
-                        <div class="card-img-wrapper <?= $isSensitive ? 'nsfw-wrapper' : '' ?>"
-                             <?= $isGroup ? 'onclick="window.location.href=\'' . $detailUrl . '\'"' : 'onclick="openImageOverlay(' . $post['id'] . ', ' . ($isSensitive ? 'true' : 'false') . ', '.$viewType.')"' ?>
-                             style="cursor: pointer;">
+                            <div class="card-img-wrapper <?= $isSensitive ? 'nsfw-wrapper' : '' ?> cursor-pointer"
+                                 <?= $isGroup ? 'onclick="window.location.href=\'' . $detailUrl . '\'"' : 'onclick="openImageOverlay(' . $post['id'] . ', ' . ($isSensitive ? 'true' : 'false') . ', '.$viewType.')"' ?>
+                                >
                             <img
                                 src="<?= $imagePath ?>"
                                 alt="<?= escapeHtml($post['title']) ?>"

@@ -100,6 +100,21 @@ const ADMIN_PATH = document.body.dataset.adminPath || '';
 - Worker constructor shim
 - Fetch wrapper (API path解決、タイムラプスgzip対応)
 
+### 4. Inline style の移行（テンプレート内 style 属性の削除） ✅
+
+**概要**: テンプレート内に残っていた `style="..."` や `data-inline-style` を順次クラス化し、共通 CSS (`/css/inline-styles.css`) に移動しました。これにより CSP 適用下でもスタイルの一貫性が保てます。
+
+**主な変更点**:
+- `public/paint/detail.php`: タイムラプス関連の `data-inline-style` をクラス化（`timelapse-size-note`, `timelapse-options-center`, `timelapse-option-label`）に置換。
+// `public/js/inline-style-applier.js` は不要となったため削除済み。`data-bg`/`data-color` 相当の処理はテーマの CSS 変数／クラスへ統合しました。
+- 新規/更新 CSS: `public/css/inline-styles.css` に移行用のユーティリティクラスをまとめました。
+
+**理由**: 直接の `style` 属性や動的なスタイル注入は CSP の `unsafe-inline` を要求しやすいため、静的クラス化でポリシー準拠を目指します。
+
+**残件**:
+- ビルド済みのバンドル（`*.bundle.js`）内に残るインラインスタイルは、ソース修正→ビルド工程で処理する必要あり（現時点では未処理）。
+
+
 ---
 
 ### 4. 設定値配信API

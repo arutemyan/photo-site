@@ -188,7 +188,7 @@ $(document).ready(function() {
                 reader.onload = function(e) {
                     $previewList.append(`
                         <div class="col-4 col-md-3">
-                            <img src="${e.target.result}" class="img-thumbnail" style="width: 100%; height: 100px; object-fit: cover;">
+                            <img src="${e.target.result}" class="img-thumbnail" data-inline-style="width: 100%; height: 100px; object-fit: cover;">
                         </div>
                     `);
                 };
@@ -1879,8 +1879,8 @@ function renderGroupPosts(posts) {
         $list.append(`
             <div class="border-bottom pb-3 mb-3">
                 <div class="row align-items-center">
-                    <div class="col-md-2">
-                        <img src="${thumbUrl}" class="img-thumbnail" style="width: 100%; aspect-ratio: 1; object-fit: cover;">
+                        <div class="col-md-2">
+                        <img src="${thumbUrl}" class="img-thumbnail" data-inline-style="width: 100%; aspect-ratio: 1; object-fit: cover;">
                     </div>
                     <div class="col-md-6">
                         <h5 class="mb-1">${escapeHtml(post.title)} ${visibilityBadge}${nsfwBadge}</h5>
@@ -1958,8 +1958,8 @@ $('#groupImages').on('change', function(e) {
                 $previewList.append(`
                     <div class="col-4 col-md-3">
                         <div class="position-relative">
-                            <img src="${e.target.result}" class="img-thumbnail" style="width: 100%; height: 100px; object-fit: cover;">
-                            <span class="badge bg-primary position-absolute" style="top: 5px; right: 5px;">${index + 1}</span>
+                            <img src="${e.target.result}" class="img-thumbnail" data-inline-style="width: 100%; height: 100px; object-fit: cover;">
+                            <span class="badge bg-primary position-absolute" data-inline-style="top: 5px; right: 5px;">${index + 1}</span>
                         </div>
                     </div>
                 `);
@@ -2100,7 +2100,7 @@ function editGroupPost(groupPostId) {
                                                 ${post.images.map(img => `
                                                     <div class="col-md-3 col-sm-4 col-6" data-image-id="${img.id}">
                                                         <div class="card">
-                                                            <img src="/${img.thumb_path}" class="card-img-top" style="aspect-ratio: 1; object-fit: cover;" alt="画像${img.display_order}">
+                                                            <img src="/${img.thumb_path}" class="card-img-top" data-inline-style="aspect-ratio: 1; object-fit: cover;" alt="画像${img.display_order}">
                                                             <div class="card-body p-2">
                                                                 <div class="text-center small text-muted mb-2">順序: ${img.display_order}</div>
                                                                 <div class="d-grid gap-1">
@@ -2284,8 +2284,8 @@ function addImagesToGroup(groupPostId) {
                     $previewList.append(`
                         <div class="col-4 col-md-3">
                             <div class="position-relative">
-                                <img src="${e.target.result}" class="img-thumbnail" style="width: 100%; height: 100px; object-fit: cover;">
-                                <span class="badge bg-primary position-absolute" style="top: 5px; right: 5px;">${index + 1}</span>
+                                <img src="${e.target.result}" class="img-thumbnail" data-inline-style="width: 100%; height: 100px; object-fit: cover;">
+                                <span class="badge bg-primary position-absolute" data-inline-style="top: 5px; right: 5px;">${index + 1}</span>
                             </div>
                         </div>
                     `);
@@ -2393,10 +2393,10 @@ function shareGroupPostToSNS(groupPostId, title, isSensitive) {
                         ${isSensitive ? '<div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-2"></i>この投稿はNSFWです。</div>' : ''}
 
                         <div class="d-grid gap-2">
-                            <a href="${shareUrls.twitter}" target="_blank" class="btn btn-primary" style="background-color: #1DA1F2; border-color: #1DA1F2;">
+                            <a href="${shareUrls.twitter}" target="_blank" class="btn btn-primary" data-inline-style="background-color: #1DA1F2; border-color: #1DA1F2;">
                                 <i class="bi bi-twitter me-2"></i>X (Twitter) で共有
                             </a>
-                            <a href="${shareUrls.misskey}" target="_blank" class="btn btn-primary" style="background-color: #86b300; border-color: #86b300;">
+                            <a href="${shareUrls.misskey}" target="_blank" class="btn btn-primary" data-inline-style="background-color: #86b300; border-color: #86b300;">
                                 <i class="bi bi-mastodon me-2"></i>Misskey で共有
                             </a>
                         </div>

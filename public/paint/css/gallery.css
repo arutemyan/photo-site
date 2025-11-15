@@ -246,6 +246,11 @@
     font-size: 1.1em;
 }
 
+/* utility: make empty-state span full grid columns */
+.empty-state.full-span {
+    grid-column: 1 / -1;
+}
+
 /* ローディング */
 .loading {
     text-align: center;

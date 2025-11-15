@@ -50,6 +50,7 @@ try {
     <!-- スタイルシート -->
     <?php echo \App\Utils\AssetHelper::linkTag('/res/css/main.css'); ?>
     <?php echo \App\Utils\AssetHelper::linkTag('/paint/css/gallery.css'); ?>
+    <?php echo \App\Utils\AssetHelper::linkTag('/css/inline-styles.css'); ?>
 
     <!-- テーマカラー -->
     <style>
@@ -73,7 +74,7 @@ try {
             <div class="modal-body">
                 <p>このコンテンツは18歳未満の閲覧に適さない可能性があります。</p>
                 <p><strong>あなたは18歳以上ですか？</strong></p>
-                <p style="font-size: 0.9em; color: #999; margin-top: 20px;">
+                <p class="muted-small">
                     <?php
                     if ($ageVerificationMinutes < 60) {
                         $displayTime = $ageVerificationMinutes . '分間';
@@ -97,9 +98,9 @@ try {
     <!-- ヘッダー -->
     <header>
         <?php if (!empty($theme['logo_image'])): ?>
-            <img src="/<?= escapeHtml($theme['logo_image']) ?>" alt="<?= escapeHtml($theme['site_title'] ?? 'ロゴ') ?>" style="max-height: 80px; margin-bottom: 10px;">
+            <img src="/<?= escapeHtml($theme['logo_image']) ?>" alt="<?= escapeHtml($theme['site_title'] ?? 'ロゴ') ?>" class="img-logo">
         <?php endif; ?>
-        <h1>🎨 <?= escapeHtml($siteTitle) ?></h1>
+        <h1><?= escapeHtml($siteTitle) ?></h1>
 
         <?php if (!empty($siteSubtitle)): ?>
             <p><?= escapeHtml($siteSubtitle) ?></p>
@@ -121,12 +122,12 @@ try {
                 <button class="filter-btn" data-nsfw-filter="safe" onclick="setNSFWFilter('safe')">一般</button>
                 <button class="filter-btn" data-nsfw-filter="nsfw" onclick="setNSFWFilter('nsfw')">NSFW</button>
             </div>
-            <div class="filter-row" style="margin-top: 15px;">
+            <div class="filter-row mt-3">
                 <span class="filter-label">タグ:</span>
                 <button class="tag-btn active" data-tag="" onclick="showAllPaints()">すべて</button>
                 <div id="tagList"></div>
             </div>
-            <div class="filter-row" style="margin-top: 15px;">
+            <div class="filter-row mt-3">
                 <span class="filter-label">検索:</span>
                 <div class="search-box">
                     <input

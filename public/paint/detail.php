@@ -183,6 +183,7 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
     <?php echo \App\Utils\AssetHelper::linkTag('/res/css/main.css'); ?>
     <?php echo \App\Utils\AssetHelper::linkTag('/paint/css/gallery.css'); ?>
     <?php echo \App\Utils\AssetHelper::linkTag('/paint/css/detail.css'); ?>
+    <?php echo \App\Utils\AssetHelper::linkTag('/css/inline-styles.css'); ?>
 
     <!-- テーマカラー -->
     <style>
@@ -206,7 +207,7 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
             <div class="modal-body">
                 <p>このコンテンツは18歳未満の閲覧に適さない可能性があります。</p>
                 <p><strong>あなたは18歳以上ですか？</strong></p>
-                <p style="font-size: 0.9em; color: #999; margin-top: 20px;">
+                <p class="muted-small">
                     <?php
                     if ($ageVerificationMinutes < 60) {
                         $displayTime = $ageVerificationMinutes . '分間';
@@ -230,9 +231,9 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
     <!-- ヘッダー -->
     <header>
         <?php if (!empty($theme['logo_image'])): ?>
-            <img src="/<?= escapeHtml($theme['logo_image']) ?>" alt="<?= escapeHtml($theme['site_title'] ?? 'ロゴ') ?>" style="max-height: 80px; margin-bottom: 10px;">
+            <img src="/<?= escapeHtml($theme['logo_image']) ?>" alt="<?= escapeHtml($theme['site_title'] ?? 'ロゴ') ?>" class="img-logo">
         <?php endif; ?>
-        <h1>🎨 <?= escapeHtml($siteTitle) ?></h1>
+        <h1><?= escapeHtml($siteTitle) ?></h1>
     </header>
     <a href="/paint/" class="back-link">
         <div class="header-back-button">
@@ -284,7 +285,7 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
                 ?>
 
                 <?php if ($isNsfw): ?>
-                <div class="detail-nsfw-badge" style="display: inline-block; padding: 6px 12px; background: #ff6b6b; color: white; border-radius: 4px; font-size: 0.9em; margin-bottom: 10px;">NSFW / 18+</div>
+                <div class="detail-nsfw-badge">NSFW / 18+</div>
                 <?php endif; ?>
 
                 <?php if (!empty($illust['detail'])): ?>
@@ -319,10 +320,10 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
                     }
                     ?>
                     <button class="action-btn" id="btnOpenTimelapse" onclick="openTimelapseOverlay(<?= $id ?>)">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="svg-vertical-align">
                             <polygon points="5 3 19 12 5 21 5 3"></polygon>
                         </svg>
-                        タイムラプスを再生<?php if ($timelapseSize > 0): ?><span style="font-size: 0.85em; opacity: 0.8; margin-left: 5px;">(<?= formatFileSize($timelapseSize) ?>)</span><?php endif; ?>
+                        タイムラプスを再生<?php if ($timelapseSize > 0): ?><span class="small-muted timelapse-size-note">(<?= formatFileSize($timelapseSize) ?>)</span><?php endif; ?>
                     </button>
                     <?php endif; ?>
                 </div>
@@ -360,7 +361,7 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
         <div class="timelapse-overlay-content" onclick="event.stopPropagation()">
             <button class="timelapse-overlay-close" onclick="closeTimelapseOverlay()">&times;</button>
             <h3 class="timelapse-overlay-title">制作過程タイムラプス</h3>
-            <div class="timelapse-player">
+                    <div class="timelapse-player">
                 <canvas id="timelapseCanvas" class="timelapse-canvas"></canvas>
                 <div class="timelapse-controls">
                     <button id="timelapsePlayBtn" class="timelapse-play-btn" onclick="togglePlayback()">▶</button>
@@ -374,13 +375,13 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
                         <button class="speed-btn" data-speed="2" onclick="changeSpeed(2)">2x</button>
                         <button class="speed-btn" data-speed="4" onclick="changeSpeed(4)">4x</button>
                     </div>
-                    <div class="timelapse-options" style="margin-top: 10px; text-align: center;">
-                        <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <div class="timelapse-options timelapse-options-center">
+                        <label class="timelapse-option-label">
                             <input type="checkbox" id="ignoreTimestamps" onchange="toggleIgnoreTimestamps(this.checked)" checked>
                             <span>時間を無視（等間隔再生）</span>
                         </label>
                         <div>
-                            <small style="display: block; margin-top: 4px; color: #666; font-size: 0.85em;">
+                            <small class="small-muted">
                                 ※ チェックを外すと制作時の実時間で再生します（タイムスタンプが記録されている場合）
                             </small>
                         </div>

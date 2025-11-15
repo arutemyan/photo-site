@@ -36,6 +36,7 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <?php echo \App\Utils\AssetHelper::linkTag('/res/css/admin.css'); ?>
+    <?php echo \App\Utils\AssetHelper::linkTag('/css/inline-styles.css'); ?>
 </head>
 <body data-admin-path="<?= escapeHtml(PathHelper::getAdminPath()) ?>">
     <!-- ナビゲーションバー -->
@@ -65,7 +66,7 @@ try {
                 </span>
                 <form method="POST" action="<?= PathHelper::getAdminUrl('logout.php') ?>" class="d-inline">
                     <input type="hidden" name="csrf_token" value="<?= escapeHtml($csrfToken) ?>">
-                    <button type="submit" class="btn btn-link nav-link text-light" style="text-decoration: none;">
+                    <button type="submit" class="btn btn-link nav-link text-light no-underline">
                         <i class="bi bi-box-arrow-right me-1"></i>ログアウト
                     </button>
                 </form>
@@ -115,7 +116,7 @@ try {
                                     <i class="bi bi-chevron-down" id="clipboardToggleIcon"></i>
                                 </button>
                             </div>
-                            <div class="card-body" id="clipboardUploadSection" style="display: none;">
+                            <div class="card-body d-none" id="clipboardUploadSection">
                                 <div id="clipboardAlert" class="alert alert-success d-none" role="alert"></div>
                                 <div id="clipboardError" class="alert alert-danger d-none" role="alert"></div>
 
@@ -132,13 +133,12 @@ try {
                                         <label class="form-label">画像を貼り付け</label>
                                         <div id="clipboardPasteArea" class="clipboard-paste-area" tabindex="0">
                                             <div id="clipboardPasteHint" class="text-center text-muted">
-                                                <i class="bi bi-clipboard2-plus" style="font-size: 3rem;"></i>
+                                                <i class="bi bi-clipboard2-plus icon-large"></i>
                                                 <p class="mt-2">クリックしてフォーカスし、Ctrl+V で画像を貼り付け</p>
                                             </div>
-                                            <div id="clipboardPreview" style="display: none; position: relative;">
-                                                <img id="clipboardPreviewImg" alt="プレビュー" style="max-width: 100%; border-radius: 4px;">
-                                                <button type="button" class="btn btn-sm btn-danger" id="clearClipboardImage"
-                                                        style="position: absolute; top: 10px; right: 10px;">
+                                            <div id="clipboardPreview" class="clipboard-preview d-none">
+                                                <img id="clipboardPreviewImg" alt="プレビュー" class="clipboard-preview-img">
+                                                <button type="button" class="btn btn-sm btn-danger absolute-top-right" id="clearClipboardImage">
                                                     <i class="bi bi-x-circle"></i> クリア
                                                 </button>
                                             </div>
@@ -301,11 +301,11 @@ try {
                                 <div>
                                     <i class="bi bi-images me-2"></i>投稿一覧
                                 </div>
-                                <div class="d-flex align-items-center gap-2" id="bulkActionButtons" style="display: none;">
+                                <div class="d-flex align-items-center gap-2 d-none" id="bulkActionButtons">
                                     <button type="button" class="btn btn-sm btn-outline-primary" id="selectAllBtn">
                                         <i class="bi bi-check-square me-1"></i>全選択
                                     </button>
-                                    <span class="badge bg-secondary" id="selectionCount" style="display: none;">0件選択中</span>
+                                    <span class="badge bg-secondary d-none" id="selectionCount">0件選択中</span>
                                     <div class="btn-group" role="group">
                                         <button type="button" class="btn btn-sm btn-success" id="bulkPublishBtn" disabled>
                                             <i class="bi bi-eye me-1"></i>一括公開
@@ -483,14 +483,14 @@ try {
                                         <div class="col-md-6">
                                             <label class="form-label">ロゴ画像</label>
                                             <div id="logoImagePreview" class="mb-2">
-                                                <img src="" alt="ロゴプレビュー" style="max-width: 150px; display: none;" id="logoPreviewImg">
+                                                <img src="" alt="ロゴプレビュー" class="img-preview d-none" id="logoPreviewImg">
                                             </div>
                                             <input type="file" class="form-control form-control-sm" id="logoImage" accept="image/*">
                                             <div class="mt-2">
                                                 <button type="button" class="btn btn-sm btn-primary" id="uploadLogo">
                                                     <i class="bi bi-upload me-1"></i>アップロード
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-danger" id="deleteLogo" style="display: none;">
+                                                <button type="button" class="btn btn-sm btn-danger d-none" id="deleteLogo">
                                                     <i class="bi bi-trash me-1"></i>削除
                                                 </button>
                                             </div>
@@ -499,14 +499,14 @@ try {
                                         <div class="col-md-6">
                                             <label class="form-label">背景画像</label>
                                             <div id="headerImagePreview" class="mb-2">
-                                                <img src="" alt="ヘッダー背景プレビュー" style="max-width: 150px; display: none;" id="headerPreviewImg">
+                                                <img src="" alt="ヘッダー背景プレビュー" class="img-preview d-none" id="headerPreviewImg">
                                             </div>
                                             <input type="file" class="form-control form-control-sm" id="headerImage" accept="image/*">
                                             <div class="mt-2">
                                                 <button type="button" class="btn btn-sm btn-primary" id="uploadHeader">
                                                     <i class="bi bi-upload me-1"></i>アップロード
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-danger" id="deleteHeader" style="display: none;">
+                                                <button type="button" class="btn btn-sm btn-danger d-none" id="deleteHeader">
                                                     <i class="bi bi-trash me-1"></i>削除
                                                 </button>
                                             </div>
@@ -591,10 +591,10 @@ try {
                                             <label for="tagTextColor" class="form-label small mb-1">タグ文字色</label>
                                             <input type="color" class="form-control form-control-color w-100" id="tagTextColor" name="tag_text_color" value="#ffffff">
                                         </div>
-                                        <div class="color-item col-span-2">
+                                            <div class="color-item col-span-2">
                                             <label class="form-label small mb-1">プレビュー</label>
-                                            <div style="padding: 8px;">
-                                                <span id="tagColorPreview" class="badge" style="background-color: #8B5AFA; color: #ffffff;">サンプルタグ</span>
+                                            <div data-inline-style="padding: 8px;">
+                                                <span id="tagColorPreview" class="badge" data-inline-style="background-color: #8B5AFA; color: #ffffff;">サンプルタグ</span>
                                             </div>
                                         </div>
                                     </div>
@@ -610,10 +610,10 @@ try {
                                             <label for="filterActiveTextColor" class="form-label small mb-1">フィルタ選択時文字色</label>
                                             <input type="color" class="form-control form-control-color w-100" id="filterActiveTextColor" name="filter_active_text_color" value="#ffffff">
                                         </div>
-                                        <div class="color-item col-span-2">
+                                            <div class="color-item col-span-2">
                                             <label class="form-label small mb-1">プレビュー</label>
-                                            <div style="padding: 8px;">
-                                                <span id="filterActiveColorPreview" class="badge" style="background-color: #8B5AFA; color: #ffffff;">選択中フィルタ</span>
+                                            <div data-inline-style="padding: 8px;">
+                                                <span id="filterActiveColorPreview" class="badge" data-inline-style="background-color: #8B5AFA; color: #ffffff;">選択中フィルタ</span>
                                             </div>
                                         </div>
                                     </div>
@@ -675,7 +675,7 @@ try {
                                                     <!-- プレビュー -->
                                                     <div class="mt-3 p-3 bg-light rounded">
                                                         <label class="form-label small text-muted">プレビュー:</label>
-                                                        <div id="backButtonPreview" class="header-back-button" style="display: inline-block; background-color: #8B5AFA; color: #FFFFFF; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+                                                        <div id="backButtonPreview" class="header-back-button" data-inline-style="display: inline-block; background-color: #8B5AFA; color: #FFFFFF; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
                                                             一覧に戻る
                                                         </div>
                                                     </div>
@@ -747,13 +747,13 @@ try {
                                     </button>
                                 </div>
                             </div>
-                            <div class="card-body p-0" style="background: #f5f5f5;">
-                                <div id="previewContainer" style="display: flex; justify-content: center; padding: 20px; min-height: 600px;">
-                                    <div id="previewFrame" style="width: 100%; max-width: 100%; transition: all 0.3s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: white;">
+                            <div class="card-body p-0" data-inline-style="background: #f5f5f5;">
+                                <div id="previewContainer" data-inline-style="display: flex; justify-content: center; padding: 20px; min-height: 600px;">
+                                    <div id="previewFrame" data-inline-style="width: 100%; max-width: 100%; transition: all 0.3s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: white;">
                                         <iframe
                                             id="sitePreview"
                                             src="/"
-                                            style="width: 100%; height: 600px; border: none; border-radius: 4px;"
+                                            data-inline-style="width: 100%; height: 600px; border: none; border-radius: 4px;"
                                             title="サイトプレビュー"
                                         ></iframe>
                                     </div>
@@ -835,14 +835,14 @@ try {
                                                     <div class="mb-3">
                                                         <label class="form-label">OGP画像</label>
                                                         <div id="ogpImagePreview" class="mb-2">
-                                                            <img src="" alt="OGP画像プレビュー" style="max-width: 300px; display: none;" id="ogpImagePreviewImg">
+                                                            <img src="" alt="OGP画像プレビュー" data-inline-style="max-width: 300px; display: none;" id="ogpImagePreviewImg">
                                                         </div>
                                                         <input type="file" class="form-control" id="ogpImageFile" accept="image/*">
                                                         <div class="mt-2">
                                                             <button type="button" class="btn btn-sm btn-primary" id="uploadOgpImage">
                                                                 <i class="bi bi-upload me-1"></i>アップロード
                                                             </button>
-                                                            <button type="button" class="btn btn-sm btn-danger" id="deleteOgpImage" style="display: none;">
+                                                            <button type="button" class="btn btn-sm btn-danger" id="deleteOgpImage" data-inline-style="display: none;">
                                                                 <i class="bi bi-trash me-1"></i>削除
                                                             </button>
                                                         </div>
@@ -965,7 +965,7 @@ try {
 
                         <!-- 右側：画像プレビュー -->
                         <div class="col-md-6">
-                            <div class="sticky-top" style="top: 20px;">
+                            <div class="sticky-top" data-inline-style="top: 20px;">
                                 <label class="form-label">画像</label>
                                 <div class="edit-image-preview-container mb-3">
                                     <img id="editImagePreview" alt="画像プレビュー" class="img-fluid rounded">
@@ -984,7 +984,7 @@ try {
                                 </div>
 
                                 <!-- 差し替え画像のプレビュー -->
-                                <div id="editImageReplacePreview" style="display: none;">
+                                <div id="editImageReplacePreview" data-inline-style="display: none;">
                                     <label class="form-label text-primary">新しい画像プレビュー</label>
                                     <div class="edit-image-preview-container mb-2">
                                         <img id="editImageReplacePreviewImg" alt="新しい画像プレビュー" class="img-fluid rounded border border-primary">

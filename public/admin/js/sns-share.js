@@ -47,10 +47,10 @@ function shareToSNS(postId, title, isSensitive) {
                         ${isSensitive ? '<div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-2"></i>この投稿はNSFWです。SNS共有時はぼかし画像が使用されます。</div>' : ''}
 
                         <div class="d-grid gap-2">
-                            <a href="${shareUrls.twitter}" target="_blank" class="btn btn-primary" style="background-color: #1DA1F2; border-color: #1DA1F2;">
+                            <a href="${shareUrls.twitter}" target="_blank" class="btn btn-primary" data-inline-style="background-color: #1DA1F2; border-color: #1DA1F2;">
                                 <i class="bi bi-twitter me-2"></i>X (Twitter) で共有
                             </a>
-                            <a href="${shareUrls.misskey}" target="_blank" class="btn btn-primary" style="background-color: #86b300; border-color: #86b300;">
+                            <a href="${shareUrls.misskey}" target="_blank" class="btn btn-primary" data-inline-style="background-color: #86b300; border-color: #86b300;">
                                 <i class="bi bi-mastodon me-2"></i>Misskey で共有
                             </a>
                         </div>

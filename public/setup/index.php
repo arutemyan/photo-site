@@ -243,31 +243,31 @@ try {
 
                 <div class="button-group">
                     <a href="/" class="btn">トップページへ</a>
-                    <a href="<?= PathHelper::getAdminUrl('login.php') ?>" class="btn" style="background: #8B5AFA;">ログイン</a>
+                    <a href="<?= PathHelper::getAdminUrl('login.php') ?>" class="btn btn-login">ログイン</a>
                 </div>
 
                 <div class="migration-section">
                     <h2>🔄 データベースマイグレーション</h2>
-                    <p style="color: #666; margin-bottom: 15px;">
+                    <p class="muted-text mb-3">
                         データベース構造の更新を管理します。
                     </p>
 
                     <?php if (empty($executedMigrations)): ?>
-                        <div style="color: #856404; background: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; padding: 15px; margin-bottom: 15px;">
+                        <div class="alert">
                             ⚠️ マイグレーションが実行されていません。
                         </div>
                         <form method="POST">
                             <input type="hidden" name="action" value="migrate">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(\App\Security\CsrfProtection::getToken()) ?>">
-                            <button type="submit" class="btn" style="background: #667eea;">マイグレーションを実行</button>
+                            <button type="submit" class="btn">マイグレーションを実行</button>
                         </form>
                     <?php else: ?>
-                        <div style="color: #155724; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; padding: 15px; margin-bottom: 15px;">
+                        <div class="alert-success">
                             ✅ マイグレーション: <?= count($executedMigrations) ?>件実行済み
                         </div>
 
                         <details>
-                            <summary style="cursor: pointer; color: #667eea; font-weight: 500; margin-bottom: 10px;">
+                            <summary class="summary-toggle">
                                 実行済みマイグレーション一覧を表示
                             </summary>
                             <div class="migration-list">
@@ -281,21 +281,21 @@ try {
                             </div>
                         </details>
 
-                        <form method="POST" style="margin-top: 15px;" id="migrationForm">
+                        <form method="POST" class="mt-3" id="migrationForm">
                             <input type="hidden" name="action" value="migrate">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(\App\Security\CsrfProtection::getToken()) ?>">
 
-                            <div style="margin-bottom: 15px;">
-                                <label style="display: flex; align-items: center; cursor: pointer; color: #666;">
-                                    <input type="checkbox" name="auto_delete" value="1" style="margin-right: 8px;">
+                            <div class="mb-3">
+                                <label class="clickable-label">
+                                    <input type="checkbox" name="auto_delete" value="1" class="label-input-spacing">
                                     <span>マイグレーション完了後に自動的にこのファイルを削除</span>
                                 </label>
-                                <div style="font-size: 0.85em; color: #999; margin-top: 5px; margin-left: 24px;">
+                                <div class="small-note">
                                     ⚠️ 削除後は元に戻せません。必要に応じてバックアップを取ってください。
                                 </div>
                             </div>
 
-                            <button type="submit" class="btn" style="background: #667eea;" onclick="return confirm('マイグレーションを実行しますか？\n既に実行済みのマイグレーションはスキップされます。');">
+                            <button type="submit" class="btn" onclick="return confirm('マイグレーションを実行しますか？\n既に実行済みのマイグレーションはスキップされます。');">
                                 マイグレーションを確認・実行
                             </button>
                         </form>
@@ -304,7 +304,7 @@ try {
 
                 <div class="delete-section">
                     <h2>⚠️ このファイルを削除</h2>
-                    <p style="color: #666; margin-bottom: 15px;">
+                    <p data-inline-style="color: #666; margin-bottom: 15px;">
                         セキュリティリスクを避けるため、このセットアップファイルを削除してください。
                     </p>
                     <form method="POST" onsubmit="return confirm('本当にこのファイルを削除しますか？');">
@@ -667,7 +667,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="submit" class="btn">管理者アカウントを作成</button>
             </form>
 
-            <div class="security-note" style="margin-top: 30px;">
+            <div class="security-note" data-inline-style="margin-top: 30px;">
                 <strong>🔒 セキュリティに関する注意</strong><br>
                 このセットアップページは、完了後に自動的に削除されます。<br>
                 セキュリティのため、このファイル名をランダムな名前に変更することもできます。

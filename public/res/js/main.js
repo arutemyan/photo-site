@@ -345,8 +345,8 @@ function renderPosts(posts) {
 
     if (posts.length === 0) {
         grid.innerHTML = `
-            <div class="empty-state" style="grid-column: 1 / -1;">
-                <span style="font-size: 4em;">🔍</span>
+            <div class="empty-state">
+                <span class="emoji-large">🔍</span>
                 <h2>該当する投稿が見つかりませんでした</h2>
                 <p>別のタグで検索してみてください</p>
             </div>
@@ -412,7 +412,7 @@ function appendPostCard(grid, post) {
         ? `onclick="window.location.href='${detailUrl}'"`
         : '';
 
-    cardHTML += `<div class="card-img-wrapper ${isSensitive ? 'nsfw-wrapper' : ''}" ${wrapperOnclick} style="cursor: pointer;">`;
+    cardHTML += `<div class="card-img-wrapper ${isSensitive ? 'nsfw-wrapper' : ''} cursor-pointer" ${wrapperOnclick}>`;
 
     const imgOnclick = isGroup ? '' : `onclick="openImageOverlay(${post.id}, ${isSensitive}, ${viewType})"`;
 

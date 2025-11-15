@@ -1,7 +1,7 @@
 <!-- ヘッダー -->
 <header>
     <?php if (!empty($theme['logo_image'])): ?>
-        <img src="/<?= escapeHtml($theme['logo_image']) ?>" alt="<?= escapeHtml($theme['site_title'] ?? 'ロゴ') ?>" style="max-height: 80px; margin-bottom: 10px;">
+        <img src="/<?= escapeHtml($theme['logo_image']) ?>" alt="<?= escapeHtml($theme['site_title'] ?? 'ロゴ') ?>" class="img-logo">
     <?php endif; ?>
     <h1><?= !empty($theme['header_html']) ? escapeHtml($theme['header_html']) : escapeHtml($theme['site_title'] ?? 'イラストポートフォリオ') ?></h1>
     
@@ -17,7 +17,7 @@ $backButtonBgColor = $theme['back_button_bg_color'] ?? '#8B5AFA';
 $backButtonTextColor = $theme['back_button_text_color'] ?? '#FFFFFF';
 ?>
 <a href="/index.php" class="back-link">
-    <div class="header-back-button" style="background-color: <?= escapeHtml($backButtonBgColor) ?>; color: <?= escapeHtml($backButtonTextColor) ?>;">
+    <div class="header-back-button header-back-button-inline">
         <?= escapeHtml($backButtonText) ?>
     </div>
 </a>
