@@ -144,9 +144,7 @@ async function loadAndPlayTimelapse(id, setStatus) {
                     frames = parseTimelapseCSV(payload.csv);
                 } else if ((payload.format === 'json' || payload.format === 'json') && payload.timelapse) {
                     const data = payload.timelapse;
-                    if (data && data.snapshots && data.snapshots.length > 0) {
-                        frames = data.snapshots.map(s => ({ type: 'snapshot', data: s.data, width: data.canvasWidth || state.layers[0].width, height: data.canvasHeight || state.layers[0].height, durationMs: 500 }));
-                    } else if (Array.isArray(data)) {
+                    if (Array.isArray(data)) {
                         frames = data;
                     } else if (data && data.events) {
                         frames = convertEventsToStrokes(data.events);
@@ -157,9 +155,7 @@ async function loadAndPlayTimelapse(id, setStatus) {
                         frames = parseTimelapseCSV(payload.csv);
                     } else if (payload.format === 'json' && payload.timelapse) {
                         const data = payload.timelapse;
-                        if (data.snapshots && data.snapshots.length > 0) {
-                            frames = data.snapshots.map(s => ({ type: 'snapshot', data: s.data, width: data.canvasWidth || state.layers[0].width, height: data.canvasHeight || state.layers[0].height, durationMs: 500 }));
-                        } else if (Array.isArray(data)) {
+                        if (Array.isArray(data)) {
                             frames = data;
                         } else if (data.events) {
                             frames = convertEventsToStrokes(data.events);
@@ -196,9 +192,7 @@ async function loadAndPlayTimelapse(id, setStatus) {
                 // Try JSON first
                 try {
                     const parsed = JSON.parse(text);
-                    if (parsed && parsed.snapshots && parsed.snapshots.length > 0) {
-                        frames = parsed.snapshots.map(s => ({ type: 'snapshot', data: s.data, width: parsed.canvasWidth || state.layers[0].width, height: parsed.canvasHeight || state.layers[0].height, durationMs: 500 }));
-                    } else if (Array.isArray(parsed)) {
+                    if (Array.isArray(parsed)) {
                         frames = parsed;
                     } else if (parsed && parsed.events) {
                         frames = convertEventsToStrokes(parsed.events);
@@ -259,15 +253,10 @@ function playTimelapse(events) {
     const canvasId = 'timelapse-canvas';
     timelapsePlayer = new TimelapsePlayer(canvasId, frames);
 
-    // Ensure the player's layer canvases and visible/opacity states match the
-    // current editor layers so the timelapse preview reflects the editor view.
-    try {
-        if (typeof timelapsePlayer.syncLayersFromEditor === 'function') {
-            timelapsePlayer.syncLayersFromEditor(state);
-        }
-    } catch (e) {
-        console.warn('Failed to sync timelapse player layers with editor state:', e);
-    }
+    // Do NOT sync with current editor state - timelapse should start from initial state
+    // and apply recorded events (visibility, opacity, reorder) from the beginning.
+    // The player will initialize all layers to visible=true, opacity=1, order=0..n
+    // and then apply recorded layer events as they occur in the timelapse.
 
     // Apply initial settings
     timelapsePlayer.setSpeed(parseFloat(elements.timelapseSpeed.value) || 1);

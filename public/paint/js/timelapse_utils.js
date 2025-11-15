@@ -53,14 +53,29 @@ export function parseTimelapseCSV(csv) {
                 }
             });
 
-            if (event.t) event.t = parseFloat(event.t);
-            if (event.x) event.x = parseFloat(event.x);
-            if (event.y) event.y = parseFloat(event.y);
-            if (event.size) event.size = parseFloat(event.size);
-            if (event.layer) event.layer = parseInt(event.layer);
+            // Parse numeric fields - use !== undefined to handle 0 values correctly
+            if (event.t !== undefined && event.t !== '') event.t = parseFloat(event.t);
+            if (event.x !== undefined && event.x !== '') event.x = parseFloat(event.x);
+            if (event.y !== undefined && event.y !== '') event.y = parseFloat(event.y);
+            if (event.size !== undefined && event.size !== '') event.size = parseFloat(event.size);
+            if (event.layer !== undefined && event.layer !== '') event.layer = parseInt(event.layer);
             if (event.pressure !== undefined && event.pressure !== '') {
                 const p = parseFloat(event.pressure);
                 if (!Number.isNaN(p)) event.pressure = p;
+            }
+            // Parse layer control event fields
+            if (event.opacity !== undefined && event.opacity !== '') {
+                event.opacity = parseFloat(event.opacity);
+            }
+            if (event.visible !== undefined && event.visible !== '') {
+                // Convert string "true"/"false" to boolean
+                event.visible = (event.visible === 'true' || event.visible === true || event.visible === '1' || event.visible === 1);
+            }
+            if (event.from !== undefined && event.from !== '') {
+                event.from = parseInt(event.from);
+            }
+            if (event.to !== undefined && event.to !== '') {
+                event.to = parseInt(event.to);
             }
 
             events.push(event);
@@ -159,7 +174,10 @@ export function convertEventsToStrokes(events) {
             const ctrl = Object.assign({}, event);
             if (ctrl.layer !== undefined) ctrl.layer = Number(ctrl.layer);
             if (ctrl.opacity !== undefined) ctrl.opacity = parseFloat(ctrl.opacity);
-            if (ctrl.visible !== undefined) ctrl.visible = !!ctrl.visible;
+            if (ctrl.visible !== undefined) {
+                // Ensure boolean conversion - handle both boolean and string values
+                ctrl.visible = (ctrl.visible === true || ctrl.visible === 'true' || ctrl.visible === 1 || ctrl.visible === '1');
+            }
             if (ctrl.blend !== undefined) ctrl.blend = String(ctrl.blend);
             strokes.push(ctrl);
             if (event.t !== undefined) lastEventTime = event.t;

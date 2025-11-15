@@ -31,8 +31,6 @@ export class TimelapsePlayer {
         this.layerOrder = null; // array of layer indexes in compositing order
         this.layerCanvases = []; // offscreen canvases per layer
         this.layerContexts = []; // their 2D contexts
-        this.baseCanvas = null; // flattened snapshot canvas
-        this.baseCtx = null;
         // -1 を初期値として、まだ何も描画していない状態を表す
         // これにより再生開始前はプログレスが0%のままになる
         this.currentFrame = -1;
@@ -108,15 +106,6 @@ export class TimelapsePlayer {
 
         // Canvas size set
 
-        // Prepare base canvas (for snapshots) and per-layer offscreen canvases.
-        this.baseCanvas = document.createElement('canvas');
-        this.baseCanvas.width = this.canvas.width;
-        this.baseCanvas.height = this.canvas.height;
-        this.baseCtx = this.baseCanvas.getContext('2d', { alpha: false });
-        // initialize base white
-        this.baseCtx.fillStyle = '#ffffff';
-        this.baseCtx.fillRect(0, 0, this.baseCanvas.width, this.baseCanvas.height);
-
         // Infer layer count from frames (find max layer index)
         let maxLayer = -1;
         for (const f of this.frames) {
@@ -137,7 +126,7 @@ export class TimelapsePlayer {
             this.layerCanvases.push(c);
             this.layerContexts.push(ctx);
             // default state
-            this.layerStates[i] = { visible: true, opacity: 1 };
+            this.layerStates[i] = { visible: true, opacity: 1, blendMode: 'source-over' };
         }
 
         // default layerOrder: bottom-to-top 0..n-1
@@ -221,16 +210,11 @@ export class TimelapsePlayer {
         }
     }
 
-    // Composite base + layers onto main canvas according to current layerOrder and states
+    // Composite layers onto main canvas according to current layerOrder and states
     compositeToMain() {
-        // clear main
+        // clear main with white background
         this.ctx.fillStyle = '#ffffff';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-        // draw base (snapshot)
-        if (this.baseCanvas) {
-            this.ctx.drawImage(this.baseCanvas, 0, 0, this.canvas.width, this.canvas.height);
-        }
 
         // draw layers in order
         if (this.layerOrder && this.layerOrder.length > 0) {
@@ -356,57 +340,40 @@ export class TimelapsePlayer {
         // ストロークを描画
         if (frame.type === 'stroke') {
             const li = typeof frame.layer === 'number' ? frame.layer : 0;
+            const layerState = this.layerStates[li];
+            // Skip drawing to hidden layers
+            if (layerState && layerState.visible === false) {
+                // Don't draw, but still need to composite to update display
+                this.compositeToMain();
+                return;
+            }
             const targetCtx = (this.layerContexts[li] || this.ctx);
             this.drawStroke(frame, targetCtx);
             this.compositeToMain();
         } else if (frame.type === 'fill') {
             const li = typeof frame.layer === 'number' ? frame.layer : 0;
+            const layerState = this.layerStates[li];
+            // Skip drawing to hidden layers
+            if (layerState && layerState.visible === false) {
+                // Don't draw, but still need to composite to update display
+                this.compositeToMain();
+                return;
+            }
             const targetCtx = (this.layerContexts[li] || this.ctx);
             this.drawFill(frame, targetCtx);
             this.compositeToMain();
-        } else if (frame.type === 'snapshot') {
-            // snapshot: flattened image data URL - draw into baseCanvas and clear layer canvases
-            try {
-                const img = new Image();
-                img.onload = () => {
-                    if (!this.baseCanvas) {
-                        this.baseCanvas = document.createElement('canvas');
-                        this.baseCanvas.width = this.canvas.width;
-                        this.baseCanvas.height = this.canvas.height;
-                        this.baseCtx = this.baseCanvas.getContext('2d', { alpha: false });
-                    }
-                    this.baseCtx.clearRect(0, 0, this.baseCanvas.width, this.baseCanvas.height);
-                    this.baseCtx.drawImage(img, 0, 0, this.baseCanvas.width, this.baseCanvas.height);
-                    // clear per-layer canvases to avoid double-draw
-                    for (const ctx of this.layerContexts) {
-                        try { ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); } catch (e) {}
-                    }
-                    this.compositeToMain();
-                };
-                img.onerror = (e) => {
-                    console.warn('Failed to load snapshot image for timelapse frame', e);
-                };
-                img.src = frame.data;
-            } catch (e) {
-                console.warn('Error rendering snapshot frame:', e);
-            }
         } else if (frame.type === 'reorder') {
             try {
                 if (Array.isArray(frame.order)) {
                     this.layerOrder = frame.order.slice();
                 } else if (typeof frame.from === 'number' && typeof frame.to === 'number') {
-                    if (!this.layerOrder) {
-                        let maxLayer = -1;
-                        for (const f of this.frames) {
-                            if (typeof f.layer === 'number') maxLayer = Math.max(maxLayer, f.layer);
-                        }
-                        this.layerOrder = Array.from({ length: Math.max(1, maxLayer + 1) }, (_, i) => i);
-                    }
                     const from = frame.from;
                     const to = frame.to;
-                    if (from >= 0 && to >= 0 && from < this.layerOrder.length && to < this.layerOrder.length) {
-                        const item = this.layerOrder.splice(from, 1)[0];
-                        this.layerOrder.splice(to, 0, item);
+                    // Swap layer canvases and states (same as editor behavior)
+                    if (from >= 0 && to >= 0 && from < this.layerCanvases.length && to < this.layerCanvases.length) {
+                        [this.layerCanvases[from], this.layerCanvases[to]] = [this.layerCanvases[to], this.layerCanvases[from]];
+                        [this.layerContexts[from], this.layerContexts[to]] = [this.layerContexts[to], this.layerContexts[from]];
+                        [this.layerStates[from], this.layerStates[to]] = [this.layerStates[to], this.layerStates[from]];
                     }
                 }
             } catch (e) {
@@ -417,7 +384,7 @@ export class TimelapsePlayer {
             try {
                 const li = Number(frame.layer);
                 if (!Number.isNaN(li)) {
-                    if (!this.layerStates[li]) this.layerStates[li] = { visible: true, opacity: 1 };
+                    if (!this.layerStates[li]) this.layerStates[li] = { visible: true, opacity: 1, blendMode: 'source-over' };
                     // store the blendMode value (string like 'overlay','screen','lighter','multiply','source-over')
                     this.layerStates[li].blendMode = frame.blend || 'source-over';
                 }
@@ -429,8 +396,10 @@ export class TimelapsePlayer {
             try {
                 const li = Number(frame.layer);
                 if (!Number.isNaN(li)) {
-                    if (!this.layerStates[li]) this.layerStates[li] = { visible: true, opacity: 1 };
-                    this.layerStates[li].visible = !!frame.visible;
+                    if (!this.layerStates[li]) this.layerStates[li] = { visible: true, opacity: 1, blendMode: 'source-over' };
+                    // Use explicit boolean conversion to ensure false values work correctly
+                    const newVisible = (frame.visible === true || frame.visible === 'true' || frame.visible === 1 || frame.visible === '1');
+                    this.layerStates[li].visible = newVisible;
                 }
             } catch (e) {
                 console.warn('Failed to apply visibility frame:', e);
@@ -440,7 +409,7 @@ export class TimelapsePlayer {
             try {
                 const li = Number(frame.layer);
                 if (!Number.isNaN(li)) {
-                    if (!this.layerStates[li]) this.layerStates[li] = { visible: true, opacity: 1 };
+                    if (!this.layerStates[li]) this.layerStates[li] = { visible: true, opacity: 1, blendMode: 'source-over' };
                     const op = parseFloat(frame.opacity);
                     if (!Number.isNaN(op)) this.layerStates[li].opacity = op;
                 }
@@ -479,23 +448,16 @@ export class TimelapsePlayer {
         if (frameIndex < 0) frameIndex = 0;
         if (frameIndex >= this.frames.length) frameIndex = this.frames.length - 1;
 
-        // 白背景で初期化
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-        // Reset base and per-layer canvases to rebuild state up to target frame
-        if (this.baseCtx) {
-            try { this.baseCtx.clearRect(0, 0, this.baseCanvas.width, this.baseCanvas.height); } catch (e) {}
-            // ensure base white background
-            try { this.baseCtx.fillStyle = '#ffffff'; this.baseCtx.fillRect(0, 0, this.baseCanvas.width, this.baseCanvas.height); } catch (e) {}
-        }
+        // Reset per-layer canvases to rebuild state up to target frame
         for (const ctx of this.layerContexts) {
             try { ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); } catch (e) {}
         }
-        // reset layerStates defaults
+        // reset layerStates to initial defaults
         for (let i = 0; i < this.layerCanvases.length; i++) {
-            if (!this.layerStates[i]) this.layerStates[i] = { visible: true, opacity: 1 };
+            this.layerStates[i] = { visible: true, opacity: 1, blendMode: 'source-over' };
         }
+        // reset layerOrder to initial order (0, 1, 2, ...)
+        this.layerOrder = Array.from({ length: this.layerCanvases.length }, (_, i) => i);
 
         // フレーム0の場合も含め、指定フレームまで（inclusive）描画する
         if (frameIndex >= 0) {

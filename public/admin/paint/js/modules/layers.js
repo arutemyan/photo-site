@@ -5,7 +5,7 @@
 
 import { CONFIG } from './config.js';
 import { state, elements } from './state.js';
-import { recordTimelapse, createTimelapseSnapshotPublic } from './timelapse_recorder.js';
+import { recordTimelapse } from './timelapse_recorder.js';
 // helper to sync an open timelapse player with current editor state
 import { syncPlayerWithEditor } from './timelapse.js';
 
@@ -359,18 +359,14 @@ export function toggleLayerVisibility(index, updateStatusBar, setStatus) {
     try {
         if (typeof recordTimelapse === 'function') {
             recordTimelapse({ t: Date.now(), type: 'visibility', layer: index, visible: newDisplay !== 'none' });
-            // Also create a snapshot to capture composite state immediately
-            if (typeof createTimelapseSnapshotPublic === 'function') {
-                createTimelapseSnapshotPublic();
+        }
+        // live-sync timelapse preview if it's open
+        try {
+            if (typeof syncPlayerWithEditor === 'function') {
+                syncPlayerWithEditor(state);
             }
-            // live-sync timelapse preview if it's open
-            try {
-                if (typeof syncPlayerWithEditor === 'function') {
-                    syncPlayerWithEditor(state);
-                }
-            } catch (e) {
-                // non-fatal
-            }
+        } catch (e) {
+            // non-fatal
         }
     } catch (e) {
         console.warn('Failed to record visibility change for timelapse:', e);
@@ -387,17 +383,14 @@ export function setLayerOpacity(index, opacity) {
     try {
         if (typeof recordTimelapse === 'function') {
             recordTimelapse({ t: Date.now(), type: 'opacity', layer: index, opacity: opacity });
-            if (typeof createTimelapseSnapshotPublic === 'function') {
-                createTimelapseSnapshotPublic();
+        }
+        // live-sync timelapse preview if it's open
+        try {
+            if (typeof syncPlayerWithEditor === 'function') {
+                syncPlayerWithEditor(state);
             }
-            // live-sync timelapse preview if it's open
-            try {
-                if (typeof syncPlayerWithEditor === 'function') {
-                    syncPlayerWithEditor(state);
-                }
-            } catch (e) {
-                // non-fatal
-            }
+        } catch (e) {
+            // non-fatal
         }
     } catch (e) {
         console.warn('Failed to record opacity change for timelapse:', e);
@@ -454,9 +447,6 @@ export function setLayerBlendMode(index, blendMode) {
         // record the change for timelapse playback
         if (typeof recordTimelapse === 'function') {
             recordTimelapse({ t: Date.now(), type: 'blend', layer: index, blend: blendMode });
-            if (typeof createTimelapseSnapshotPublic === 'function') {
-                createTimelapseSnapshotPublic();
-            }
         }
 
         // If a timelapse modal/player is active, request an immediate sync so
@@ -515,9 +505,6 @@ export function moveLayer(index, delta, updateStatusBar, setStatus) {
     try {
         if (typeof recordTimelapse === 'function') {
             recordTimelapse({ t: Date.now(), type: 'reorder', from: index, to: to });
-        }
-        if (typeof createTimelapseSnapshotPublic === 'function') {
-            createTimelapseSnapshotPublic();
         }
         // live-sync timelapse preview if it's open
         try {
@@ -605,9 +592,6 @@ export function removeLayer(layerIndex, updateStatusBar, setStatus) {
     try {
         if (typeof recordTimelapse === 'function') {
             recordTimelapse({ t: Date.now(), type: 'delete', layer: layerIndex });
-        }
-        if (typeof createTimelapseSnapshotPublic === 'function') {
-            createTimelapseSnapshotPublic();
         }
         try {
             if (typeof syncPlayerWithEditor === 'function') {
@@ -708,9 +692,6 @@ export function duplicateLayer(layerIndex, pushUndo, updateStatusBar, setStatus)
         if (typeof recordTimelapse === 'function') {
             recordTimelapse({ t: Date.now(), type: 'duplicate', from: layerIndex, to: (layerIndex + 1) % state.layers.length });
         }
-        if (typeof createTimelapseSnapshotPublic === 'function') {
-            createTimelapseSnapshotPublic();
-        }
         try {
             if (typeof syncPlayerWithEditor === 'function') {
                 syncPlayerWithEditor(state);
@@ -754,9 +735,6 @@ export function mergeLayerDown(layerIndex, pushUndo, updateStatusBar, setStatus)
         if (typeof recordTimelapse === 'function') {
             recordTimelapse({ t: Date.now(), type: 'merge', from: layerIndex, to: layerIndex - 1 });
         }
-        if (typeof createTimelapseSnapshotPublic === 'function') {
-            createTimelapseSnapshotPublic();
-        }
         try {
             if (typeof syncPlayerWithEditor === 'function') {
                 syncPlayerWithEditor(state);
@@ -791,9 +769,6 @@ export function clearLayer(layerIndex, pushUndo, updateStatusBar, setStatus) {
     try {
         if (typeof recordTimelapse === 'function') {
             recordTimelapse({ t: Date.now(), type: 'clear', layer: layerIndex });
-        }
-        if (typeof createTimelapseSnapshotPublic === 'function') {
-            createTimelapseSnapshotPublic();
         }
         try {
             if (typeof syncPlayerWithEditor === 'function') {

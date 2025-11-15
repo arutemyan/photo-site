@@ -6,14 +6,12 @@ import { hexToRgb } from './color_utils.js';
 export function drawStrokePrimitive(ctx, frame, layerStates = {}) {
     if (!frame.path || frame.path.length === 0) return;
 
+    // Check layer visibility only - do NOT apply layer opacity here
+    // Layer opacity is applied during compositing in TimelapsePlayer.compositeToMain()
     if (typeof frame.layer !== 'undefined') {
         const li = Number(frame.layer);
         const st = layerStates[li];
         if (st && st.visible === false) return;
-        if (st && typeof st.opacity === 'number') {
-            frame._originalOpacity = frame._originalOpacity === undefined ? (frame.opacity !== undefined ? frame.opacity : 1) : frame._originalOpacity;
-            frame.opacity = (frame._originalOpacity !== undefined ? frame._originalOpacity : 1) * st.opacity;
-        }
     }
 
     ctx.save();
@@ -118,14 +116,12 @@ export function drawStrokePrimitive(ctx, frame, layerStates = {}) {
 
 export function drawFillPrimitive(ctx, frame, canvasWidth, canvasHeight, layerStates = {}, options = {}) {
     if (frame.x === undefined || frame.y === undefined) return;
+    // Check layer visibility only - do NOT apply layer opacity here
+    // Layer opacity is applied during compositing in TimelapsePlayer.compositeToMain()
     if (typeof frame.layer !== 'undefined') {
         const li = Number(frame.layer);
         const st = layerStates[li];
         if (st && st.visible === false) return;
-        if (st && typeof st.opacity === 'number') {
-            frame._originalOpacity = frame._originalOpacity === undefined ? (frame.opacity !== undefined ? frame.opacity : 1) : frame._originalOpacity;
-            frame.opacity = (frame._originalOpacity !== undefined ? frame._originalOpacity : 1) * st.opacity;
-        }
     }
 
     // Flood fill implementation that operates on the provided context
