@@ -191,7 +191,7 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
     </style>
 </head>
 <body data-age-verification-minutes="<?= $ageVerificationMinutes ?>" data-nsfw-config-version="<?= $nsfwConfigVersion ?>" data-is-nsfw="<?= !empty($illust['nsfw']) ? '1' : '0' ?>">
-    <script>
+    <script nonce="<?= \App\Security\CspMiddleware::getInstance()->getNonce() ?>">
         // 設定値をdata属性から読み込み（const定義で改ざん防止）
         const AGE_VERIFICATION_MINUTES = parseFloat(document.body.dataset.ageVerificationMinutes) || 10080;
         const NSFW_CONFIG_VERSION = parseInt(document.body.dataset.nsfwConfigVersion) || 1;
@@ -394,7 +394,7 @@ $pageUrl = $protocol . $host . $_SERVER['REQUEST_URI'];
     
     <!-- JavaScript -->
     <?php echo \App\Utils\AssetHelper::scriptTag('/paint/js/detail.js'); ?>
-    <script>
+    <script nonce="<?= \App\Security\CspMiddleware::getInstance()->getNonce() ?>">
         // 年齢確認関数
         function checkAgeVerification() {
             const verified = localStorage.getItem('age_verified');

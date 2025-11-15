@@ -116,9 +116,9 @@ try {
                                     <i class="bi bi-chevron-down" id="clipboardToggleIcon"></i>
                                 </button>
                             </div>
-                            <div class="card-body d-none" id="clipboardUploadSection">
-                                <div id="clipboardAlert" class="alert alert-success d-none" role="alert"></div>
-                                <div id="clipboardError" class="alert alert-danger d-none" role="alert"></div>
+                            <div class="card-body" id="clipboardUploadSection" style="display: none;">
+                                <div id="clipboardAlert" class="alert alert-success" role="alert" style="display: none;"></div>
+                                <div id="clipboardError" class="alert alert-danger" role="alert" style="display: none;"></div>
 
                                 <div class="alert alert-info mb-3">
                                     <i class="bi bi-info-circle me-2"></i>
@@ -136,7 +136,7 @@ try {
                                                 <i class="bi bi-clipboard2-plus icon-large"></i>
                                                 <p class="mt-2">クリックしてフォーカスし、Ctrl+V で画像を貼り付け</p>
                                             </div>
-                                            <div id="clipboardPreview" class="clipboard-preview d-none">
+                                            <div id="clipboardPreview" class="clipboard-preview d-none-important">
                                                 <img id="clipboardPreviewImg" alt="プレビュー" class="clipboard-preview-img">
                                                 <button type="button" class="btn btn-sm btn-danger absolute-top-right" id="clearClipboardImage">
                                                     <i class="bi bi-x-circle"></i> クリア
@@ -190,7 +190,7 @@ try {
                                     </div>
 
                                     <div class="d-flex gap-2">
-                                        <button type="submit" class="btn btn-primary flex-grow-1" id="clipboardUploadBtn" disabled>
+                                        <button type="submit" class="btn btn-primary" id="clipboardUploadBtn" disabled>
                                             <i class="bi bi-upload me-2"></i>アップロード
                                         </button>
                                         <button type="button" class="btn btn-secondary" id="clipboardCancelBtn">
@@ -254,7 +254,7 @@ try {
                                         <img id="imagePreview" alt="プレビュー">
                                     </div>
 
-                                    <button type="submit" class="btn btn-primary w-100">
+                                    <button type="submit" class="btn btn-primary">
                                         <i class="bi bi-upload me-2"></i>アップロード
                                     </button>
                                 </form>
@@ -286,7 +286,7 @@ try {
                                         <div id="bulkPreviewList" class="row g-2"></div>
                                     </div>
 
-                                    <button type="submit" class="btn btn-success">
+                                    <button type="submit" class="btn btn-primary">
                                         <i class="bi bi-cloud-upload me-2"></i>一括アップロード
                                     </button>
                                 </form>
@@ -487,7 +487,7 @@ try {
                                             </div>
                                             <input type="file" class="form-control form-control-sm" id="logoImage" accept="image/*">
                                             <div class="mt-2">
-                                                <button type="button" class="btn btn-sm btn-primary" id="uploadLogo">
+                                                <button type="button" class="btn btn-primary" id="uploadLogo">
                                                     <i class="bi bi-upload me-1"></i>アップロード
                                                 </button>
                                                 <button type="button" class="btn btn-sm btn-danger d-none" id="deleteLogo">
@@ -503,7 +503,7 @@ try {
                                             </div>
                                             <input type="file" class="form-control form-control-sm" id="headerImage" accept="image/*">
                                             <div class="mt-2">
-                                                <button type="button" class="btn btn-sm btn-primary" id="uploadHeader">
+                                                <button type="button" class="btn btn-primary" id="uploadHeader">
                                                     <i class="bi bi-upload me-1"></i>アップロード
                                                 </button>
                                                 <button type="button" class="btn btn-sm btn-danger d-none" id="deleteHeader">

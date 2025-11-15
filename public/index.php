@@ -124,7 +124,7 @@ try {
     </style>
 </head>
 <body data-age-verification-minutes="<?= $ageVerificationMinutes ?>" data-nsfw-config-version="<?= $nsfwConfigVersion ?>">
-    <script>
+    <script nonce="<?= \App\Security\CspMiddleware::getInstance()->getNonce() ?>">
         // 設定値をdata属性から読み込み（const定義で改ざん防止）
         const AGE_VERIFICATION_MINUTES = parseFloat(document.body.dataset.ageVerificationMinutes) || 10080;
         const NSFW_CONFIG_VERSION = parseInt(document.body.dataset.nsfwConfigVersion) || 1;

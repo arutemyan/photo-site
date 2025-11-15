@@ -208,7 +208,7 @@ $imageUrl = !empty($shareImagePath) ? $protocol . ($_SERVER['HTTP_HOST'] ?? 'loc
 </head>
 <?php /**************************************************************/ ?>
 <body data-age-verification-minutes="<?= $ageVerificationMinutes ?>" data-nsfw-config-version="<?= $nsfwConfigVersion ?>" data-post-id="<?= $id ?>" data-is-sensitive="<?= isset($data['is_sensitive']) && $data['is_sensitive'] == 1 ? '1' : '0' ?>">
-    <script>
+    <script nonce="<?= \App\Security\CspMiddleware::getInstance()->getNonce() ?>">
         // 設定値をdata属性から読み込み（const定義で改ざん防止）
         const AGE_VERIFICATION_MINUTES = parseFloat(document.body.dataset.ageVerificationMinutes) || 10080;
         const NSFW_CONFIG_VERSION = parseInt(document.body.dataset.nsfwConfigVersion) || 1;
@@ -400,7 +400,7 @@ $imageUrl = !empty($shareImagePath) ? $protocol . ($_SERVER['HTTP_HOST'] ?? 'loc
 
     <!-- JavaScript -->
     <?php echo \App\Utils\AssetHelper::scriptTag('/res/js/detail.js', [], ['v' => $nsfwConfigVersion]); ?>
-    <script>
+    <script nonce="<?= \App\Security\CspMiddleware::getInstance()->getNonce() ?>">
         // DOMロード後に初期化
         document.addEventListener('DOMContentLoaded', function() {
             // 年齢確認チェック
@@ -411,7 +411,7 @@ $imageUrl = !empty($shareImagePath) ? $protocol . ($_SERVER['HTTP_HOST'] ?? 'loc
 
     <?php if ($isGroupPost): ?>
     <!-- グループ投稿用のギャラリーJS -->
-    <script>
+    <script nonce="<?= \App\Security\CspMiddleware::getInstance()->getNonce() ?>">
         let currentImageIndex = 0;
         const images = document.querySelectorAll('.gallery-image');
         const totalImages = images.length;
@@ -442,7 +442,7 @@ $imageUrl = !empty($shareImagePath) ? $protocol . ($_SERVER['HTTP_HOST'] ?? 'loc
     </script>
     <?php endif; ?>
 
-    <script>
+    <script nonce="<?= \App\Security\CspMiddleware::getInstance()->getNonce() ?>">
         // SNS共有機能
         function shareToSNS(platform) {
             const title = <?= json_encode($data['title']) ?>;

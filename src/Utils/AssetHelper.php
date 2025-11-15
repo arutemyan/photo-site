@@ -89,6 +89,18 @@ class AssetHelper
         }
         $attrs[] = 'src="' . htmlspecialchars($src, ENT_QUOTES, 'UTF-8') . '"';
 
+        // If CSP is enabled and no explicit nonce was provided, attach nonce for script tags
+        $config = \App\Config\ConfigManager::getInstance()->getConfig();
+        $cspEnabled = $config['csp']['enabled'] ?? false;
+        if ($cspEnabled && !isset($attributes['nonce'])) {
+            try {
+                $nonce = \App\Security\CspMiddleware::getInstance()->getNonce();
+                $attributes['nonce'] = $nonce;
+            } catch (Throwable $e) {
+                // If CspMiddleware is not available for some reason, skip adding nonce
+            }
+        }
+
         foreach ($attributes as $key => $value) {
             if (is_bool($value)) {
                 if ($value) {
