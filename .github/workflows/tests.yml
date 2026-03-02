@@ -264,7 +264,7 @@ jobs:
 
       - name: Download all artifacts for debugging
         if: always()
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           # download all artifacts produced by the workflow run
           path: artifacts
