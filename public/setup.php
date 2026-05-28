@@ -10,8 +10,8 @@ declare(strict_types=1);
  * セットアップ完了後、このファイルは自動的に削除されます
  */
 
-require_once __DIR__ . '/../../vendor/autoload.php';
-require_once __DIR__ . '/../../src/Security/SecurityUtil.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../src/Security/SecurityUtil.php';
 
 use App\Database\Connection;
 use App\Utils\PathHelper;

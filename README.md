@@ -65,7 +65,7 @@ cp config/config.local.example.php config/config.local.php
 
 - `config/config.local.php` を作成し、管理パスを推測されにくくする
 - HTTPS（TLS）を強制する設定を行う
-- 不要なセットアップファイル（例: `public/setup/`）を削除
+- 不要なセットアップファイル（例: `public/setup.php`）を削除
 - `data/`, `config/` 等のパーミッションを適切に設定する
 - 強力な管理者パスワードを設定する（推奨: 12文字以上・複雑）
 

@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit("This script can only be executed from the command line.\n");
+}
+
 require_once __DIR__ . '/../vendor/autoload.php';
 
 // Run migrations using an isolated PDO connection and a file lock to avoid concurrent
