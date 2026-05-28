@@ -46,7 +46,7 @@ file_put_contents($configPath, $testConfig);
 // Run migrations
 echo "Running migrations...\n";
 $php = defined('PHP_BINARY') ? PHP_BINARY : 'php';
-$migrateCmd = escapeshellarg($php) . ' ' . escapeshellarg($projectRoot . '/public/setup/run_migrations.php') . ' > ' . escapeshellarg($tmpDir . '/migrations.log') . ' 2>&1';
+$migrateCmd = escapeshellarg($php) . ' ' . escapeshellarg($projectRoot . '/scripts/run_migrations.php') . ' > ' . escapeshellarg($tmpDir . '/migrations.log') . ' 2>&1';
 $rc = run_cmd($migrateCmd, $out);
 if ($rc !== 0) {
     echo "Migration failed. Log:\n" . file_get_contents($tmpDir . '/migrations.log') . "\n";

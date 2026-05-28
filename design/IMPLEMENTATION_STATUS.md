@@ -47,8 +47,8 @@
 - [x] 詳細ページ + タイムラプス再生 — public/paint/detail.php, public/paint/js/detail.js
 
 ## データモデル / マイグレーション
-- [x] paint テーブル作成マイグレーション — public/setup/migrations/008_add_paint_table.php
-- [x] 追加カラム用マイグレーション — public/setup/migrations/010_add_description_tags_to_paint.php
+- [x] paint テーブル作成マイグレーション — migrations/008_add_paint_table.php
+- [x] 追加カラム用マイグレーション — migrations/010_add_description_tags_to_paint.php
 
 ## テスト / CI
 - [x] 統合テスト（ペイント関連）の存在 — `tests/Integration` や `tests/Api` 配下に関連テストあり

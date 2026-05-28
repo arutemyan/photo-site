@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 // Run migrations using an isolated PDO connection and a file lock to avoid concurrent
 // processes opening the same SQLite file and causing 'database is locked'.
@@ -22,7 +22,7 @@ try {
     }
 
     // Load config to determine DB settings
-    $configPath = __DIR__ . '/../../config/config.php';
+    $configPath = __DIR__ . '/../config/config.php';
     $config = file_exists($configPath) ? require $configPath : [];
 
     $driver = $config['database']['driver'];
