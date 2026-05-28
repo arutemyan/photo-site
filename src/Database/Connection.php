@@ -171,7 +171,7 @@ class Connection
                 }
 
                 // スキーマ初期化はマイグレーションで管理します。
-                // ここでは自動的にスキーマを作成しません（public/setup/run_migrations.php を使ってください）。
+                // ここでは自動的にスキーマを作成しません（scripts/run_migrations.php を使ってください）。
 
                 // マイグレーションを自動実行するかどうかは設定で制御
                 $runMigrations = self::$config['database']['run_migrations_on_connect'] ?? true;
@@ -188,7 +188,7 @@ class Connection
         return self::$instance;
     }
 
-    // initializeSchema() was removed: schema is managed via migrations in public/setup/migrations
+    // initializeSchema() was removed: schema is managed via migrations in /migrations
 
     /**
      * マイグレーション実行

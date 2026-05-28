@@ -10,8 +10,8 @@ declare(strict_types=1);
  * セットアップ完了後、このファイルは自動的に削除されます
  */
 
-require_once __DIR__ . '/../../vendor/autoload.php';
-require_once __DIR__ . '/../../src/Security/SecurityUtil.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../src/Security/SecurityUtil.php';
 
 use App\Database\Connection;
 use App\Utils\PathHelper;
@@ -22,6 +22,45 @@ use App\Utils\Logger;
 // エラーメッセージ
 $error = null;
 $success = null;
+
+// 旧バージョンで public/setup/ 配下に置かれていたマイグレーション関連ファイルを掃除する。
+// 旧 run_migrations.php には CLI ガードが無く、残置すると Web 経由で叩かれる恐れがあるため
+// 新しい setup.php を踏んだ時点でベストエフォートで除去する。
+$legacyCleanup = ['removed' => [], 'failed' => []];
+$legacyDir = __DIR__ . '/setup';
+if (is_dir($legacyDir)) {
+    $legacyTargets = [];
+    $legacyMigrationsDir = $legacyDir . '/migrations';
+    if (is_dir($legacyMigrationsDir)) {
+        foreach (glob($legacyMigrationsDir . '/*.php') ?: [] as $f) {
+            $legacyTargets[] = $f;
+        }
+    }
+    $legacyRunner = $legacyDir . '/run_migrations.php';
+    if (is_file($legacyRunner)) {
+        $legacyTargets[] = $legacyRunner;
+    }
+    foreach ($legacyTargets as $f) {
+        $rel = 'public/' . ltrim(str_replace(__DIR__, '', $f), '/');
+        if (@unlink($f)) {
+            $legacyCleanup['removed'][] = $rel;
+        } else {
+            $legacyCleanup['failed'][] = $rel;
+        }
+    }
+    @rmdir($legacyMigrationsDir);
+    @rmdir($legacyDir);
+    if ($legacyTargets) {
+        try {
+            Logger::getInstance()->warning('Legacy public/setup/ files detected', [
+                'removed' => $legacyCleanup['removed'],
+                'failed' => $legacyCleanup['failed'],
+            ]);
+        } catch (\Throwable $e) {
+            // Logger 未初期化等は無視
+        }
+    }
+}
 
 // セットアップ済みかチェック
 try {
@@ -233,6 +272,24 @@ try {
                 <?php if (isset($success)): ?>
                     <div class="alert-success">
                         ✅ <?= htmlspecialchars($success) ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($legacyCleanup['removed'])): ?>
+                    <div class="alert-success">
+                        🧹 旧バージョンの <code>public/setup/</code> 配下のファイルを <?= count($legacyCleanup['removed']) ?> 件除去しました。
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($legacyCleanup['failed'])): ?>
+                    <div class="alert alert-danger">
+                        <strong>⚠️ レガシーファイルの自動削除に失敗しました。</strong><br>
+                        セキュリティのため、サーバー上で以下を手動で削除してください：
+                        <ul>
+                            <?php foreach ($legacyCleanup['failed'] as $f): ?>
+                                <li><code><?= htmlspecialchars($f) ?></code></li>
+                            <?php endforeach; ?>
+                        </ul>
                     </div>
                 <?php endif; ?>
 
@@ -611,6 +668,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php if ($error): ?>
                 <div class="alert alert-danger">
                     ❌ <?= htmlspecialchars($error) ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($legacyCleanup['removed'])): ?>
+                <div class="alert-success">
+                    🧹 旧バージョンの <code>public/setup/</code> 配下のファイルを <?= count($legacyCleanup['removed']) ?> 件除去しました。
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($legacyCleanup['failed'])): ?>
+                <div class="alert alert-danger">
+                    <strong>⚠️ レガシーファイルの自動削除に失敗しました。</strong><br>
+                    セキュリティのため、サーバー上で以下を手動で削除してください：
+                    <ul>
+                        <?php foreach ($legacyCleanup['failed'] as $f): ?>
+                            <li><code><?= htmlspecialchars($f) ?></code></li>
+                        <?php endforeach; ?>
+                    </ul>
                 </div>
             <?php endif; ?>
 

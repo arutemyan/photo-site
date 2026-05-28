@@ -29,7 +29,7 @@ class MigrationRunner
     public function __construct(PDO $db, ?string $migrationsDir = null)
     {
         $this->db = $db;
-        $this->migrationsDir = $migrationsDir ?? __DIR__ . '/../../public/setup/migrations';
+        $this->migrationsDir = $migrationsDir ?? __DIR__ . '/../../migrations';
     }
 
     /**

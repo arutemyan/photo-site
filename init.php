@@ -31,7 +31,7 @@ echo "  データベース初期化ツール (CLI版)\n";
 echo "========================================\n\n";
 
 try {
-    require_once __DIR__."/public/setup/run_migrations.php";
+    require_once __DIR__."/scripts/run_migrations.php";
 
     // データベース接続を取得（自動的にスキーマが初期化される）
     $db = Connection::getInstance();

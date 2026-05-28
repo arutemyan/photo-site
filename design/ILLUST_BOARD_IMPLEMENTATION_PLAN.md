@@ -58,10 +58,10 @@
   - 根拠: public/paint/detail.php, public/paint/js/detail.js
 
 ### データモデル・マイグレーション
-- [x] paint テーブル作成用マイグレーション: public/setup/migrations/008_add_paint_table.php
-  - 根拠: public/setup/migrations/008_add_paint_table.php
-- [x] カラム追加等の後続マイグレーション: public/setup/migrations/010_add_description_tags_to_paint.php
-  - 根拠: public/setup/migrations/010_add_description_tags_to_paint.php
+- [x] paint テーブル作成用マイグレーション: migrations/008_add_paint_table.php
+  - 根拠: migrations/008_add_paint_table.php
+- [x] カラム追加等の後続マイグレーション: migrations/010_add_description_tags_to_paint.php
+  - 根拠: migrations/010_add_description_tags_to_paint.php
 
 ### テスト・CI
 - [x] 統合テスト（ペイント関連）の存在: Tests/Api/AdminPaintIntegrationTest 等

@@ -71,7 +71,7 @@ abstract class IntegrationTestCase extends TestCase
         // Run migrations for this test DB so the schema matches production migrations.
         // We run the migration script as a separate PHP process to avoid in-process
         // SQLite locking against the test runner.
-        $migrationCmd = escapeshellarg((defined('PHP_BINARY') ? PHP_BINARY : 'php')) . ' ' . escapeshellarg($projectRoot . '/public/setup/run_migrations.php') . ' > ' . escapeshellarg(self::$tmpDir . '/migrations.log') . ' 2>&1';
+        $migrationCmd = escapeshellarg((defined('PHP_BINARY') ? PHP_BINARY : 'php')) . ' ' . escapeshellarg($projectRoot . '/scripts/run_migrations.php') . ' > ' . escapeshellarg(self::$tmpDir . '/migrations.log') . ' 2>&1';
         exec($migrationCmd, $migrationOut, $migrationRc);
         if ($migrationRc !== 0) {
             $log = @file_get_contents(self::$tmpDir . '/migrations.log');
